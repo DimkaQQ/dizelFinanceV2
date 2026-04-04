@@ -13,7 +13,7 @@ from flask import (
 from datetime import datetime
 import database as db
 from config import (
-    FLASK_SECRET, FLASK_PORT, WEB_USERNAME, WEB_PASSWORD,
+    FLASK_SECRET, FLASK_PORT, WEB_USERS,
     SECTIONS, ALL_CATEGORIES, CURRENCIES, CURRENCY_SYMBOLS,
     MONTH_NAMES,
 )
@@ -39,8 +39,9 @@ def require_login():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        if (request.form.get("username") == WEB_USERNAME and
-                request.form.get("password") == WEB_PASSWORD):
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        if WEB_USERS.get(username) == password:
             session["logged_in"] = True
             session["user_id"]   = DEFAULT_USER
             return redirect(url_for("dashboard"))

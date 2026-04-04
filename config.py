@@ -24,8 +24,16 @@ DATABASE_URL         = os.getenv("DATABASE_URL", "postgresql://user:pass@localho
 # ── Flask ─────────────────────────────────────────────────────────────────────
 FLASK_SECRET         = os.getenv("FLASK_SECRET", "super-secret-key")
 FLASK_PORT           = int(os.getenv("FLASK_PORT", 5000))
-WEB_USERNAME         = os.getenv("WEB_USERNAME", "admin")
-WEB_PASSWORD         = os.getenv("WEB_PASSWORD", "admin123")
+
+def _parse_users(raw: str) -> dict:
+    users = {}
+    for pair in raw.split(","):
+        if ":" in pair:
+            u, p = pair.strip().split(":", 1)
+            users[u.strip()] = p.strip()
+    return users
+
+WEB_USERS = _parse_users(os.getenv("WEB_USERS", ""))
 
 # ── Валюты ────────────────────────────────────────────────────────────────────
 CURRENCIES = ["RUB", "USD", "EUR", "KZT", "IDR", "VND"]
