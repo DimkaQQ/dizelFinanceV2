@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Главная — DizelFinance{% endblock %}
+{% block page_title %}{{ month_name }} {{ now.year }}{% endblock %}
+
+{% block content %}
+<!-- KPI карточки -->
+<div class="grid grid-4" style="margin-bottom:20px">
+  <div class="card card-sm">
+    <div class="card-title">💰 Доходы</div>
+    <div class="card-value text-green">{{ "{:,.0f}".format(summary.total_income) }} ₽</div>
+    <div class="card-sub">за месяц</div>
+    <div class="progress">
+      <div class="progress-fill" style="width:100%; background:var(--green)"></div>
+    </div>
+  </div>
+  <div class="card card-sm">
+    <div class="card-title">💸 Расходы</div>
+    <div class="card-value text-red">{{ "{:,.0f}".format(summary.total_expense) }} ₽</div>
+    <div class="card-sub">за месяц</div>
+    {% set pct = (summary.total_expense / summary.total_income * 100) if summary.total_income > 0 else 0 %}
+    <div class="progress">
+      <div class="progress-fill" style="width:{{ [pct,100]|min }}%; background:var(--red)"></div>
+    </div>
+  </div>
+  <div class="card card-sm">
+    <div class="card-title">📊 Дельта</div>
+    {% set delta = summary.delta %}
+    <div class="card-value {{ 'text-green' if delta >= 0 else 'text-red' }}">
+      {{ "{:+,.0f}".format(delta) }} ₽
+    </div>
+    <div class="card-sub">{{ 'Профицит' if delta >= 0 else 'Дефицит' }}</div>
+  </div>
+  <div class="card card-sm">
+    <div class="card-title">🏦 Активы</div>
+    <div class="card-value text-accent">{{ "{:,.0f}".format(summary.total_assets) }} ₽</div>
+    <div class="card-sub">движение</div>
+  </div>
+</div>
+
+<!-- График + топ категорий -->
+<div class="grid grid-2" style="margin-bottom:20px">
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">📈 Доходы vs Расходы</div>
+    <canvas id="mainChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">🏆 Топ расходов</div>
+    {% if top_cats %}
+      {% set max_val = top_cats[0].total %}
+      {% for cat in top_cats %}
+        <div style="margin-bottom:12px">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px">
+            <span style="font-size:0.85rem; font-weight:500">{{ cat.category }}</span>
+            <span style="font-size:0.82rem; color:var(--muted)">{{ "{:,.0f}".format(cat.total) }} ₽</span>
+          </div>
+          <div class="progress">
+            <div class="progress-fill" style="
+              width:{{ (cat.total / max_val * 100)|round }}%;
+              background: linear-gradient(90deg, var(--accent), var(--accent2))
+            "></div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="color:var(--muted); font-size:0.88rem; text-align:center; padding:32px 0">
+        Данных за этот месяц нет
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Разделы месяца -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-title" style="margin-bottom:16px">📂 По разделам — {{ month_name }}</div>
+  {% if summary.sections %}
+    <div class="grid grid-4">
+      {% for row in summary.sections %}
+        {% set sec = row.section %}
+        {% set info = sections.get(sec, {}) %}
+        {% set total = (row.income or 0)|float + (row.expense or 0)|float + (row.assets or 0)|float %}
+        <div style="
+          background:var(--bg3);
+          border:1px solid var(--border);
+          border-radius:var(--radius);
+          padding:16px;
+        ">
+          <div style="font-size:1.4rem; margin-bottom:8px">{{ info.get('icon','📂') }}</div>
+          <div style="font-size:0.75rem; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em">{{ sec }}</div>
+          <div style="
+            font-family:'Unbounded',sans-serif;
+            font-size:1.1rem;
+            font-weight:600;
+            color:{{ info.get('color','var(--text)') }};
+            letter-spacing:-0.02em
+          ">{{ "{:,.0f}".format(total) }} ₽</div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:4px">{{ row.cnt }} транзакций</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="text-align:center; color:var(--muted); padding:40px 0; font-size:0.9rem">
+      Нет транзакций за {{ month_name }}. <a href="{{ url_for('add_transaction') }}" style="color:var(--accent)">Добавить первую →</a>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Быстрые действия -->
+<div class="grid grid-3">
+  <a href="{{ url_for('add_transaction') }}" class="btn btn-primary" style="justify-content:center; padding:14px">
+    ➕ Новая транзакция
+  </a>
+  <a href="{{ url_for('transactions') }}" class="btn btn-ghost" style="justify-content:center; padding:14px">
+    📋 Все транзакции
+  </a>
+  <a href="{{ url_for('analytics') }}" class="btn btn-ghost" style="justify-content:center; padding:14px">
+    📊 Аналитика
+  </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const labels  = {{ chart_labels | tojson }};
+const income  = {{ chart_income  | tojson }};
+const expense = {{ chart_expense | tojson }};
+
+const ctx = document.getElementById('mainChart');
+if (ctx && labels.length) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Доходы',
+          data: income,
+          backgroundColor: 'rgba(34,197,94,0.6)',
+          borderColor: 'rgba(34,197,94,0.9)',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: 'Расходы',
+          data: expense,
+          backgroundColor: 'rgba(239,68,68,0.6)',
+          borderColor: 'rgba(239,68,68,0.9)',
+          borderWidth: 1,
+          borderRadius: 4,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#6b6b85', font: { family: 'Inter' } } }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(42,42,56,0.8)' },
+          ticks: { color: '#6b6b85', font: { size: 11 } }
+        },
+        y: {
+          grid: { color: 'rgba(42,42,56,0.8)' },
+          ticks: {
+            color: '#6b6b85', font: { size: 11 },
+            callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k ₽' : v + ' ₽'
+          }
+        }
+      }
+    }
+  });
+}
+</script>
+{% endblock %}

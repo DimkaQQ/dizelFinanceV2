@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Транзакции — DizelFinance{% endblock %}
+{% block page_title %}Транзакции{% endblock %}
+
+{% block content %}
+<!-- Фильтры -->
+<div class="card" style="margin-bottom:20px">
+  <form method="GET" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap">
+    <div class="form-group" style="margin:0; flex:1; min-width:120px">
+      <label>Год</label>
+      <select name="year">
+        <option value="">Все</option>
+        {% for y in years %}
+          <option value="{{ y }}" {{ 'selected' if year == y }}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0; flex:1; min-width:140px">
+      <label>Месяц</label>
+      <select name="month">
+        <option value="">Все</option>
+        {% for num, name in months.items() %}
+          <option value="{{ num }}" {{ 'selected' if month == num }}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0; flex:1; min-width:160px">
+      <label>Раздел</label>
+      <select name="section">
+        <option value="">Все</option>
+        {% for s in sections %}
+          <option value="{{ s }}" {{ 'selected' if section == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="height:40px">Применить</button>
+    <a href="{{ url_for('transactions') }}" class="btn btn-ghost" style="height:40px">Сбросить</a>
+    <a href="{{ url_for('add_transaction') }}" class="btn btn-primary" style="height:40px; margin-left:auto">
+      ➕ Добавить
+    </a>
+  </form>
+</div>
+
+<!-- Итого -->
+{% if total %}
+<div style="font-size:0.83rem; color:var(--muted); margin-bottom:12px">
+  Найдено: <b style="color:var(--text)">{{ total }}</b> транзакций
+</div>
+{% endif %}
+
+<!-- Таблица -->
+<div class="card" style="padding:0; overflow:hidden">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Категория</th>
+          <th>Раздел</th>
+          <th>Место</th>
+          <th style="text-align:right">Сумма</th>
+          <th style="text-align:right">₽</th>
+          <th>Тип</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td style="color:var(--muted); white-space:nowrap">{{ r.date_str }}</td>
+          <td style="font-weight:500">{{ r.category }}</td>
+          <td style="color:var(--muted); font-size:0.82rem">{{ r.section }}</td>
+          <td style="color:var(--muted); font-size:0.85rem; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+            {{ r.merchant or '—' }}
+          </td>
+          <td style="text-align:right; white-space:nowrap; font-weight:500">
+            {{ "{:,.0f}".format(r.amount | float) }} {{ r.sym }}
+          </td>
+          <td style="text-align:right; white-space:nowrap; color:var(--muted); font-size:0.85rem">
+            {% if r.currency != 'RUB' %}
+              {{ "{:,.0f}".format(r.amount_rub | float) }} ₽
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if r.tx_type == 'Доход' %}
+              <span class="tag tag-income">Доход</span>
+            {% elif r.tx_type == 'Актив' %}
+              <span class="tag tag-asset">Актив</span>
+            {% else %}
+              <span class="tag tag-expense">Расход</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="POST" action="{{ url_for('delete_transaction', tx_id=r.id) }}"
+                  onsubmit="return confirm('Удалить транзакцию?')">
+              <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" style="text-align:center; color:var(--muted); padding:48px">
+            Транзакций не найдено.
+            <a href="{{ url_for('add_transaction') }}" style="color:var(--accent)">Добавить первую →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Пагинация -->
+{% if pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+    <a class="page-btn" href="?page={{ page-1 }}&year={{ year or '' }}&month={{ month or '' }}&section={{ section or '' }}">←</a>
+  {% endif %}
+  {% for p in range(1, pages+1) %}
+    {% if p == page or (p >= page-2 and p <= page+2) or p == 1 or p == pages %}
+      <a class="page-btn {{ 'active' if p == page }}"
+         href="?page={{ p }}&year={{ year or '' }}&month={{ month or '' }}&section={{ section or '' }}">
+        {{ p }}
+      </a>
+    {% elif p == page-3 or p == page+3 %}
+      <span style="color:var(--muted); padding:0 4px">…</span>
+    {% endif %}
+  {% endfor %}
+  {% if page < pages %}
+    <a class="page-btn" href="?page={{ page+1 }}&year={{ year or '' }}&month={{ month or '' }}&section={{ section or '' }}">→</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

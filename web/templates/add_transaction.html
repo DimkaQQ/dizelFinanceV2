@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Добавить транзакцию — DizelFinance{% endblock %}
+{% block page_title %}Новая транзакция{% endblock %}
+
+{% block extra_css %}
+<style>
+  .section-btn {
+    background: var(--bg3);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: left;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-btn:hover { border-color: var(--accent); }
+  .section-btn.selected {
+    border-color: var(--accent);
+    background: rgba(124,106,255,0.08);
+  }
+  .section-btn .s-icon { font-size: 1.3rem; }
+  .section-btn .s-name { font-weight: 600; font-size: 0.9rem; }
+  .section-btn .s-count { font-size: 0.75rem; color: var(--muted); }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .cat-btn {
+    background: var(--bg3);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .cat-btn:hover { border-color: var(--accent); background: rgba(124,106,255,0.06); }
+  .cat-btn.selected {
+    border-color: var(--accent);
+    background: rgba(124,106,255,0.12);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .step { display: none; }
+  .step.active { display: block; }
+
+  .step-indicator {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .step-dot {
+    height: 4px;
+    border-radius: 99px;
+    flex: 1;
+    background: var(--border);
+    transition: background 0.25s;
+  }
+  .step-dot.done { background: var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:700px">
+  <div class="step-indicator" id="stepDots">
+    <div class="step-dot" id="dot1"></div>
+    <div class="step-dot" id="dot2"></div>
+    <div class="step-dot" id="dot3"></div>
+  </div>
+
+  <form method="POST" id="txForm">
+    <input type="hidden" name="section"  id="fSection">
+    <input type="hidden" name="category" id="fCategory">
+
+    <!-- Шаг 1: Раздел -->
+    <div class="step active" id="step1">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">Шаг 1 — Выберите раздел</div>
+        <div class="grid grid-2" id="sectionGrid">
+          {% for sec_name, sec_info in sections.items() %}
+          <button type="button" class="section-btn"
+                  data-section="{{ sec_name }}"
+                  onclick="selectSection(this)">
+            <span class="s-icon">{{ sec_info.icon }}</span>
+            <div>
+              <div class="s-name">{{ sec_name }}</div>
+              <div class="s-count">{{ sec_info.categories | length }} категорий</div>
+            </div>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Шаг 2: Категория -->
+    <div class="step" id="step2">
+      <div class="card">
+        <div class="card-title" id="catTitle" style="margin-bottom:12px">Шаг 2 — Категория</div>
+        <div class="cat-grid" id="catGrid"></div>
+        <div style="margin-top:16px">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="goStep(1)">← Назад</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Шаг 3: Детали -->
+    <div class="step" id="step3">
+      <div class="card">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px">
+          <div id="selBadge" style="
+            background:rgba(124,106,255,0.12);
+            border:1px solid rgba(124,106,255,0.3);
+            color:var(--accent);
+            border-radius:10px;
+            padding:6px 14px;
+            font-size:0.85rem;
+            font-weight:600
+          "></div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label>Сумма *</label>
+            <input type="number" name="amount" step="0.01" min="0.01" required
+                   placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label>Валюта</label>
+            <select name="currency">
+              {% for c in currencies %}
+                <option value="{{ c }}" {{ 'selected' if c == 'RUB' }}>{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Дата *</label>
+          <input type="date" name="date" value="{{ today }}" required>
+        </div>
+
+        <div class="form-group">
+          <label>Место / Магазин</label>
+          <input type="text" name="merchant" placeholder="Пятёрочка, Яндекс...">
+        </div>
+
+        <div class="form-group">
+          <label>Комментарий</label>
+          <input type="text" name="comment" placeholder="Опционально">
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:8px">
+          <button type="button" class="btn btn-ghost" onclick="goStep(2)">← Назад</button>
+          <button type="submit" class="btn btn-primary" style="flex:1">
+            ✅ Записать транзакцию
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+const SECTIONS = {{ sections | tojson }};
+let currentStep = 1;
+
+function updateDots(step) {
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById('dot' + i).classList.toggle('done', i <= step);
+  }
+}
+
+function goStep(n) {
+  document.querySelectorAll('.step').forEach((el, i) => {
+    el.classList.toggle('active', i + 1 === n);
+  });
+  currentStep = n;
+  updateDots(n);
+}
+
+function selectSection(btn) {
+  document.querySelectorAll('.section-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const sec = btn.dataset.section;
+  document.getElementById('fSection').value = sec;
+
+  // Строим сетку категорий
+  const info = SECTIONS[sec];
+  document.getElementById('catTitle').textContent = `Шаг 2 — Категория (${sec})`;
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = '';
+  (info.categories || []).forEach(cat => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cat-btn';
+    b.textContent = cat;
+    b.onclick = () => selectCategory(b, cat, sec);
+    grid.appendChild(b);
+  });
+  goStep(2);
+}
+
+function selectCategory(btn, cat, sec) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('fCategory').value = cat;
+  document.getElementById('selBadge').textContent = sec + ' → ' + cat;
+  setTimeout(() => goStep(3), 250);
+}
+
+updateDots(1);
+</script>
+{% endblock %}
