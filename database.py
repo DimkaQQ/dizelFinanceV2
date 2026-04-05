@@ -414,3 +414,108 @@ def _parse_date(date_str: str):
         except ValueError:
             continue
     return datetime.now().date()
+
+def get_monthly_summary_year(user_id: int, year: int) -> list[dict]:
+    """Сводка по каждому месяцу года."""
+    sql = """
+        SELECT
+            EXTRACT(MONTH FROM date)::int AS month,
+            SUM(amount_rub) FILTER (WHERE tx_type='Доход')  AS income,
+            SUM(amount_rub) FILTER (WHERE tx_type='Расход') AS expense,
+            SUM(amount_rub) FILTER (WHERE tx_type='Актив')  AS assets,
+            COUNT(*) AS cnt
+        FROM transactions
+        WHERE user_id=%s AND EXTRACT(YEAR FROM date)=%s
+        GROUP BY month
+        ORDER BY month
+    """
+    with db() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, (user_id, year))
+            return [dict(r) for r in cur.fetchall()]
+ 
+ 
+def get_month_expenses_list(user_id: int, year: int, month: int,
+                             limit: int = 10, offset: int = 0) -> list[dict]:
+    """Все расходы за месяц постранично."""
+    sql = """
+        SELECT id, date, category, section, amount, currency, amount_rub,
+               merchant, tx_type
+        FROM transactions
+        WHERE user_id=%s
+          AND EXTRACT(YEAR  FROM date)=%s
+          AND EXTRACT(MONTH FROM date)=%s
+          AND tx_type='Расход'
+        ORDER BY date DESC, created_at DESC
+        LIMIT %s OFFSET %s
+    """
+    with db() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, (user_id, year, month, limit, offset))
+            return [dict(r) for r in cur.fetchall()]
+ 
+ 
+def count_month_expenses(user_id: int, year: int, month: int) -> int:
+    sql = """
+        SELECT COUNT(*) FROM transactions
+        WHERE user_id=%s
+          AND EXTRACT(YEAR  FROM date)=%s
+          AND EXTRACT(MONTH FROM date)=%s
+          AND tx_type='Расход'
+    """
+    with db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (user_id, year, month))
+            return cur.fetchone()[0]
+ 
+ 
+def get_compare_months(user_id: int,
+                        year1: int, month1: int,
+                        year2: int, month2: int) -> dict:
+    """Сравнение двух месяцев по разделам."""
+    def _fetch(y, m):
+        sql = """
+            SELECT section,
+                   SUM(amount_rub) FILTER (WHERE tx_type='Доход')  AS income,
+                   SUM(amount_rub) FILTER (WHERE tx_type='Расход') AS expense,
+                   COUNT(*) AS cnt
+            FROM transactions
+            WHERE user_id=%s
+              AND EXTRACT(YEAR  FROM date)=%s
+              AND EXTRACT(MONTH FROM date)=%s
+            GROUP BY section
+        """
+        with db() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, (user_id, y, m))
+                return {r["section"]: dict(r) for r in cur.fetchall()}
+ 
+    d1 = _fetch(year1, month1)
+    d2 = _fetch(year2, month2)
+    all_sections = set(d1) | set(d2)
+    result = []
+    for sec in all_sections:
+        r1 = d1.get(sec, {})
+        r2 = d2.get(sec, {})
+        exp1 = float(r1.get("expense") or 0)
+        exp2 = float(r2.get("expense") or 0)
+        inc1 = float(r1.get("income")  or 0)
+        inc2 = float(r2.get("income")  or 0)
+        result.append({
+            "section": sec,
+            "expense1": exp1, "expense2": exp2,
+            "income1":  inc1, "income2":  inc2,
+            "exp_diff": exp2 - exp1,
+            "exp_pct":  round((exp2 - exp1) / exp1 * 100, 1) if exp1 else 0,
+        })
+    return {
+        "sections": sorted(result, key=lambda x: x["expense1"], reverse=True),
+        "total1": {
+            "income":  sum(float(v.get("income")  or 0) for v in d1.values()),
+            "expense": sum(float(v.get("expense") or 0) for v in d1.values()),
+        },
+        "total2": {
+            "income":  sum(float(v.get("income")  or 0) for v in d2.values()),
+            "expense": sum(float(v.get("expense") or 0) for v in d2.values()),
+        },
+    }

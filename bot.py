@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-DizelFinance Bot v3 — aiogram 3, PostgreSQL
+DizelFinance Bot v3 — aiogram 3, PostgreSQL, полный дашборд
 """
 
 import logging
 import uuid
 import asyncio
+import io
 from datetime import datetime
 
-from aiogram import Bot, Dispatcher, F, Router
+from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup, default_state
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
-    Message, CallbackQuery,
+    Message, CallbackQuery, BufferedInputFile,
     ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
     InlineKeyboardMarkup, InlineKeyboardButton,
 )
@@ -49,7 +50,7 @@ pending: dict = {}
 pdf_sessions: dict = {}
 
 # ══════════════════════════════════════════════════════════════════════════════
-# FSM состояния
+# FSM
 # ══════════════════════════════════════════════════════════════════════════════
 
 class TxForm(StatesGroup):
@@ -66,6 +67,10 @@ class TxForm(StatesGroup):
 class PDFReview(StatesGroup):
     reviewing = State()
 
+class CompareForm(StatesGroup):
+    pick_month1 = State()
+    pick_month2 = State()
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Клавиатуры
 # ══════════════════════════════════════════════════════════════════════════════
@@ -73,8 +78,17 @@ class PDFReview(StatesGroup):
 def kb_main() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="➕ Добавить транзакцию")],
-        [KeyboardButton(text="📋 Транзакции"), KeyboardButton(text="📊 Аналитика")],
-        [KeyboardButton(text="📥 Черновики"),  KeyboardButton(text="⚙️ Настройки")],
+        [KeyboardButton(text="📊 Дашборд"),    KeyboardButton(text="📈 Аналитика")],
+        [KeyboardButton(text="📋 Транзакции"), KeyboardButton(text="📥 Черновики")],
+        [KeyboardButton(text="⚙️ Настройки")],
+    ], resize_keyboard=True)
+
+def kb_analytics() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="📊 За этот месяц"), KeyboardButton(text="📅 Выбрать месяц")],
+        [KeyboardButton(text="📈 Сравнить месяцы"), KeyboardButton(text="🏆 Топ-10 категорий")],
+        [KeyboardButton(text="💸 Все расходы"), KeyboardButton(text="📄 Выписка PDF")],
+        [KeyboardButton(text="⏪ Главное меню")],
     ], resize_keyboard=True)
 
 def kb_tx_type() -> ReplyKeyboardMarkup:
@@ -105,7 +119,6 @@ SECTION_LABEL = {
 
 def kb_categories(section: str) -> ReplyKeyboardMarkup:
     cats = SECTIONS.get(section, {}).get("categories", [])
-    # по 2 кнопки в ряд для удобства
     rows = []
     for i in range(0, len(cats), 2):
         row = [KeyboardButton(text=cats[i])]
@@ -167,7 +180,7 @@ def kb_quick_cats(tx_id: str, category: str, section: str) -> InlineKeyboardMark
     cats = SECTIONS.get(section, {}).get("categories", [])
     alts = [c for c in cats if c != category][:3]
     rows = [[InlineKeyboardButton(
-        text=f"🤖 {category} ✓",
+        text=f"✅ {category}",
         callback_data=f"qc|{tx_id}|{category}|{section}"
     )]]
     for alt in alts:
@@ -176,6 +189,57 @@ def kb_quick_cats(tx_id: str, category: str, section: str) -> InlineKeyboardMark
         InlineKeyboardButton(text="📋 Все категории", callback_data=f"qa|{tx_id}"),
         InlineKeyboardButton(text="❌ Пропустить",    callback_data="qn|skip"),
     ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def kb_month_picker(prefix: str) -> InlineKeyboardMarkup:
+    """Клавиатура выбора месяца (текущий год + прошлый)."""
+    now   = datetime.now()
+    rows  = []
+    months_row = []
+    for m in range(1, 13):
+        months_row.append(InlineKeyboardButton(
+            text=MONTH_NAMES[m][:3],
+            callback_data=f"{prefix}|{now.year}|{m}"
+        ))
+        if len(months_row) == 3:
+            rows.append(months_row)
+            months_row = []
+    if months_row:
+        rows.append(months_row)
+    # Прошлый год
+    prev_year = now.year - 1
+    rows.append([InlineKeyboardButton(
+        text=f"── {prev_year} ──", callback_data="noop"
+    )])
+    py_row = []
+    for m in range(1, 13):
+        py_row.append(InlineKeyboardButton(
+            text=MONTH_NAMES[m][:3],
+            callback_data=f"{prefix}|{prev_year}|{m}"
+        ))
+        if len(py_row) == 3:
+            rows.append(py_row)
+            py_row = []
+    if py_row:
+        rows.append(py_row)
+    rows.append([InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_pick")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def kb_expenses_nav(year: int, month: int, offset: int,
+                     total: int, per: int = 10) -> InlineKeyboardMarkup:
+    rows = []
+    nav  = []
+    if offset > 0:
+        nav.append(InlineKeyboardButton(
+            text="◀️ Назад", callback_data=f"exp|{year}|{month}|{offset-per}"
+        ))
+    if offset + per < total:
+        nav.append(InlineKeyboardButton(
+            text="Вперёд ▶️", callback_data=f"exp|{year}|{month}|{offset+per}"
+        ))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton(text="❌ Закрыть", callback_data="close_exp")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -190,30 +254,23 @@ def build_preview(data: dict) -> str:
     sym        = CURRENCY_SYMBOLS.get(cur, cur)
     tx_type    = data.get("tx_type", "Расход")
     icon       = "💰" if tx_type == "Доход" else ("🏦" if tx_type == "Актив" else "💸")
-    section    = data.get("section", "")
-    category   = data.get("category", "")
-    date       = data.get("date", "")
     merchant   = data.get("merchant", "")
 
     text = (
-        f"╔══════════════════╗\n"
-        f"  📝 Новая транзакция\n"
-        f"╚══════════════════╝\n\n"
+        f"📝 <b>Предварительный просмотр</b>\n\n"
         f"{icon} <b>{tx_type}</b>\n"
-        f"📅 <b>Дата:</b> {date}\n"
-        f"📂 <b>Раздел:</b> {section}\n"
-        f"🏷 <b>Категория:</b> {category}\n"
+        f"📅 {data.get('date', '')}\n"
+        f"📂 {data.get('section', '')} → <b>{data.get('category', '')}</b>\n"
     )
     if merchant:
-        text += f"🏪 <b>Место:</b> {merchant}\n"
+        text += f"🏪 {merchant}\n"
     text += "\n"
     if cur == "RUB":
-        text += f"💰 <b>Сумма:</b> <code>{amount:,.0f} ₽</code>\n"
+        text += f"💰 <code>{amount:,.0f} ₽</code>\n"
     else:
         text += (
-            f"💰 <b>Сумма:</b> <code>{amount:,.2f} {sym}</code>\n"
-            f"💱 <b>Курс:</b> <code>{rate:,.4f} ₽/{sym}</code>\n"
-            f"🔄 <b>В рублях:</b> <code>{amount_rub:,.0f} ₽</code>\n"
+            f"💰 <code>{amount:,.2f} {sym}</code>\n"
+            f"🔄 <code>{amount_rub:,.0f} ₽</code> (курс {rate:,.4f})\n"
         )
     return text
 
@@ -222,20 +279,247 @@ def build_pdf_preview(tx: dict, idx: int, total: int) -> str:
     sym  = CURRENCY_SYMBOLS.get(cur, cur)
     icon = "💰" if tx.get("tx_type") == "Доход" else "💸"
     text = (
-        f"<b>Транзакция {idx+1} из {total}</b>\n\n"
+        f"<b>{idx+1} / {total}</b>\n\n"
         f"{icon} <b>{tx.get('merchant', '—')}</b>\n"
         f"💰 <code>{float(tx.get('amount',0)):,.2f} {sym}</code>\n"
         f"📅 {tx.get('date','—')}\n"
         f"📂 {tx.get('section','—')} → <b>{tx.get('category','—')}</b>"
     )
     if tx.get("category_hint"):
-        text += f"\n💡 Банк: <i>{tx['category_hint']}</i>"
+        text += f"\n💡 <i>{tx['category_hint']}</i>"
     if tx.get("is_duplicate"):
-        text += "\n\n⚠️ <b>Возможный дубликат!</b>"
+        text += "\n⚠️ <b>Возможный дубликат</b>"
     return text
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Вспомогательные функции
+# Дашборд — генерация текста
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _bar(pct: float, width: int = 12) -> str:
+    filled = int(pct / 100 * width)
+    return "█" * filled + "░" * (width - filled)
+
+def build_dashboard(uid: int, year: int, month: int) -> str:
+    data       = db.get_monthly_summary(uid, year, month)
+    month_name = MONTH_NAMES.get(month, "")
+    top_cats   = db.get_top_categories(uid, year, month, limit=5)
+
+    # Сравнение с прошлым месяцем
+    prev_month = month - 1 if month > 1 else 12
+    prev_year  = year if month > 1 else year - 1
+    prev_data  = db.get_monthly_summary(uid, prev_year, prev_month)
+
+    income  = data["total_income"]
+    expense = data["total_expense"]
+    assets  = data["total_assets"]
+    delta   = data["delta"]
+
+    prev_exp = prev_data["total_expense"]
+    exp_diff = expense - prev_exp
+    exp_pct  = round(exp_diff / prev_exp * 100, 1) if prev_exp else 0
+    exp_vs   = f"{'📈' if exp_diff > 0 else '📉'} {exp_pct:+.1f}% vs {MONTH_NAMES.get(prev_month,'')[:3]}"
+
+    text = (
+        f"📊 <b>Дашборд — {month_name} {year}</b>\n"
+        f"{'─' * 30}\n\n"
+        f"💚 Доходы:   <b>{income:>12,.0f} ₽</b>\n"
+        f"❤️  Расходы: <b>{expense:>12,.0f} ₽</b>  {exp_vs}\n"
+    )
+    if assets:
+        text += f"🏦 Активы:   <b>{assets:>12,.0f} ₽</b>\n"
+    delta_icon = "📈" if delta >= 0 else "⚠️"
+    text += (
+        f"{'─' * 30}\n"
+        f"{delta_icon} Дельта:   <b>{delta:>+12,.0f} ₽</b>\n"
+    )
+
+    # Структура расходов по разделам
+    expense_sections = [
+        r for r in data["sections"]
+        if float(r.get("expense") or 0) > 0
+    ]
+    if expense_sections and expense > 0:
+        text += f"\n<b>Структура расходов:</b>\n"
+        for row in sorted(expense_sections, key=lambda x: float(x.get("expense") or 0), reverse=True):
+            sec  = row.get("section", "")
+            exp  = float(row.get("expense") or 0)
+            pct  = exp / expense * 100
+            icon = SECTIONS.get(sec, {}).get("icon", "📂")
+            text += f"{icon} {sec[:16]:<16} {_bar(pct, 8)} {pct:4.0f}%  {exp:,.0f} ₽\n"
+
+    # Топ-5 категорий
+    if top_cats:
+        text += f"\n<b>Топ расходов:</b>\n"
+        max_val = float(top_cats[0]["total"]) if top_cats else 1
+        for i, c in enumerate(top_cats):
+            total = float(c["total"])
+            pct   = total / max_val * 100
+            text += f"{i+1}. {c['category'][:18]:<18} <code>{total:>8,.0f} ₽</code>\n"
+
+    return text
+
+def build_compare(uid: int, year1: int, month1: int, year2: int, month2: int) -> str:
+    cmp  = db.get_compare_months(uid, year1, month1, year2, month2)
+    mn1  = f"{MONTH_NAMES.get(month1,'')[:3]} {year1}"
+    mn2  = f"{MONTH_NAMES.get(month2,'')[:3]} {year2}"
+
+    t1 = cmp["total1"]
+    t2 = cmp["total2"]
+
+    text = (
+        f"📈 <b>Сравнение: {mn1} vs {mn2}</b>\n"
+        f"{'─' * 32}\n\n"
+        f"{'':20} {mn1:>10} {mn2:>10}  Δ\n"
+        f"{'─' * 32}\n"
+        f"💚 {'Доходы':<18} {t1['income']:>10,.0f} {t2['income']:>10,.0f}  "
+        f"{t2['income']-t1['income']:>+8,.0f}\n"
+        f"❤️  {'Расходы':<17} {t1['expense']:>10,.0f} {t2['expense']:>10,.0f}  "
+        f"{t2['expense']-t1['expense']:>+8,.0f}\n"
+        f"{'─' * 32}\n\n"
+        f"<b>По разделам (расходы):</b>\n"
+    )
+    for row in cmp["sections"]:
+        if row["expense1"] == 0 and row["expense2"] == 0:
+            continue
+        sec  = row["section"]
+        icon = SECTIONS.get(sec, {}).get("icon", "📂")
+        diff = row["exp_diff"]
+        pct  = row["exp_pct"]
+        arrow = "📈" if diff > 0 else ("📉" if diff < 0 else "➡️")
+        text += (
+            f"{icon} {sec[:14]:<14} "
+            f"{row['expense1']:>8,.0f} → {row['expense2']:>8,.0f}  "
+            f"{arrow}{pct:>+5.0f}%\n"
+        )
+    return text
+
+def build_expenses_list(uid: int, year: int, month: int,
+                         offset: int = 0, per: int = 10) -> tuple[str, int]:
+    records = db.get_month_expenses_list(uid, year, month, limit=per, offset=offset)
+    total   = db.count_month_expenses(uid, year, month)
+    month_name = MONTH_NAMES.get(month, "")
+
+    text = (
+        f"💸 <b>Расходы — {month_name} {year}</b>\n"
+        f"Показано {offset+1}–{min(offset+per, total)} из {total}\n"
+        f"{'─' * 30}\n"
+    )
+    for r in records:
+        cur  = r.get("currency", "RUB")
+        sym  = CURRENCY_SYMBOLS.get(cur, cur)
+        amt  = float(r.get("amount", 0))
+        a_rub = float(r.get("amount_rub", amt))
+        d    = r.get("date", "")
+        if hasattr(d, "strftime"): d = d.strftime("%d.%m")
+        merchant = r.get("merchant", "")
+        cat  = r.get("category", "")
+        text += f"<b>{d}</b> {cat}"
+        if merchant:
+            text += f" · <i>{merchant[:15]}</i>"
+        text += f"\n   <code>{amt:,.0f} {sym}"
+        if cur != "RUB":
+            text += f" ({a_rub:,.0f} ₽)"
+        text += "</code>\n"
+    return text, total
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Генерация PDF выписки
+# ══════════════════════════════════════════════════════════════════════════════
+
+def generate_pdf_report(uid: int, year: int, month: int) -> bytes:
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+    except ImportError:
+        raise ImportError("reportlab не установлен. Запусти: pip install reportlab")
+
+    buf        = io.BytesIO()
+    doc        = SimpleDocTemplate(buf, pagesize=A4)
+    styles     = getSampleStyleSheet()
+    story      = []
+    month_name = MONTH_NAMES.get(month, "")
+
+    # Заголовок
+    title_style = ParagraphStyle("title", parent=styles["Title"], fontSize=16)
+    story.append(Paragraph(f"DizelFinance — {month_name} {year}", title_style))
+    story.append(Spacer(1, 12))
+
+    # Сводка
+    data_summary = db.get_monthly_summary(uid, year, month)
+    summary_data = [
+        ["Показатель", "Сумма (₽)"],
+        ["💚 Доходы",  f"{data_summary['total_income']:,.0f}"],
+        ["❤️ Расходы", f"{data_summary['total_expense']:,.0f}"],
+        ["📊 Дельта",  f"{data_summary['delta']:+,.0f}"],
+    ]
+    if data_summary["total_assets"]:
+        summary_data.append(["🏦 Активы", f"{data_summary['total_assets']:,.0f}"])
+
+    t = Table(summary_data, colWidths=[200, 150])
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#1a1a24")),
+        ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
+        ("FONTSIZE",   (0,0), (-1,-1), 11),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f5f5f5")]),
+        ("GRID",       (0,0), (-1,-1), 0.5, colors.grey),
+        ("ALIGN",      (1,0), (1,-1), "RIGHT"),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 16))
+
+    # Топ категорий
+    story.append(Paragraph("Топ категорий расходов", styles["Heading2"]))
+    top = db.get_top_categories(uid, year, month, limit=10)
+    if top:
+        cat_data = [["Категория", "Сумма (₽)"]]
+        for c in top:
+            cat_data.append([c["category"], f"{float(c['total']):,.0f}"])
+        t2 = Table(cat_data, colWidths=[250, 150])
+        t2.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#6366f1")),
+            ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
+            ("FONTSIZE",   (0,0), (-1,-1), 10),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f0f0ff")]),
+            ("GRID",       (0,0), (-1,-1), 0.5, colors.grey),
+            ("ALIGN",      (1,0), (1,-1), "RIGHT"),
+        ]))
+        story.append(t2)
+    story.append(Spacer(1, 16))
+
+    # Все транзакции
+    story.append(Paragraph("Все транзакции", styles["Heading2"]))
+    records = db.get_month_expenses_list(uid, year, month, limit=500, offset=0)
+    if records:
+        tx_data = [["Дата", "Категория", "Место", "Сумма (₽)"]]
+        for r in records:
+            d = r.get("date", "")
+            if hasattr(d, "strftime"): d = d.strftime("%d.%m.%Y")
+            tx_data.append([
+                str(d),
+                r.get("category", ""),
+                (r.get("merchant") or "")[:20],
+                f"{float(r.get('amount_rub', r.get('amount',0))):,.0f}",
+            ])
+        t3 = Table(tx_data, colWidths=[70, 130, 130, 90])
+        t3.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#374151")),
+            ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
+            ("FONTSIZE",   (0,0), (-1,-1), 8),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f9f9f9")]),
+            ("GRID",       (0,0), (-1,-1), 0.3, colors.lightgrey),
+            ("ALIGN",      (3,0), (3,-1), "RIGHT"),
+        ]))
+        story.append(t3)
+
+    doc.build(story)
+    return buf.getvalue()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
 def allowed(user_id: int) -> bool:
@@ -274,9 +558,9 @@ async def _send_summary(msg: Message, enriched: list, label: str):
     new_ = len(enriched) - dup
     await msg.answer(
         f"✅ <b>{label} обработан!</b>\n\n"
-        f"📄 Транзакций найдено: <b>{len(enriched)}</b>\n"
+        f"📄 Найдено: <b>{len(enriched)}</b>\n"
         f"🆕 Новых: <b>{new_}</b>\n"
-        f"⚠️ Возможных дубликатов: <b>{dup}</b>\n\n"
+        f"⚠️ Дубликатов: <b>{dup}</b>\n\n"
         f"Что делаем?",
         reply_markup=kb_pdf_action()
     )
@@ -292,9 +576,7 @@ async def show_pdf_tx(msg: Message, uid: int, idx: int):
         skipped = sess.get("skipped_count", 0)
         pdf_sessions.pop(uid, None)
         await msg.answer(
-            f"🏁 <b>Готово!</b>\n\n"
-            f"✅ Записано: <b>{saved}</b>\n"
-            f"⏭ Пропущено: <b>{skipped}</b>",
+            f"🏁 <b>Готово!</b>\n✅ Записано: {saved}\n⏭ Пропущено: {skipped}",
             reply_markup=kb_main()
         )
         return
@@ -327,21 +609,20 @@ async def _send_single_tx(msg: Message, tx: dict):
         "id": str(uuid.uuid4())[:8], "a": amount, "m": merchant, "d": date,
         "cur": cur, "rate": rate, "a_rub": a_rub, "tx_type": tx_type,
     })
-    hint_line = f"\n💡 Банк: <i>{hint}</i>" if hint else ""
-    sym_line  = f"{amount:,.2f} {sym}" if cur != "RUB" else f"{amount:,.0f} ₽"
+    sym_line  = f"{amount:,.0f} ₽" if cur == "RUB" else f"{amount:,.2f} {sym}"
+    hint_line = f"\n💡 <i>{hint}</i>" if hint else ""
     await msg.answer(
         f"📸 <b>Распознано</b>\n\n"
         f"{icon} {tx_type} | <code>{sym_line}</code>\n"
         f"🏪 {merchant}\n"
         f"📅 {date}{hint_line}\n\n"
-        f"🤖 Предлагаю: <b>{sec} → {cat}</b>\n"
-        f"Подтвердите или выберите другую категорию:",
+        f"🤖 <b>{sec} → {cat}</b>\n"
+        f"Подтвердите или выберите другую:",
         reply_markup=kb_quick_cats(tx_id, cat, sec)
     )
 
 def _notify_admin(text: str):
-    if not ADMIN_ID:
-        return
+    if not ADMIN_ID: return
     try:
         req.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
@@ -365,17 +646,15 @@ async def cmd_start(msg: Message, state: FSMContext):
         "👋 <b>DizelFinance v3</b>\n\n"
         "Личный финансовый трекер.\n\n"
         "<b>Как добавить транзакцию:</b>\n"
-        "📸 Скриншот банка → AI распознает\n"
-        "📄 PDF выписка → автопарсинг\n"
-        "📊 Excel выписка → автопарсинг\n"
-        "💬 Текст SMS → автораспознавание\n"
-        "✏️ Кнопка «Добавить транзакцию»\n\n"
-        "Выберите действие:",
+        "📸 Скриншот банка\n"
+        "📄 PDF / Excel выписка\n"
+        "💬 Текст SMS\n"
+        "✏️ Кнопка «Добавить транзакцию»",
         reply_markup=kb_main()
     )
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Главное меню — кнопки работают из ЛЮБОГО состояния
+# Главное меню
 # ══════════════════════════════════════════════════════════════════════════════
 
 @dp.message(StateFilter("*"), F.text == "➕ Добавить транзакцию")
@@ -383,10 +662,256 @@ async def new_tx(msg: Message, state: FSMContext):
     if not allowed(msg.from_user.id): return
     await state.clear()
     await state.set_state(TxForm.tx_type)
-    await msg.answer(
-        "Выберите тип операции:",
-        reply_markup=kb_tx_type()
+    await msg.answer("Тип операции:", reply_markup=kb_tx_type())
+
+@dp.message(StateFilter("*"), F.text == "⏪ Главное меню")
+async def go_main(msg: Message, state: FSMContext):
+    await state.clear()
+    await msg.answer("Главное меню:", reply_markup=kb_main())
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Дашборд
+# ══════════════════════════════════════════════════════════════════════════════
+
+@dp.message(StateFilter("*"), F.text == "📊 Дашборд")
+async def dashboard(msg: Message, state: FSMContext):
+    if not allowed(msg.from_user.id): return
+    now = datetime.now()
+    await msg.answer("⏳ Загружаю дашборд...")
+    text = build_dashboard(msg.from_user.id, now.year, now.month)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="💸 Все расходы",    callback_data=f"exp|{now.year}|{now.month}|0"),
+            InlineKeyboardButton(text="🏆 Топ-10",         callback_data=f"top|{now.year}|{now.month}"),
+        ],
+        [
+            InlineKeyboardButton(text="📅 Другой месяц",  callback_data="pick_dash"),
+            InlineKeyboardButton(text="📄 PDF выписка",   callback_data=f"rpdf|{now.year}|{now.month}"),
+        ],
+        [InlineKeyboardButton(text="📈 Сравнить месяцы", callback_data="start_compare")],
+    ])
+    await msg.answer(text, reply_markup=kb)
+
+@dp.callback_query(F.data.startswith("top|"))
+async def cb_top(cb: CallbackQuery):
+    _, year, month = cb.data.split("|")
+    uid  = cb.from_user.id
+    cats = db.get_top_categories(uid, int(year), int(month), limit=10)
+    if not cats:
+        await cb.answer("Нет данных", show_alert=True)
+        return
+    month_name = MONTH_NAMES.get(int(month), "")
+    total = sum(float(c["total"]) for c in cats)
+    text  = f"🏆 <b>Топ-10 расходов — {month_name} {year}</b>\n\n"
+    max_v = float(cats[0]["total"])
+    for i, c in enumerate(cats):
+        v   = float(c["total"])
+        pct = v / total * 100
+        bar = _bar(v / max_v * 100, 10)
+        text += f"{i+1:2}. {c['category'][:20]:<20}\n    {bar} {pct:.1f}%  <code>{v:,.0f} ₽</code>\n"
+    await cb.message.answer(text)
+    await cb.answer()
+
+@dp.callback_query(F.data.startswith("rpdf|"))
+async def cb_report_pdf(cb: CallbackQuery):
+    _, year, month = cb.data.split("|")
+    uid = cb.from_user.id
+    await cb.message.answer("⏳ Генерирую PDF выписку...")
+    try:
+        pdf_bytes  = generate_pdf_report(uid, int(year), int(month))
+        month_name = MONTH_NAMES.get(int(month), "")
+        filename   = f"DizelFinance_{month_name}_{year}.pdf"
+        await bot.send_document(
+            cb.from_user.id,
+            document=BufferedInputFile(pdf_bytes, filename=filename),
+            caption=f"📄 Выписка за {month_name} {year}"
+        )
+    except ImportError:
+        await cb.message.answer(
+            "❌ Для PDF нужен reportlab:\n<code>pip install reportlab</code>"
+        )
+    except Exception as e:
+        await cb.message.answer(f"❌ Ошибка генерации PDF: {e}")
+    await cb.answer()
+
+@dp.callback_query(F.data == "pick_dash")
+async def cb_pick_dash(cb: CallbackQuery):
+    await cb.message.answer(
+        "Выберите месяц для дашборда:",
+        reply_markup=kb_month_picker("dash")
     )
+    await cb.answer()
+
+@dp.callback_query(F.data.startswith("dash|"))
+async def cb_dash_month(cb: CallbackQuery):
+    _, year, month = cb.data.split("|")
+    uid  = cb.from_user.id
+    y, m = int(year), int(month)
+    text = build_dashboard(uid, y, m)
+    kb   = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="💸 Все расходы", callback_data=f"exp|{y}|{m}|0"),
+            InlineKeyboardButton(text="🏆 Топ-10",      callback_data=f"top|{y}|{m}"),
+        ],
+        [InlineKeyboardButton(text="📄 PDF выписка",   callback_data=f"rpdf|{y}|{m}")],
+    ])
+    await cb.message.answer(text, reply_markup=kb)
+    await cb.answer()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Все расходы списком
+# ══════════════════════════════════════════════════════════════════════════════
+
+@dp.callback_query(F.data.startswith("exp|"))
+async def cb_expenses(cb: CallbackQuery):
+    parts  = cb.data.split("|")
+    year   = int(parts[1])
+    month  = int(parts[2])
+    offset = int(parts[3])
+    uid    = cb.from_user.id
+    per    = 10
+    text, total = build_expenses_list(uid, year, month, offset=offset, per=per)
+    if total == 0:
+        await cb.answer("Нет расходов за этот период", show_alert=True)
+        return
+    await cb.message.answer(text, reply_markup=kb_expenses_nav(year, month, offset, total, per))
+    await cb.answer()
+
+@dp.callback_query(F.data == "close_exp")
+async def cb_close_exp(cb: CallbackQuery):
+    await cb.message.delete()
+    await cb.answer()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Сравнение месяцев
+# ══════════════════════════════════════════════════════════════════════════════
+
+@dp.callback_query(F.data == "start_compare")
+async def cb_start_compare(cb: CallbackQuery, state: FSMContext):
+    await state.set_state(CompareForm.pick_month1)
+    await cb.message.answer(
+        "Выберите <b>первый</b> месяц для сравнения:",
+        reply_markup=kb_month_picker("cmp1")
+    )
+    await cb.answer()
+
+@dp.message(StateFilter("*"), F.text == "📈 Сравнить месяцы")
+async def compare_months_btn(msg: Message, state: FSMContext):
+    if not allowed(msg.from_user.id): return
+    await state.set_state(CompareForm.pick_month1)
+    await msg.answer(
+        "Выберите <b>первый</b> месяц:",
+        reply_markup=kb_month_picker("cmp1")
+    )
+
+@dp.callback_query(F.data.startswith("cmp1|"))
+async def cb_cmp1(cb: CallbackQuery, state: FSMContext):
+    _, year, month = cb.data.split("|")
+    await state.update_data(year1=int(year), month1=int(month))
+    await state.set_state(CompareForm.pick_month2)
+    mn = MONTH_NAMES.get(int(month), "")
+    await cb.message.answer(
+        f"Первый месяц: <b>{mn} {year}</b>\n\nТеперь выберите <b>второй</b> месяц:",
+        reply_markup=kb_month_picker("cmp2")
+    )
+    await cb.answer()
+
+@dp.callback_query(F.data.startswith("cmp2|"))
+async def cb_cmp2(cb: CallbackQuery, state: FSMContext):
+    _, year, month = cb.data.split("|")
+    data   = await state.get_data()
+    uid    = cb.from_user.id
+    y1, m1 = data.get("year1", datetime.now().year), data.get("month1", datetime.now().month)
+    y2, m2 = int(year), int(month)
+    await state.clear()
+    text = build_compare(uid, y1, m1, y2, m2)
+    await cb.message.answer(text)
+    await cb.answer()
+
+@dp.callback_query(F.data == "cancel_pick")
+async def cb_cancel_pick(cb: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await cb.message.delete()
+    await cb.answer("Отменено")
+
+@dp.callback_query(F.data == "noop")
+async def cb_noop(cb: CallbackQuery):
+    await cb.answer()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Аналитика раздел
+# ══════════════════════════════════════════════════════════════════════════════
+
+@dp.message(StateFilter("*"), F.text == "📈 Аналитика")
+async def analytics_menu(msg: Message, state: FSMContext):
+    if not allowed(msg.from_user.id): return
+    await msg.answer("Выберите тип аналитики:", reply_markup=kb_analytics())
+
+@dp.message(StateFilter("*"), F.text == "📊 За этот месяц")
+async def analytics_this_month(msg: Message, state: FSMContext):
+    if not allowed(msg.from_user.id): return
+    now  = datetime.now()
+    text = build_dashboard(msg.from_user.id, now.year, now.month)
+    await msg.answer(text)
+
+@dp.message(StateFilter("*"), F.text == "📅 Выбрать месяц")
+async def analytics_pick_month(msg: Message, state: FSMContext):
+    await msg.answer("Выберите месяц:", reply_markup=kb_month_picker("dash"))
+
+@dp.message(StateFilter("*"), F.text == "🏆 Топ-10 категорий")
+async def analytics_top10(msg: Message, state: FSMContext):
+    if not allowed(msg.from_user.id): return
+    now  = datetime.now()
+    cats = db.get_top_categories(msg.from_user.id, now.year, now.month, limit=10)
+    if not cats:
+        await msg.answer("Нет данных за этот месяц.", reply_markup=kb_analytics())
+        return
+    month_name = MONTH_NAMES.get(now.month, "")
+    total = sum(float(c["total"]) for c in cats)
+    text  = f"🏆 <b>Топ-10 расходов — {month_name} {now.year}</b>\n\n"
+    max_v = float(cats[0]["total"])
+    for i, c in enumerate(cats):
+        v   = float(c["total"])
+        pct = v / total * 100
+        bar = _bar(v / max_v * 100, 10)
+        text += f"{i+1:2}. {c['category'][:20]:<20}\n    {bar} {pct:.1f}%  <code>{v:,.0f} ₽</code>\n"
+    await msg.answer(text)
+
+@dp.message(StateFilter("*"), F.text == "💸 Все расходы")
+async def analytics_all_expenses(msg: Message, state: FSMContext):
+    if not allowed(msg.from_user.id): return
+    now  = datetime.now()
+    text, total = build_expenses_list(msg.from_user.id, now.year, now.month)
+    if total == 0:
+        await msg.answer("Нет расходов за этот месяц.", reply_markup=kb_analytics())
+        return
+    await msg.answer(
+        text,
+        reply_markup=kb_expenses_nav(now.year, now.month, 0, total)
+    )
+
+@dp.message(StateFilter("*"), F.text == "📄 Выписка PDF")
+async def analytics_pdf(msg: Message, state: FSMContext):
+    if not allowed(msg.from_user.id): return
+    now = datetime.now()
+    await msg.answer("⏳ Генерирую PDF выписку за текущий месяц...")
+    try:
+        pdf_bytes  = generate_pdf_report(msg.from_user.id, now.year, now.month)
+        month_name = MONTH_NAMES.get(now.month, "")
+        filename   = f"DizelFinance_{month_name}_{now.year}.pdf"
+        await bot.send_document(
+            msg.from_user.id,
+            document=BufferedInputFile(pdf_bytes, filename=filename),
+            caption=f"📄 Выписка за {month_name} {now.year}"
+        )
+    except ImportError:
+        await msg.answer("❌ Нужно установить reportlab:\n<code>pip install reportlab</code>")
+    except Exception as e:
+        await msg.answer(f"❌ Ошибка: {e}")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Транзакции
+# ══════════════════════════════════════════════════════════════════════════════
 
 @dp.message(StateFilter("*"), F.text == "📋 Транзакции")
 async def my_txs(msg: Message, state: FSMContext):
@@ -394,10 +919,7 @@ async def my_txs(msg: Message, state: FSMContext):
     uid     = msg.from_user.id
     records = db.get_transactions(uid, limit=10)
     if not records:
-        await msg.answer(
-            "📂 Транзакций пока нет.\n\nДобавьте первую через «➕ Добавить транзакцию»",
-            reply_markup=kb_main()
-        )
+        await msg.answer("📂 Транзакций пока нет.", reply_markup=kb_main())
         return
     text = "📋 <b>Последние 10 транзакций:</b>\n\n"
     for r in records:
@@ -410,63 +932,15 @@ async def my_txs(msg: Message, state: FSMContext):
         if hasattr(d, "strftime"): d = d.strftime("%d.%m.%Y")
         text += f"{icon} <b>{r.get('category','')}</b>"
         if r.get("merchant"):
-            text += f" · {r['merchant']}"
-        text += f"\n"
-        text += f"   📅 {d}  |  {r.get('section','')}\n"
-        text += f"   💰 {amt:,.0f} {sym}"
-        if cur != "RUB": text += f"  ({a_rub:,.0f} ₽)"
-        text += f"\n{'─' * 30}\n"
+            text += f" · <i>{r['merchant'][:15]}</i>"
+        text += f"\n  📅 {d}  💰 {amt:,.0f} {sym}"
+        if cur != "RUB": text += f" ({a_rub:,.0f} ₽)"
+        text += f"\n{'─'*28}\n"
     await msg.answer(text, reply_markup=kb_main())
 
-@dp.message(StateFilter("*"), F.text == "📊 Аналитика")
-async def analytics(msg: Message, state: FSMContext):
-    if not allowed(msg.from_user.id): return
-    uid  = msg.from_user.id
-    now  = datetime.now()
-    data = db.get_monthly_summary(uid, now.year, now.month)
-    month_name = MONTH_NAMES.get(now.month, "")
-
-    if not data["sections"]:
-        await msg.answer(
-            f"📂 Нет данных за {month_name} {now.year}.",
-            reply_markup=kb_main()
-        )
-        return
-
-    text = f"📊 <b>Аналитика — {month_name} {now.year}</b>\n\n"
-    for row in data["sections"]:
-        sec   = row.get("section", "")
-        total = (
-            float(row.get("income")  or 0) +
-            float(row.get("expense") or 0) +
-            float(row.get("assets")  or 0)
-        )
-        icon  = SECTIONS.get(sec, {}).get("icon", "📂")
-        color_total = f"{total:,.0f} ₽"
-        text += f"{icon} <b>{sec}</b>\n"
-        text += f"   {color_total} · {row.get('cnt',0)} транзакций\n\n"
-
-    delta = data["delta"]
-    delta_icon = "📈" if delta >= 0 else "📉"
-    text += (
-        f"{'═' * 30}\n"
-        f"💚 Доходы:    <b>{data['total_income']:,.0f} ₽</b>\n"
-        f"❤️ Расходы:  <b>{data['total_expense']:,.0f} ₽</b>\n"
-        f"{delta_icon} Дельта:    <b>{delta:+,.0f} ₽</b>\n"
-    )
-    if data["total_assets"]:
-        text += f"🏦 Активы:    <b>{data['total_assets']:,.0f} ₽</b>\n"
-
-    # Кнопки для детализации
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="📊 Топ расходов",  callback_data=f"an|top|{now.year}|{now.month}"),
-            InlineKeyboardButton(text="📅 За год",        callback_data=f"an|year|{now.year}|0"),
-        ],
-        [InlineKeyboardButton(text="📈 Тренд по месяцам", callback_data=f"an|trend|{now.year}|0")],
-    ])
-    await msg.answer(text, reply_markup=kb_main())
-    await msg.answer("Детализация:", reply_markup=kb)
+# ══════════════════════════════════════════════════════════════════════════════
+# Черновики
+# ══════════════════════════════════════════════════════════════════════════════
 
 @dp.message(StateFilter("*"), F.text == "📥 Черновики")
 async def show_drafts(msg: Message, state: FSMContext):
@@ -489,88 +963,58 @@ async def show_drafts(msg: Message, state: FSMContext):
     rows.append([InlineKeyboardButton(text="🗑 Очистить все", callback_data="dr|clear")])
     await msg.answer(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
 
+@dp.callback_query(F.data.startswith("dr|"))
+async def cb_draft(cb: CallbackQuery, state: FSMContext):
+    uid    = cb.from_user.id
+    action = cb.data.split("|")[1]
+    if action == "clear":
+        db.drafts_clear(uid)
+        await cb.message.edit_text("🗑 Черновики удалены.")
+        await cb.answer()
+        return
+    drafts = db.drafts_get(uid)
+    draft  = next((d for d in drafts if d["id"] == action), None)
+    if not draft:
+        await cb.message.edit_text("❌ Черновик не найден.")
+        await cb.answer()
+        return
+    db.drafts_remove(action)
+    tx_type = draft.get("tx_type", "Расход")
+    await state.update_data(
+        amount=draft["a"], currency=draft["cur"], rate=draft["rate"],
+        amount_rub=draft["a_rub"], date=draft["d"],
+        merchant=draft["m"], tx_type=tx_type,
+    )
+    sym = CURRENCY_SYMBOLS.get(draft["cur"], "₽")
+    await cb.message.edit_reply_markup(reply_markup=None)
+    await cb.message.answer(
+        f"✅ Продолжаем: <b>{draft['a']:,.0f} {sym}</b> — {draft['m']}\nВыберите раздел:",
+        reply_markup=kb_section(tx_type)
+    )
+    await state.set_state(TxForm.section)
+    await cb.answer()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Настройки
+# ══════════════════════════════════════════════════════════════════════════════
+
 @dp.message(StateFilter("*"), F.text == "⚙️ Настройки")
-async def settings(msg: Message, state: FSMContext):
+async def settings(msg: Message):
     now = datetime.now()
     await msg.answer(
         f"⚙️ <b>DizelFinance v3</b>\n\n"
         f"👤 Ваш ID: <code>{msg.from_user.id}</code>\n"
-        f"🗄 База данных: PostgreSQL\n"
-        f"📅 Текущий месяц: {MONTH_NAMES.get(now.month,'')} {now.year}\n\n"
-        f"<b>Категории:</b>\n"
-        f"💰 Доходы — 5 категорий\n"
-        f"🛒 Регулярные расходы — 20 категорий\n"
-        f"💳 Крупные траты — 8 категорий\n"
-        f"🏦 Движение активов — 5 категорий\n\n"
-        f"<b>Webhook для iPhone Shortcut:</b>\n"
+        f"🗄 БД: PostgreSQL\n"
+        f"📅 {MONTH_NAMES.get(now.month,'')} {now.year}\n\n"
+        f"<b>Webhook endpoints:</b>\n"
         f"<code>POST /webhook/sms</code>\n"
-        f"<code>POST /webhook/transaction</code>",
+        f"<code>POST /webhook/transaction</code>\n\n"
+        f"<b>Категорий:</b> {len(ALL_CATEGORIES)}",
         reply_markup=kb_main()
     )
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Аналитика — inline callbacks
-# ══════════════════════════════════════════════════════════════════════════════
-
-@dp.callback_query(F.data.startswith("an|"))
-async def cb_analytics(cb: CallbackQuery):
-    parts  = cb.data.split("|")
-    action = parts[1]
-    year   = int(parts[2])
-    month  = int(parts[3])
-    uid    = cb.from_user.id
-
-    if action == "top":
-        cats = db.get_top_categories(uid, year, month, limit=8)
-        if not cats:
-            await cb.answer("Нет данных", show_alert=True)
-            return
-        month_name = MONTH_NAMES.get(month, "")
-        text = f"🏆 <b>Топ расходов — {month_name} {year}</b>\n\n"
-        max_val = float(cats[0]["total"]) if cats else 1
-        for i, c in enumerate(cats):
-            total = float(c["total"])
-            pct   = total / max_val * 100
-            bar   = "█" * int(pct / 10) + "░" * (10 - int(pct / 10))
-            text += f"{i+1}. <b>{c['category']}</b>\n"
-            text += f"   {bar} {total:,.0f} ₽\n"
-        await cb.message.answer(text)
-
-    elif action == "year":
-        data = db.get_monthly_summary_year(uid, year)
-        text = f"📅 <b>Итоги {year} года по месяцам:</b>\n\n"
-        for row in data:
-            m_name = MONTH_NAMES.get(row["month"], "")[:3]
-            income  = float(row.get("income")  or 0)
-            expense = float(row.get("expense") or 0)
-            delta   = income - expense
-            d_icon  = "📈" if delta >= 0 else "📉"
-            text += (
-                f"<b>{m_name}</b>: "
-                f"💚{income:,.0f} ❤️{expense:,.0f} {d_icon}{delta:+,.0f}\n"
-            )
-        await cb.message.answer(text)
-
-    elif action == "trend":
-        trend = db.get_yearly_trend(uid, years=3)
-        text  = f"📈 <b>Тренд за последние 3 года:</b>\n\n"
-        cur_year = None
-        for row in trend:
-            y = int(row["year"])
-            m = int(row["month"])
-            if y != cur_year:
-                cur_year = y
-                text += f"\n<b>{y}:</b>\n"
-            m_name  = MONTH_NAMES.get(m, "")[:3]
-            income  = float(row.get("income")  or 0)
-            expense = float(row.get("expense") or 0)
-            text += f"  {m_name}: 💚{income:,.0f} ❤️{expense:,.0f}\n"
-        await cb.message.answer(text)
-
-    await cb.answer()
-
-# ══════════════════════════════════════════════════════════════════════════════
-# FSM — Новая транзакция
+# FSM — Ручной ввод транзакции
 # ══════════════════════════════════════════════════════════════════════════════
 
 @dp.message(TxForm.tx_type)
@@ -582,7 +1026,7 @@ async def proc_tx_type(msg: Message, state: FSMContext):
     MAP = {"💸 Расход": "Расход", "💰 Доход": "Доход", "🏦 Актив": "Актив"}
     tx_type = MAP.get(msg.text)
     if not tx_type:
-        await msg.answer("Выберите тип операции:", reply_markup=kb_tx_type())
+        await msg.answer("Выберите тип:", reply_markup=kb_tx_type())
         return
     await state.update_data(tx_type=tx_type)
     await state.set_state(TxForm.section)
@@ -601,10 +1045,7 @@ async def proc_section(msg: Message, state: FSMContext):
         return
     await state.update_data(section=section)
     await state.set_state(TxForm.category)
-    await msg.answer(
-        f"Выберите категорию\n<i>{section}</i>:",
-        reply_markup=kb_categories(section)
-    )
+    await msg.answer(f"Категория ({section}):", reply_markup=kb_categories(section))
 
 @dp.message(TxForm.category)
 async def proc_category(msg: Message, state: FSMContext):
@@ -616,7 +1057,7 @@ async def proc_category(msg: Message, state: FSMContext):
         return
     valid = SECTIONS.get(section, {}).get("categories", [])
     if msg.text not in valid:
-        await msg.answer("Выберите категорию из списка:", reply_markup=kb_categories(section))
+        await msg.answer("Выберите из списка:", reply_markup=kb_categories(section))
         return
     await state.update_data(category=msg.text)
     if data.get("from_pdf"):
@@ -644,11 +1085,11 @@ async def proc_amount(msg: Message, state: FSMContext):
         amount = float(msg.text.replace(",", ".").replace(" ", ""))
         assert amount > 0
     except Exception:
-        await msg.answer("Введите корректную сумму (например: 5000 или 5000.50):", reply_markup=kb_back())
+        await msg.answer("Введите корректную сумму:", reply_markup=kb_back())
         return
     await state.update_data(amount=amount)
     await state.set_state(TxForm.currency)
-    await msg.answer("Выберите валюту:", reply_markup=kb_currencies())
+    await msg.answer("Валюта:", reply_markup=kb_currencies())
 
 @dp.message(TxForm.currency)
 async def proc_currency(msg: Message, state: FSMContext):
@@ -666,7 +1107,7 @@ async def proc_currency(msg: Message, state: FSMContext):
     await state.set_state(TxForm.date)
     today = datetime.now().strftime("%d.%m.%Y, %H:%M")
     await msg.answer(
-        "Введите дату или нажмите кнопку для текущей:",
+        "Дата и время:",
         reply_markup=ReplyKeyboardMarkup(keyboard=[
             [KeyboardButton(text=today)],
             [KeyboardButton(text="⏪ Назад")],
@@ -688,10 +1129,7 @@ async def proc_date(msg: Message, state: FSMContext):
         except ValueError:
             pass
     if not ok:
-        await msg.answer(
-            "Формат: <code>ДД.ММ.ГГГГ, ЧЧ:ММ</code>\nНапример: <code>09.03.2026, 14:35</code>",
-            reply_markup=kb_back()
-        )
+        await msg.answer("Формат: <code>09.03.2026, 14:35</code>", reply_markup=kb_back())
         return
     await state.update_data(date=msg.text.strip())
     data = await state.get_data()
@@ -702,12 +1140,10 @@ async def proc_date(msg: Message, state: FSMContext):
 async def proc_confirm(msg: Message, state: FSMContext):
     data = await state.get_data()
     uid  = msg.from_user.id
-
     if msg.text == "✅ Записать":
         db.save_transaction(uid, {**data, "source": "manual"})
         _notify_admin(
             f"💾 Новая транзакция\n"
-            f"👤 ID: {uid}\n"
             f"📂 {data.get('section')} → {data.get('category')}\n"
             f"💰 {data.get('amount')} {data.get('currency')}"
         )
@@ -722,16 +1158,14 @@ async def proc_confirm(msg: Message, state: FSMContext):
         else:
             await state.clear()
             await msg.answer("✅ Транзакция записана!", reply_markup=kb_main())
-
     elif msg.text == "✏️ Изменить категорию":
         await state.set_state(TxForm.section)
         await msg.answer("Раздел:", reply_markup=kb_section(data.get("tx_type", "Расход")))
-
     elif msg.text == "🔢 Изменить сумму":
         sym = CURRENCY_SYMBOLS.get(data.get("currency", "RUB"), "")
         await state.set_state(TxForm.edit_amount)
         await msg.answer(
-            f"Текущая сумма: <b>{data.get('amount',0)} {sym}</b>\nВведите новую:",
+            f"Текущая: <b>{data.get('amount',0)} {sym}</b>\nНовая сумма:",
             reply_markup=kb_back()
         )
     elif msg.text == "❌ Отменить":
@@ -759,7 +1193,7 @@ async def proc_edit_amount(msg: Message, state: FSMContext):
         return
     await state.update_data(new_amount=amount)
     await state.set_state(TxForm.edit_currency)
-    await msg.answer("Выберите валюту:", reply_markup=kb_currencies())
+    await msg.answer("Валюта:", reply_markup=kb_currencies())
 
 @dp.message(TxForm.edit_currency)
 async def proc_edit_currency(msg: Message, state: FSMContext):
@@ -780,16 +1214,14 @@ async def proc_edit_currency(msg: Message, state: FSMContext):
         sess = pdf_sessions.get(uid)
         idx  = data.get("pdf_idx", 0)
         if sess and idx < len(sess["transactions"]):
-            sess["transactions"][idx].update(
-                amount=new_amount, currency=msg.text, rate=rate, amount_rub=a_rub
-            )
+            sess["transactions"][idx].update(amount=new_amount, currency=msg.text, rate=rate, amount_rub=a_rub)
     updated = await state.get_data()
     await state.set_state(TxForm.confirm)
-    await msg.answer("✅ Сумма обновлена!", reply_markup=ReplyKeyboardRemove())
+    await msg.answer("✅ Обновлено!", reply_markup=ReplyKeyboardRemove())
     await msg.answer(build_preview(updated), reply_markup=kb_confirm())
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Документы (PDF / XLSX)
+# Документы
 # ══════════════════════════════════════════════════════════════════════════════
 
 @dp.message(StateFilter("*"), F.document)
@@ -804,7 +1236,7 @@ async def handle_document(msg: Message, state: FSMContext):
         await msg.answer("Поддерживаются PDF и Excel файлы.")
 
 async def _handle_xlsx(msg: Message):
-    await msg.answer("⏳ Читаю Excel выписку...")
+    await msg.answer("⏳ Читаю Excel...")
     try:
         f   = await bot.get_file(msg.document.file_id)
         raw = await bot.download_file(f.file_path)
@@ -812,16 +1244,15 @@ async def _handle_xlsx(msg: Message):
         if not txs:
             await msg.answer("❌ Транзакции не найдены.", reply_markup=kb_main())
             return
-        await msg.answer(f"📊 Найдено <b>{len(txs)}</b> транзакций. Определяю категории через AI...")
+        await msg.answer(f"📊 Найдено <b>{len(txs)}</b> транзакций. Определяю категории...")
         enriched = _enrich(txs, msg.from_user.id)
         _store_session(msg.from_user.id, enriched)
         await _send_summary(msg, enriched, "Excel")
     except Exception as e:
-        log.error(f"xlsx: {e}")
         await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
 
 async def _handle_pdf(msg: Message):
-    await msg.answer("⏳ Читаю PDF выписку через AI...")
+    await msg.answer("⏳ Читаю PDF через AI...")
     try:
         f   = await bot.get_file(msg.document.file_id)
         raw = await bot.download_file(f.file_path)
@@ -829,17 +1260,12 @@ async def _handle_pdf(msg: Message):
         if not txs:
             await msg.answer("❌ Транзакции не найдены.", reply_markup=kb_main())
             return
-        await msg.answer(f"📊 Найдено <b>{len(txs)}</b> транзакций. Определяю категории через AI...")
+        await msg.answer(f"📊 Найдено <b>{len(txs)}</b> транзакций. Определяю категории...")
         enriched = _enrich(txs, msg.from_user.id)
         _store_session(msg.from_user.id, enriched)
         await _send_summary(msg, enriched, "PDF")
     except Exception as e:
-        log.error(f"pdf: {e}")
         await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PDF callbacks
-# ══════════════════════════════════════════════════════════════════════════════
 
 @dp.callback_query(F.data.startswith("pdf|"))
 async def cb_pdf_action(cb: CallbackQuery, state: FSMContext):
@@ -855,7 +1281,7 @@ async def cb_pdf_action(cb: CallbackQuery, state: FSMContext):
         await cb.message.edit_text("❌ Отменено.")
         await cb.message.answer("Главное меню:", reply_markup=kb_main())
     elif action == "all":
-        await cb.message.edit_text("⏳ Записываю все транзакции...")
+        await cb.message.edit_text("⏳ Записываю все...")
         saved = db.save_transactions_batch(uid, [{**tx, "source": "auto"} for tx in sess["transactions"]])
         pdf_sessions.pop(uid, None)
         await cb.message.answer(f"✅ Записано <b>{saved}</b> транзакций!", reply_markup=kb_main())
@@ -886,9 +1312,7 @@ async def cb_pdf_item(cb: CallbackQuery, state: FSMContext):
         saved   = sess.get("saved_count", 0)
         skipped = sess.get("skipped_count", 0)
         pdf_sessions.pop(uid, None)
-        await cb.message.edit_text(
-            f"🏁 <b>Готово!</b>\n✅ Записано: {saved}\n⏭ Пропущено: {skipped}"
-        )
+        await cb.message.edit_text(f"🏁 <b>Готово!</b>\n✅ {saved}\n⏭ {skipped}")
         await cb.message.answer("Главное меню:", reply_markup=kb_main())
         await state.clear()
     elif act == "save":
@@ -909,17 +1333,14 @@ async def cb_pdf_item(cb: CallbackQuery, state: FSMContext):
         tx = txs[idx]
         await state.update_data(
             from_pdf=True, pdf_idx=idx,
-            amount=float(tx.get("amount", 0)),
-            currency=tx.get("currency", "RUB"),
-            rate=float(tx.get("rate", 1.0)),
-            amount_rub=float(tx.get("amount_rub", tx.get("amount", 0))),
-            date=tx.get("date", ""),
-            tx_type=tx.get("tx_type", "Расход"),
+            amount=float(tx.get("amount", 0)), currency=tx.get("currency", "RUB"),
+            rate=float(tx.get("rate", 1.0)), amount_rub=float(tx.get("amount_rub", tx.get("amount", 0))),
+            date=tx.get("date", ""), tx_type=tx.get("tx_type", "Расход"),
         )
         await remove_kb()
         await state.set_state(TxForm.section)
         await cb.message.answer(
-            f"✏️ Редактирую категорию\n<b>{tx.get('merchant','')}</b>",
+            f"✏️ Категория для: <b>{tx.get('merchant','')}</b>",
             reply_markup=kb_section(tx.get("tx_type", "Расход"))
         )
     elif act == "edit_amt":
@@ -934,31 +1355,25 @@ async def cb_pdf_item(cb: CallbackQuery, state: FSMContext):
         await remove_kb()
         await state.set_state(TxForm.edit_amount)
         await cb.message.answer(
-            f"🔢 Текущая: <b>{tx.get('amount',0)} {sym}</b>\nНовая сумма:",
+            f"🔢 Текущая: <b>{tx.get('amount',0)} {sym}</b>\nНовая:",
             reply_markup=kb_back()
         )
     await cb.answer()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Фото — скриншот банка
+# Фото
 # ══════════════════════════════════════════════════════════════════════════════
 
 @dp.message(StateFilter("*"), F.photo)
 async def handle_photo(msg: Message, state: FSMContext):
     if not allowed(msg.from_user.id): return
-    await msg.answer("📸 Анализирую скриншот через AI...")
+    await msg.answer("📸 Анализирую скриншот...")
     try:
         f   = await bot.get_file(msg.photo[-1].file_id)
         raw = await bot.download_file(f.file_path)
         txs = parse_screenshot(raw.read())
         if not txs:
-            await msg.answer(
-                "❌ Транзакций не найдено.\n\n"
-                "Попробуйте:\n"
-                "— Скриншот списка операций\n"
-                "— PDF выписку из банка",
-                reply_markup=kb_main()
-            )
+            await msg.answer("❌ Транзакций не найдено.", reply_markup=kb_main())
             return
         if len(txs) == 1:
             await _send_single_tx(msg, txs[0])
@@ -967,11 +1382,10 @@ async def handle_photo(msg: Message, state: FSMContext):
             _store_session(msg.from_user.id, enriched)
             await _send_summary(msg, enriched, "Скриншот")
     except Exception as e:
-        log.error(f"screenshot: {e}")
         await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Quick cat inline callbacks
+# Quick cat callbacks
 # ══════════════════════════════════════════════════════════════════════════════
 
 @dp.callback_query(F.data.startswith("qc|"))
@@ -1021,77 +1435,37 @@ async def cb_quick_skip(cb: CallbackQuery):
     await cb.answer()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Черновики callbacks
-# ══════════════════════════════════════════════════════════════════════════════
-
-@dp.callback_query(F.data.startswith("dr|"))
-async def cb_draft(cb: CallbackQuery, state: FSMContext):
-    uid    = cb.from_user.id
-    action = cb.data.split("|")[1]
-    if action == "clear":
-        db.drafts_clear(uid)
-        await cb.message.edit_text("🗑 Черновики удалены.")
-        await cb.answer()
-        return
-    drafts = db.drafts_get(uid)
-    draft  = next((d for d in drafts if d["id"] == action), None)
-    if not draft:
-        await cb.message.edit_text("❌ Черновик не найден.")
-        await cb.answer()
-        return
-    db.drafts_remove(action)
-    tx_type = draft.get("tx_type", "Расход")
-    await state.update_data(
-        amount=draft["a"], currency=draft["cur"], rate=draft["rate"],
-        amount_rub=draft["a_rub"], date=draft["d"],
-        merchant=draft["m"], tx_type=tx_type,
-    )
-    sym = CURRENCY_SYMBOLS.get(draft["cur"], "₽")
-    await cb.message.edit_reply_markup(reply_markup=None)
-    await cb.message.answer(
-        f"✅ Продолжаем: <b>{draft['a']:,.0f} {sym}</b> — {draft['m']}\nВыберите раздел:",
-        reply_markup=kb_section(tx_type)
-    )
-    await state.set_state(TxForm.section)
-    await cb.answer()
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SMS текстом
+# SMS и фоллбэк
 # ══════════════════════════════════════════════════════════════════════════════
 
 SMS_KEYWORDS = [
     "списано", "зачислено", "покупка", "оплата", "перевод",
-    "баланс", "карта", "тенге", "рублей", "сом", "withdrawal", "payment"
+    "баланс", "карта", "тенге", "рублей", "сом"
 ]
 
 @dp.message(StateFilter("*"), F.text)
 async def handle_text_fallback(msg: Message, state: FSMContext):
     if not allowed(msg.from_user.id): return
     text = msg.text or ""
-    # Проверяем на SMS
     if len(text) > 20 and any(w in text.lower() for w in SMS_KEYWORDS):
-        await msg.answer("📱 Похоже на банковское SMS, разбираю...")
+        await msg.answer("📱 Похоже на SMS, разбираю...")
         tx = parse_sms(text)
         if tx:
             await _send_single_tx(msg, tx)
             return
-    # Фоллбэк
     await msg.answer(
         "Используйте кнопки меню 👇\n\n"
-        "Или отправьте:\n"
-        "📸 Скриншот банка\n"
-        "📄 PDF / Excel выписку\n"
-        "💬 Текст SMS",
+        "Или отправьте скриншот / PDF / SMS текстом",
         reply_markup=kb_main()
     )
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Flask webhook для iPhone Shortcut / n8n
+# Flask webhook
 # ══════════════════════════════════════════════════════════════════════════════
 
 flask_app = Flask(__name__)
 
-def _send_tg_sync(chat_id: int, text: str, kb=None):
+def _send_tg_sync(chat_id: int, text: str, kb: list = None):
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
     if kb:
         payload["reply_markup"] = {"inline_keyboard": kb}
@@ -1113,11 +1487,9 @@ def webhook_sms():
             return jsonify({"status": "error", "message": "Missing user_id or sms"}), 400
         if ALLOWED_IDS and int(user_id) not in ALLOWED_IDS:
             return jsonify({"status": "error", "message": "Unauthorized"}), 403
-
         tx = parse_sms(sms_text)
         if not tx:
-            return jsonify({"status": "skip", "message": "Not a transaction SMS"}), 200
-
+            return jsonify({"status": "skip"}), 200
         amount   = float(tx.get("amount", 0))
         currency = tx.get("currency", "RUB")
         merchant = tx.get("merchant", "SMS")
@@ -1127,11 +1499,9 @@ def webhook_sms():
         a_rub    = round(amount * rate, 2)
         sym      = CURRENCY_SYMBOLS.get(currency, currency)
         icon     = "💰" if tx_type == "Доход" else "💸"
-
         cat, sec = guess_category(merchant, amount, tx_type=tx_type)
         tx_id    = str(uuid.uuid4())[:8]
         uid_int  = int(user_id)
-
         pending[tx_id] = {
             "a": amount, "m": merchant, "d": date,
             "cur": currency, "rate": rate, "a_rub": a_rub,
@@ -1141,21 +1511,20 @@ def webhook_sms():
             "id": str(uuid.uuid4())[:8], "a": amount, "m": merchant, "d": date,
             "cur": currency, "rate": rate, "a_rub": a_rub, "tx_type": tx_type,
         })
-
-        sym_line = f"{amount:,.2f} {sym}" if currency != "RUB" else f"{amount:,.0f} ₽"
+        sym_line = f"{amount:,.0f} ₽" if currency == "RUB" else f"{amount:,.2f} {sym}"
         text = (
             f"📱 <b>SMS транзакция</b>\n\n"
             f"{icon} {tx_type} | <code>{sym_line}</code>\n"
             f"🏪 {merchant}\n"
             f"📅 {date}\n\n"
-            f"🤖 Категория: <b>{sec} → {cat}</b>"
+            f"🤖 <b>{sec} → {cat}</b>"
         )
         kb = [
             [{"text": f"✅ {cat}", "callback_data": f"qc|{tx_id}|{cat}|{sec}"}],
             [
                 {"text": "📋 Все категории", "callback_data": f"qa|{tx_id}"},
                 {"text": "❌ Пропустить",    "callback_data": "qn|skip"},
-            ]
+            ],
         ]
         _send_tg_sync(uid_int, text, kb)
         return jsonify({"status": "ok"}), 200
@@ -1166,11 +1535,10 @@ def webhook_sms():
 @flask_app.route("/webhook/transaction", methods=["POST"])
 def webhook_transaction():
     try:
-        data     = request.json or {}
-        user_id  = data.get("user_id")
+        data    = request.json or {}
+        user_id = data.get("user_id")
         if not user_id or (ALLOWED_IDS and int(user_id) not in ALLOWED_IDS):
             return jsonify({"status": "error", "message": "Unauthorized"}), 403
-
         amount   = float(data.get("amount", 0))
         currency = data.get("currency", "RUB")
         merchant = data.get("merchant", "Неизвестно")
@@ -1180,11 +1548,9 @@ def webhook_transaction():
         a_rub    = round(amount * rate, 2)
         sym      = CURRENCY_SYMBOLS.get(currency, currency)
         icon     = "💰" if tx_type == "Доход" else "💸"
-
         cat, sec = guess_category(merchant, amount, tx_type=tx_type)
         tx_id    = str(uuid.uuid4())[:8]
         uid_int  = int(user_id)
-
         pending[tx_id] = {
             "a": amount, "m": merchant, "d": date,
             "cur": currency, "rate": rate, "a_rub": a_rub,
@@ -1194,22 +1560,21 @@ def webhook_transaction():
             "id": str(uuid.uuid4())[:8], "a": amount, "m": merchant, "d": date,
             "cur": currency, "rate": rate, "a_rub": a_rub, "tx_type": tx_type,
         })
-
-        sym_line = f"{amount:,.2f} {sym}" if currency != "RUB" else f"{amount:,.0f} ₽"
+        sym_line = f"{amount:,.0f} ₽" if currency == "RUB" else f"{amount:,.2f} {sym}"
         rub_line = f"\n🔄 {a_rub:,.0f} ₽" if currency != "RUB" else ""
         text = (
             f"🔔 <b>Новая транзакция</b>\n\n"
             f"{icon} {tx_type} | <code>{sym_line}</code>{rub_line}\n"
             f"🏪 {merchant}\n"
             f"📅 {date}\n\n"
-            f"🤖 Категория: <b>{sec} → {cat}</b>"
+            f"🤖 <b>{sec} → {cat}</b>"
         )
         kb = [
             [{"text": f"✅ {cat}", "callback_data": f"qc|{tx_id}|{cat}|{sec}"}],
             [
                 {"text": "📋 Все категории", "callback_data": f"qa|{tx_id}"},
                 {"text": "❌ Пропустить",    "callback_data": "qn|skip"},
-            ]
+            ],
         ]
         _send_tg_sync(uid_int, text, kb)
         return jsonify({"status": "ok"}), 200
@@ -1226,7 +1591,7 @@ def health():
 # ══════════════════════════════════════════════════════════════════════════════
 
 async def start_bot():
-    log.info("🚀 DizelFinance Bot v3 (aiogram 3) запущен!")
+    log.info("🚀 DizelFinance Bot v3 запущен!")
     await dp.start_polling(bot, skip_updates=True)
 
 if __name__ == "__main__":
