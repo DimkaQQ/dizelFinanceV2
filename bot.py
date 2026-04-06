@@ -1235,6 +1235,8 @@ async def handle_document(msg: Message, state: FSMContext):
         await _handle_pdf(msg)
     else:
         await msg.answer("Поддерживаются PDF и Excel файлы.")
+    elif fname.endswith('.txt'):
+        await _handle_txt(msg)
 
 async def _handle_xlsx(msg: Message):
     await msg.answer("⏳ Читаю Excel...")
