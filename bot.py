@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 DizelFinance Bot v3 — aiogram 3, PostgreSQL, полный дашборд
+С генерацией PDF через Puppeteer-сервис (pdf_caller)
 """
 
 import logging
@@ -424,100 +425,14 @@ def build_expenses_list(uid: int, year: int, month: int,
     return text, total
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Генерация PDF выписки
+# Генерация PDF выписки — НОВАЯ ВЕРСИЯ ЧЕРЕЗ PUPPETEER
 # ══════════════════════════════════════════════════════════════════════════════
 
 def generate_pdf_report(uid: int, year: int, month: int) -> bytes:
-    try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib import colors
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-    except ImportError:
-        raise ImportError("reportlab не установлен. Запусти: pip install reportlab")
-
-    buf        = io.BytesIO()
-    doc        = SimpleDocTemplate(buf, pagesize=A4)
-    styles     = getSampleStyleSheet()
-    story      = []
-    month_name = MONTH_NAMES.get(month, "")
-
-    # Заголовок
-    title_style = ParagraphStyle("title", parent=styles["Title"], fontSize=16)
-    story.append(Paragraph(f"DizelFinance — {month_name} {year}", title_style))
-    story.append(Spacer(1, 12))
-
-    # Сводка
-    data_summary = db.get_monthly_summary(uid, year, month)
-    summary_data = [
-        ["Показатель", "Сумма (₽)"],
-        ["💚 Доходы",  f"{data_summary['total_income']:,.0f}"],
-        ["❤️ Расходы", f"{data_summary['total_expense']:,.0f}"],
-        ["📊 Дельта",  f"{data_summary['delta']:+,.0f}"],
-    ]
-    if data_summary["total_assets"]:
-        summary_data.append(["🏦 Активы", f"{data_summary['total_assets']:,.0f}"])
-
-    t = Table(summary_data, colWidths=[200, 150])
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#1a1a24")),
-        ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
-        ("FONTSIZE",   (0,0), (-1,-1), 11),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f5f5f5")]),
-        ("GRID",       (0,0), (-1,-1), 0.5, colors.grey),
-        ("ALIGN",      (1,0), (1,-1), "RIGHT"),
-    ]))
-    story.append(t)
-    story.append(Spacer(1, 16))
-
-    # Топ категорий
-    story.append(Paragraph("Топ категорий расходов", styles["Heading2"]))
-    top = db.get_top_categories(uid, year, month, limit=10)
-    if top:
-        cat_data = [["Категория", "Сумма (₽)"]]
-        for c in top:
-            cat_data.append([c["category"], f"{float(c['total']):,.0f}"])
-        t2 = Table(cat_data, colWidths=[250, 150])
-        t2.setStyle(TableStyle([
-            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#6366f1")),
-            ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
-            ("FONTSIZE",   (0,0), (-1,-1), 10),
-            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f0f0ff")]),
-            ("GRID",       (0,0), (-1,-1), 0.5, colors.grey),
-            ("ALIGN",      (1,0), (1,-1), "RIGHT"),
-        ]))
-        story.append(t2)
-    story.append(Spacer(1, 16))
-
-    # Все транзакции
-    story.append(Paragraph("Все транзакции", styles["Heading2"]))
-    records = db.get_month_expenses_list(uid, year, month, limit=500, offset=0)
-    if records:
-        tx_data = [["Дата", "Категория", "Место", "Сумма (₽)"]]
-        for r in records:
-            d = r.get("date", "")
-            if hasattr(d, "strftime"): d = d.strftime("%d.%m.%Y")
-            tx_data.append([
-                str(d),
-                r.get("category", ""),
-                (r.get("merchant") or "")[:20],
-                f"{float(r.get('amount_rub', r.get('amount',0))):,.0f}",
-            ])
-        t3 = Table(tx_data, colWidths=[70, 130, 130, 90])
-        t3.setStyle(TableStyle([
-            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#374151")),
-            ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
-            ("FONTSIZE",   (0,0), (-1,-1), 8),
-            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f9f9f9")]),
-            ("GRID",       (0,0), (-1,-1), 0.3, colors.lightgrey),
-            ("ALIGN",      (3,0), (3,-1), "RIGHT"),
-        ]))
-        story.append(t3)
-
-    doc.build(story)
-    return buf.getvalue()
+    """Генерация PDF через Puppeteer сервис."""
+    from pdf_caller import generate_pdf, build_monthly_data
+    data = build_monthly_data(uid, year, month)
+    return generate_pdf("monthly", data)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Helpers
@@ -717,20 +632,20 @@ async def cb_top(cb: CallbackQuery):
 async def cb_report_pdf(cb: CallbackQuery):
     _, year, month = cb.data.split("|")
     uid = cb.from_user.id
-    await cb.message.answer("⏳ Генерирую PDF выписку...")
+    await cb.message.answer("⏳ Генерирую PDF отчёт...")
     try:
-        pdf_bytes  = generate_pdf_report(uid, int(year), int(month))
+        from pdf_caller import generate_pdf, build_monthly_data
+        data = build_monthly_data(uid, int(year), int(month))
+        pdf_bytes = generate_pdf("monthly", data)
         month_name = MONTH_NAMES.get(int(month), "")
-        filename   = f"DizelFinance_{month_name}_{year}.pdf"
+        filename = f"DizelFinance_{month_name}_{year}.pdf"
         await bot.send_document(
             cb.from_user.id,
             document=BufferedInputFile(pdf_bytes, filename=filename),
-            caption=f"📄 Выписка за {month_name} {year}"
+            caption=f"📄 Месячный отчёт · {month_name} {year}"
         )
-    except ImportError:
-        await cb.message.answer(
-            "❌ Для PDF нужен reportlab:\n<code>pip install reportlab</code>"
-        )
+    except RuntimeError as e:
+        await cb.message.answer(f"❌ {e}")
     except Exception as e:
         await cb.message.answer(f"❌ Ошибка генерации PDF: {e}")
     await cb.answer()
@@ -895,18 +810,20 @@ async def analytics_all_expenses(msg: Message, state: FSMContext):
 async def analytics_pdf(msg: Message, state: FSMContext):
     if not allowed(msg.from_user.id): return
     now = datetime.now()
-    await msg.answer("⏳ Генерирую PDF выписку за текущий месяц...")
+    await msg.answer("⏳ Генерирую PDF отчёт за текущий месяц...")
     try:
-        pdf_bytes  = generate_pdf_report(msg.from_user.id, now.year, now.month)
+        from pdf_caller import generate_pdf, build_monthly_data
+        data = build_monthly_data(msg.from_user.id, now.year, now.month)
+        pdf_bytes = generate_pdf("monthly", data)
         month_name = MONTH_NAMES.get(now.month, "")
-        filename   = f"DizelFinance_{month_name}_{now.year}.pdf"
+        filename = f"DizelFinance_{month_name}_{now.year}.pdf"
         await bot.send_document(
             msg.from_user.id,
             document=BufferedInputFile(pdf_bytes, filename=filename),
-            caption=f"📄 Выписка за {month_name} {now.year}"
+            caption=f"📄 Месячный отчёт · {month_name} {now.year}"
         )
-    except ImportError:
-        await msg.answer("❌ Нужно установить reportlab:\n<code>pip install reportlab</code>")
+    except RuntimeError as e:
+        await msg.answer(f"❌ {e}\n\nУбедитесь что PDF сервис запущен:\n`pm2 start pdf-service`")
     except Exception as e:
         await msg.answer(f"❌ Ошибка: {e}")
 
@@ -1270,7 +1187,6 @@ async def _handle_pdf(msg: Message):
     except Exception as e:
         await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
 
-# вставить после _handle_pdf:
 async def _handle_txt(msg: Message):
     await msg.answer("⏳ Читаю TXT файл через AI...")
     try:

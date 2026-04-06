@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Сравнительный отчёт</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#080810;--card:#0d0d1a;--border:rgba(255,255,255,0.07);--text:#f0f0fa;--muted:#60607a;--text2:#a0a0c0;--green:#4fffb0;--red:#ff4d6d;--amber:#ffb84d;--violet:#9d7aff;--blue:#00d4ff;--p1:#4fffb0;--p2:#00d4ff;--p3:#ffb84d;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;}
+  .page{width:210mm;min-height:297mm;padding:18mm 16mm;page-break-after:always;position:relative;background:var(--bg);}
+  .page:last-child{page-break-after:auto;}
+  .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .ph-title{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.03em;}
+  .ph-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+  .ph-right{text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+  .ph-right strong{display:block;font-size:13px;color:var(--text);margin-bottom:2px;}
+  .hl{background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(79,255,176,0.04));border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:16px 20px;margin-bottom:18px;}
+  .hl-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--blue);margin-bottom:6px;}
+  .hl-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;line-height:1.4;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .sec-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+  /* Period columns */
+  .cmp-header{display:grid;gap:10px;margin-bottom:12px;align-items:center;}
+  .cmp-row{display:grid;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center;font-size:12px;}
+  .cmp-row:last-child{border-bottom:none;}
+  .cmp-label{color:var(--muted);font-size:11px;}
+  .cmp-val{font-family:'DM Mono',monospace;font-weight:500;text-align:right;}
+  .cmp-delta{font-family:'DM Mono',monospace;font-size:11px;text-align:right;}
+  .period-badge{display:inline-block;padding:4px 10px;border-radius:4px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;text-align:center;}
+  .p1{color:var(--p1);} .p2{color:var(--p2);} .p3{color:var(--p3);}
+  .bg-p1{background:rgba(79,255,176,0.1);} .bg-p2{background:rgba(0,212,255,0.1);} .bg-p3{background:rgba(255,184,77,0.1);}
+  .c-green{color:var(--green);} .c-red{color:var(--red);} .c-muted{color:var(--muted);}
+  .footer{position:absolute;bottom:10mm;left:16mm;right:16mm;display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+</style>
+</head>
+<body>
+<script>
+const D=window.__DATA__||{};
+const fmt=n=>new Intl.NumberFormat('ru-RU').format(Math.round(n||0))+' ₽';
+const fmtK=n=>{n=n||0;return n>=1000000?(n/1000000).toFixed(1)+'M ₽':n>=1000?(n/1000).toFixed(0)+'K ₽':Math.round(n)+' ₽';};
+const MONTHS=['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const PCOLORS=['var(--p1)','var(--p2)','var(--p3)'];
+const PBGS=['rgba(79,255,176,0.1)','rgba(0,212,255,0.1)','rgba(255,184,77,0.1)'];
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const periods = D.periods || [];
+  if(!periods.length) return;
+
+  // Заголовок
+  const periodNames = periods.map(p=>`${MONTHS[p.month]?.slice(0,3)||''} ${p.year}`);
+  document.querySelectorAll('.gen-date').forEach(el=>el.textContent=new Date().toLocaleDateString('ru-RU'));
+  document.querySelectorAll('.periods-label').forEach(el=>el.textContent=periodNames.join(' · '));
+
+  // Headline
+  const p0=periods[0], p1=periods[1]||{};
+  const expDiff=(p1.total_expense||0)-(p0.total_expense||0);
+  const expPct=p0.total_expense>0?((expDiff/p0.total_expense)*100).toFixed(1):0;
+  document.querySelectorAll('.hl-text').forEach(el=>{
+    el.textContent=`${periodNames[0]} vs ${periodNames.slice(1).join(' vs ')}: расходы ${expDiff>=0?'выросли на':'снизились на'} ${Math.abs(expPct)}%.`;
+  });
+
+  // Колонки: сколько периодов
+  const cols = periods.length;
+  const gridCols = `180px ${Array(cols).fill('1fr').join(' ')} ${cols>1?'80px':''}`;
+
+  // Заголовки колонок
+  const headerEl = document.getElementById('cmpHeader');
+  if(headerEl){
+    headerEl.style.gridTemplateColumns=gridCols;
+    headerEl.innerHTML=`<div></div>${periods.map((p,i)=>`<div class="period-badge" style="background:${PBGS[i]};color:${PCOLORS[i]}">${p.label||periodNames[i]}</div>`).join('')}${cols>1?'<div style="font-family:\'DM Mono\',monospace;font-size:9px;color:var(--muted);text-align:right">ΔΔΔΔ</div>':''}`;
+  }
+
+  // Строки сравнения
+  const rows = [
+    {label:'Доходы',key:'total_income',color:(v,ref)=>v>ref?'c-green':'c-red'},
+    {label:'Расходы',key:'total_expense',color:(v,ref)=>v<ref?'c-green':'c-red'},
+    {label:'Дельта',key:'delta',color:(v,ref)=>v>=0?'c-green':'c-red'},
+  ];
+  const rowsEl=document.getElementById('cmpRows');
+  if(rowsEl){
+    rows.forEach(row=>{
+      const vals=periods.map(p=>p[row.key]||0);
+      const ref=vals[0];
+      let html=`<div class="cmp-row" style="grid-template-columns:${gridCols}"><div class="cmp-label">${row.label}</div>`;
+      vals.forEach((v,i)=>{
+        const cls=row.color(v,ref);
+        html+=`<div class="cmp-val ${cls}">${fmtK(v)}</div>`;
+      });
+      if(cols>1){
+        const diff=vals[vals.length-1]-vals[0];
+        const pct=vals[0]?((diff/Math.abs(vals[0]))*100).toFixed(1):0;
+        html+=`<div class="cmp-delta ${diff>=0?'c-red':'c-green'}">${diff>=0?'+':''}${pct}%</div>`;
+      }
+      html+=`</div>`;
+      rowsEl.innerHTML+=html;
+    });
+  }
+
+  // Bar chart — сравнение
+  const ctx1=document.getElementById('cmpChart');
+  if(ctx1){
+    new Chart(ctx1,{
+      type:'bar',
+      data:{
+        labels:['Доходы','Расходы','Дельта'],
+        datasets:periods.map((p,i)=>({
+          label:p.label||periodNames[i],
+          data:[p.total_income||0,p.total_expense||0,p.delta||0],
+          backgroundColor:`${PCOLORS[i].replace('var(','').replace(')','').trim()}88`.replace('var(','').replace(')',''),
+          borderColor:PCOLORS[i],
+          borderWidth:1,borderRadius:4,
+        }))
+      },
+      options:{responsive:true,plugins:{legend:{labels:{color:'#a0a0c0',font:{size:10}}}},
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#a0a0c0'}},
+          y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#60607a',callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}
+        }}
+    });
+  }
+
+  // Топ категорий по периодам
+  periods.forEach((p,pi)=>{
+    const el=document.getElementById(`cats${pi}`);
+    if(!el) return;
+    const cats=p.top_categories||[];
+    const maxV=parseFloat(cats[0]?.total||1);
+    cats.slice(0,8).forEach(c=>{
+      const pct=(parseFloat(c.total)/maxV*100).toFixed(0);
+      el.innerHTML+=`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <div style="min-width:130px;font-size:11px">${c.category.slice(0,18)}</div>
+          <div style="flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${PCOLORS[pi]};border-radius:99px"></div>
+          </div>
+          <div style="min-width:65px;text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${fmtK(parseFloat(c.total))}</div>
+        </div>`;
+    });
+  });
+
+  // Conclusions
+  const concl=document.getElementById('conclusions');
+  if(concl){
+    const expChange=periods.length>1?((periods[periods.length-1].total_expense||0)-(periods[0].total_expense||0)):0;
+    const incChange=periods.length>1?((periods[periods.length-1].total_income||0)-(periods[0].total_income||0)):0;
+    concl.innerHTML=`
+      <p>Сравнение периодов: <strong>${periodNames.join(' / ')}</strong>.</p>
+      <p style="margin-top:10px">Расходы ${expChange>=0?'выросли':'снизились'} на <strong>${fmtK(Math.abs(expChange))}</strong> (${Math.abs(((expChange/(periods[0].total_expense||1))*100)).toFixed(1)}%).</p>
+      <p style="margin-top:10px">Доходы ${incChange>=0?'выросли':'снизились'} на <strong>${fmtK(Math.abs(incChange))}</strong>.</p>
+    `;
+  }
+});
+</script>
+
+<!-- PAGE 1 -->
+<div class="page">
+  <div class="ph">
+    <div><div class="ph-title">Сравнительный<br>отчёт</div><div class="ph-sub">DizelFinance · Comparative Analysis</div></div>
+    <div class="ph-right"><strong class="periods-label">—</strong><span class="gen-date"></span></div>
+  </div>
+  <div class="hl"><div class="hl-label">Главный вывод</div><div class="hl-text">—</div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-title">Ключевые показатели</div>
+    <div class="cmp-header" id="cmpHeader"></div>
+    <div id="cmpRows"></div>
+  </div>
+  <div class="card">
+    <div class="sec-title">Визуальное сравнение</div>
+    <canvas id="cmpChart" height="180"></canvas>
+  </div>
+  <div class="footer"><span>DizelFinance</span><span>1 / 4</span></div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+  <div class="ph"><div><div class="ph-title" style="font-size:16px">Топ категорий расходов</div></div></div>
+  <div id="catsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+    <div class="card"><div class="sec-title" style="color:var(--p1)">Период 1</div><div id="cats0"></div></div>
+    <div class="card"><div class="sec-title" style="color:var(--p2)">Период 2</div><div id="cats1"></div></div>
+    <div class="card" id="cats2wrap" style="display:none"><div class="sec-title" style="color:var(--p3)">Период 3</div><div id="cats2"></div></div>
+  </div>
+  <div class="footer"><span>DizelFinance</span><span>2 / 4</span></div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page">
+  <div class="ph"><div><div class="ph-title" style="font-size:16px">Анализ и выводы</div></div></div>
+  <div class="card">
+    <div class="sec-title" style="margin-bottom:14px">Интерпретация данных</div>
+    <div id="conclusions" style="font-size:12px;line-height:1.8;color:var(--text2)"></div>
+  </div>
+  <div class="footer"><span>DizelFinance</span><span>3 / 4</span></div>
+</div>
+
+<!-- PAGE 4 -->
+<div class="page">
+  <div class="ph"><div><div class="ph-title" style="font-size:16px">Итог сравнения</div></div></div>
+  <div id="summaryCards" style="display:grid;gap:12px"></div>
+  <div class="footer"><span>DizelFinance</span><span>4 / 4</span></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  const D=window.__DATA__||{};
+  const periods=D.periods||[];
+  const fmtK=n=>{n=n||0;return n>=1000000?(n/1000000).toFixed(1)+'M ₽':n>=1000?(n/1000).toFixed(0)+'K ₽':Math.round(n)+' ₽';};
+  const PCOLORS=['var(--p1)','var(--p2)','var(--p3)'];
+
+  // Показываем третий период если есть
+  if(periods.length>=3){
+    const w=document.getElementById('cats2wrap');
+    if(w) w.style.display='block';
+  }
+
+  // Summary cards
+  const sc=document.getElementById('summaryCards');
+  if(sc){
+    sc.style.gridTemplateColumns=`repeat(${periods.length},1fr)`;
+    periods.forEach((p,i)=>{
+      const d=p.delta||0;
+      sc.innerHTML+=`
+        <div class="card" style="border-color:${PCOLORS[i].replace('var(','').replace(')','').trim()}33">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:${PCOLORS[i]};margin-bottom:10px">${p.label||''}</div>
+          <div style="margin-bottom:8px"><div style="font-size:10px;color:var(--muted)">Доходы</div><div style="font-family:'DM Mono',monospace;color:var(--green)">${fmtK(p.total_income||0)}</div></div>
+          <div style="margin-bottom:8px"><div style="font-size:10px;color:var(--muted)">Расходы</div><div style="font-family:'DM Mono',monospace;color:var(--red)">${fmtK(p.total_expense||0)}</div></div>
+          <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><div style="font-size:10px;color:var(--muted)">Дельта</div><div style="font-family:'DM Mono',monospace;color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'+':''}${fmtK(d)}</div></div>
+        </div>`;
+    });
+  }
+});
+</script>
+</body>
+</html>
