@@ -1233,10 +1233,10 @@ async def handle_document(msg: Message, state: FSMContext):
         await _handle_xlsx(msg)
     elif fname.endswith(".pdf"):
         await _handle_pdf(msg)
-    else:
-        await msg.answer("Поддерживаются PDF и Excel файлы.")
     elif fname.endswith('.txt'):
         await _handle_txt(msg)
+    else:
+        await msg.answer("Поддерживаются PDF, Excel и TXT файлы.")
 
 async def _handle_xlsx(msg: Message):
     await msg.answer("⏳ Читаю Excel...")
@@ -1267,6 +1267,25 @@ async def _handle_pdf(msg: Message):
         enriched = _enrich(txs, msg.from_user.id)
         _store_session(msg.from_user.id, enriched)
         await _send_summary(msg, enriched, "PDF")
+    except Exception as e:
+        await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
+
+# вставить после _handle_pdf:
+async def _handle_txt(msg: Message):
+    await msg.answer("⏳ Читаю TXT файл через AI...")
+    try:
+        from txt_parser import parse_txt, read_txt_file
+        f   = await bot.get_file(msg.document.file_id)
+        raw = await bot.download_file(f.file_path)
+        text = read_txt_file(raw.read())
+        txs = parse_txt(text)
+        if not txs:
+            await msg.answer("❌ Транзакции не найдены.", reply_markup=kb_main())
+            return
+        await msg.answer(f"📊 Найдено <b>{len(txs)}</b> транзакций. Определяю категории...")
+        enriched = _enrich(txs, msg.from_user.id)
+        _store_session(msg.from_user.id, enriched)
+        await _send_summary(msg, enriched, "TXT")
     except Exception as e:
         await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
 

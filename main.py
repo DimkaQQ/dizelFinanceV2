@@ -3,6 +3,7 @@ import asyncio
 import threading
 import logging
 import sys, os
+from web.web_app import app
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
