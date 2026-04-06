@@ -16,6 +16,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
+from voice import transcribe, transcribe_fallback
 from aiogram.types import (
     Message, CallbackQuery, BufferedInputFile,
     ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,

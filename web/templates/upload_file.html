@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Загрузить файл — DizelFinance{% endblock %}
+{% block page_title %}Загрузить файл{% endblock %}
+
+{% block content %}
+<div style="max-width:640px">
+  <div class="card" style="margin-bottom:16px">
+    <div class="sec-head">
+      <div class="sec-title">Загрузка выписки</div>
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.6">
+      Поддерживаются банковские выписки в форматах PDF, Excel (.xlsx) и текст (.txt).
+      AI автоматически распознает транзакции и предложит категории.
+    </p>
+
+    <form method="POST" enctype="multipart/form-data" id="uploadForm">
+      <!-- Drag & Drop зона -->
+      <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div style="font-size:28px;margin-bottom:10px">↑</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">
+          Перетащите файл сюда
+        </div>
+        <div style="font-size:11px;color:var(--text3)">
+          или нажмите для выбора · PDF, XLSX, TXT
+        </div>
+        <input type="file" id="fileInput" name="file"
+               accept=".pdf,.xlsx,.xls,.txt"
+               style="display:none"
+               onchange="handleFileSelect(this)">
+      </div>
+
+      <!-- Выбранный файл -->
+      <div id="fileInfo" style="display:none;margin-top:12px">
+        <div class="card card-sm" style="background:rgba(79,255,176,0.04);border-color:rgba(79,255,176,0.2)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px" id="fileIcon">📄</span>
+            <div>
+              <div style="font-size:13px;font-weight:600" id="fileName">—</div>
+              <div style="font-size:11px;color:var(--text3)" id="fileSize">—</div>
+            </div>
+            <button type="button" onclick="clearFile()"
+                    style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Дополнительно -->
+      <div style="margin-top:16px">
+        <div class="form-group">
+          <label class="form-label">Период (если нет в файле)</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <select name="period_year">
+              {% for y in years %}<option value="{{ y }}" {{ 'selected' if y == now.year }}>{{ y }}</option>{% endfor %}
+            </select>
+            <select name="period_month">
+              {% for num, name in months.items() %}<option value="{{ num }}" {{ 'selected' if num == now.month }}>{{ name }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;justify-content:center;margin-top:8px" disabled>
+        Анализировать →
+      </button>
+    </form>
+  </div>
+
+  <!-- Результат (появляется после загрузки) -->
+  {% if result %}
+  <div class="card fade-in">
+    <div class="sec-head">
+      <div class="sec-title">Результат анализа</div>
+      <span class="topbar-tag c-green">{{ result.count }} транзакций</span>
+    </div>
+
+    {% if result.duplicates > 0 %}
+    <div style="background:rgba(255,184,77,0.08);border:1px solid rgba(255,184,77,0.2);border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--amber)">
+      ⚠️ Найдено {{ result.duplicates }} возможных дубликатов — они помечены
+    </div>
+    {% endif %}
+
+    <table class="tbl" style="margin-bottom:14px">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Место</th>
+          <th>Категория</th>
+          <th style="text-align:right">Сумма</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in result.transactions %}
+        <tr {% if tx.is_duplicate %}style="opacity:0.5"{% endif %}>
+          <td class="c-muted" style="font-family:var(--mono);font-size:11px">{{ tx.date }}</td>
+          <td style="font-size:12px">{{ (tx.merchant or '—')[:20] }}</td>
+          <td>
+            <span class="tag {{ 'tag-in' if tx.tx_type == 'Доход' else 'tag-out' }}">{{ tx.section[:4] }}</span>
+            <span style="margin-left:4px;font-size:11px">{{ tx.category }}</span>
+          </td>
+          <td class="num {{ 'c-green' if tx.tx_type == 'Доход' else 'c-red' }}">
+            {{ "{:,.0f}".format(tx.amount_rub|float) }} ₽
+          </td>
+          <td>{% if tx.is_duplicate %}<span class="c-amber" style="font-size:10px">дубль</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <form method="POST" action="{{ url_for('upload_confirm') }}">
+      <input type="hidden" name="session_id" value="{{ result.session_id }}">
+      <div style="display:flex;gap:10px">
+        <button type="submit" name="action" value="all" class="btn btn-primary" style="flex:1;justify-content:center">
+          ✓ Записать все ({{ result.count }})
+        </button>
+        <button type="submit" name="action" value="new_only" class="btn btn-ghost" style="flex:1;justify-content:center">
+          Только новые ({{ result.count - result.duplicates }})
+        </button>
+        <a href="{{ url_for('upload_file') }}" class="btn btn-danger">✕</a>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dropZone   = document.getElementById('dropZone');
+const fileInput  = document.getElementById('fileInput');
+const fileInfo   = document.getElementById('fileInfo');
+const submitBtn  = document.getElementById('submitBtn');
+
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  showFile(file);
+}
+
+function showFile(file) {
+  const icons = { pdf: '📄', xlsx: '📊', xls: '📊', txt: '📝' };
+  const ext   = file.name.split('.').pop().toLowerCase();
+  document.getElementById('fileIcon').textContent = icons[ext] || '📄';
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(0) + ' KB';
+  fileInfo.style.display  = 'block';
+  submitBtn.disabled       = false;
+  submitBtn.textContent    = 'Анализировать →';
+}
+
+function clearFile() {
+  fileInput.value         = '';
+  fileInfo.style.display  = 'none';
+  submitBtn.disabled       = true;
+}
+
+// Drag & Drop
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    showFile(file);
+  }
+});
+
+// Loading state
+document.getElementById('uploadForm').addEventListener('submit', () => {
+  submitBtn.textContent = '⏳ Анализирую...';
+  submitBtn.disabled    = true;
+});
+</script>
+{% endblock %}

@@ -1,120 +1,119 @@
 {% extends "base.html" %}
-{% block title %}Главная — DizelFinance{% endblock %}
-{% block page_title %}{{ month_name }} {{ now.year }}{% endblock %}
+{% block title %}Дашборд — DizelFinance{% endblock %}
+{% block page_title %}Дашборд{% endblock %}
 
 {% block content %}
-<!-- KPI карточки -->
-<div class="grid grid-4" style="margin-bottom:20px">
+<!-- KPI -->
+<div class="grid g4 stagger" style="margin-bottom:16px">
   <div class="card card-sm">
-    <div class="card-title">💰 Доходы</div>
-    <div class="card-value text-green">{{ "{:,.0f}".format(summary.total_income) }} ₽</div>
-    <div class="card-sub">за месяц</div>
-    <div class="progress">
-      <div class="progress-fill" style="width:100%; background:var(--green)"></div>
-    </div>
+    <div class="card-label">Доходы / мес</div>
+    <div class="card-value c-green">{{ "{:,.0f}".format(summary.total_income) }}</div>
+    <div class="card-sub">₽ · {{ month_name }}</div>
+    <div class="card-delta c-green">↑ поступления</div>
   </div>
   <div class="card card-sm">
-    <div class="card-title">💸 Расходы</div>
-    <div class="card-value text-red">{{ "{:,.0f}".format(summary.total_expense) }} ₽</div>
-    <div class="card-sub">за месяц</div>
-    {% set pct = (summary.total_expense / summary.total_income * 100) if summary.total_income > 0 else 0 %}
-    <div class="progress">
-      <div class="progress-fill" style="width:{{ [pct,100]|min }}%; background:var(--red)"></div>
-    </div>
+    <div class="card-label">Расходы / мес</div>
+    <div class="card-value c-red">{{ "{:,.0f}".format(summary.total_expense) }}</div>
+    <div class="card-sub">₽ · {{ month_name }}</div>
+    {% set pct = ((summary.total_expense / summary.total_income * 100)|round|int) if summary.total_income > 0 else 0 %}
+    <div class="card-delta {{ 'c-red' if pct > 80 else 'c-amber' }}">{{ pct }}% от доходов</div>
   </div>
   <div class="card card-sm">
-    <div class="card-title">📊 Дельта</div>
+    <div class="card-label">Дельта</div>
     {% set delta = summary.delta %}
-    <div class="card-value {{ 'text-green' if delta >= 0 else 'text-red' }}">
-      {{ "{:+,.0f}".format(delta) }} ₽
-    </div>
-    <div class="card-sub">{{ 'Профицит' if delta >= 0 else 'Дефицит' }}</div>
+    <div class="card-value {{ 'c-green' if delta >= 0 else 'c-red' }}">{{ "{:+,.0f}".format(delta) }}</div>
+    <div class="card-sub">₽ · {{ 'Профицит' if delta >= 0 else 'Дефицит' }}</div>
+    <div class="card-delta c-muted">{{ month_name }} {{ now.year }}</div>
   </div>
   <div class="card card-sm">
-    <div class="card-title">🏦 Активы</div>
-    <div class="card-value text-accent">{{ "{:,.0f}".format(summary.total_assets) }} ₽</div>
-    <div class="card-sub">движение</div>
+    <div class="card-label">Активы / движение</div>
+    <div class="card-value c-violet">{{ "{:,.0f}".format(summary.total_assets) }}</div>
+    <div class="card-sub">₽ · за месяц</div>
+    <div class="card-delta c-muted">движение активов</div>
   </div>
 </div>
 
-<!-- График + топ категорий -->
-<div class="grid grid-2" style="margin-bottom:20px">
+<!-- Графики -->
+<div class="grid g21 stagger" style="margin-bottom:16px">
   <div class="card">
-    <div class="card-title" style="margin-bottom:16px">📈 Доходы vs Расходы</div>
-    <canvas id="mainChart" height="200"></canvas>
+    <div class="sec-head">
+      <div class="sec-title">Доходы vs Расходы</div>
+      <span class="topbar-tag">{{ now.year }}</span>
+    </div>
+    <canvas id="mainChart" height="180"></canvas>
   </div>
   <div class="card">
-    <div class="card-title" style="margin-bottom:16px">🏆 Топ расходов</div>
+    <div class="sec-head">
+      <div class="sec-title">Структура расходов</div>
+    </div>
+    <canvas id="donutChart" height="180"></canvas>
+  </div>
+</div>
+
+<!-- Топ категорий + последние транзакции -->
+<div class="grid g2 stagger">
+  <div class="card">
+    <div class="sec-head">
+      <div class="sec-title">Топ расходов</div>
+      <a href="{{ url_for('analytics') }}" class="btn btn-ghost btn-sm">Все →</a>
+    </div>
     {% if top_cats %}
-      {% set max_val = top_cats[0].total %}
+      {% set max_v = top_cats[0].total | float %}
       {% for cat in top_cats %}
-        <div style="margin-bottom:12px">
-          <div style="display:flex; justify-content:space-between; margin-bottom:4px">
-            <span style="font-size:0.85rem; font-weight:500">{{ cat.category }}</span>
-            <span style="font-size:0.82rem; color:var(--muted)">{{ "{:,.0f}".format(cat.total) }} ₽</span>
+        <div class="prog-row">
+          <div class="prog-label">{{ cat.category[:20] }}</div>
+          <div class="prog-bar">
+            <div class="prog-fill" style="width:{{ ((cat.total|float / max_v)*100)|round }}%;background:linear-gradient(90deg,#4fffb0,#00d4ff)"></div>
           </div>
-          <div class="progress">
-            <div class="progress-fill" style="
-              width:{{ (cat.total / max_val * 100)|round }}%;
-              background: linear-gradient(90deg, var(--accent), var(--accent2))
-            "></div>
-          </div>
+          <div class="prog-val">{{ "{:,.0f}".format(cat.total|float) }} ₽</div>
         </div>
       {% endfor %}
     {% else %}
-      <div style="color:var(--muted); font-size:0.88rem; text-align:center; padding:32px 0">
-        Данных за этот месяц нет
-      </div>
+      <div style="color:var(--text3);font-size:12px;padding:20px 0;text-align:center">Нет данных за месяц</div>
     {% endif %}
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="sec-head" style="padding:16px 18px 0">
+      <div class="sec-title">Последние транзакции</div>
+      <a href="{{ url_for('transactions') }}" class="btn btn-ghost btn-sm">Все →</a>
+    </div>
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Категория</th>
+          <th style="text-align:right">Сумма</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in recent_txs %}
+          {% set d = r.date %}
+          {% set ds = d.strftime('%d.%m') if d and d.strftime is defined else (d|string)[:10] %}
+          <tr>
+            <td class="c-muted" style="font-family:var(--mono);font-size:11px">{{ ds }}</td>
+            <td>
+              <span class="tag {{ 'tag-in' if r.tx_type == 'Доход' else ('tag-asset' if r.tx_type == 'Актив' else 'tag-out') }}">{{ r.tx_type[:2] }}</span>
+              <span style="margin-left:6px;font-size:12px">{{ r.category }}</span>
+            </td>
+            <td class="num {{ 'c-green' if r.tx_type == 'Доход' else 'c-red' }}">
+              {{ "{:,.0f}".format(r.amount_rub|float) }} ₽
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px">Нет транзакций</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 
-<!-- Разделы месяца -->
-<div class="card" style="margin-bottom:20px">
-  <div class="card-title" style="margin-bottom:16px">📂 По разделам — {{ month_name }}</div>
-  {% if summary.sections %}
-    <div class="grid grid-4">
-      {% for row in summary.sections %}
-        {% set sec = row.section %}
-        {% set info = sections.get(sec, {}) %}
-        {% set total = (row.income or 0)|float + (row.expense or 0)|float + (row.assets or 0)|float %}
-        <div style="
-          background:var(--bg3);
-          border:1px solid var(--border);
-          border-radius:var(--radius);
-          padding:16px;
-        ">
-          <div style="font-size:1.4rem; margin-bottom:8px">{{ info.get('icon','📂') }}</div>
-          <div style="font-size:0.75rem; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em">{{ sec }}</div>
-          <div style="
-            font-family:'Unbounded',sans-serif;
-            font-size:1.1rem;
-            font-weight:600;
-            color:{{ info.get('color','var(--text)') }};
-            letter-spacing:-0.02em
-          ">{{ "{:,.0f}".format(total) }} ₽</div>
-          <div style="font-size:0.75rem; color:var(--muted); margin-top:4px">{{ row.cnt }} транзакций</div>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <div style="text-align:center; color:var(--muted); padding:40px 0; font-size:0.9rem">
-      Нет транзакций за {{ month_name }}. <a href="{{ url_for('add_transaction') }}" style="color:var(--accent)">Добавить первую →</a>
-    </div>
-  {% endif %}
-</div>
-
 <!-- Быстрые действия -->
-<div class="grid grid-3">
-  <a href="{{ url_for('add_transaction') }}" class="btn btn-primary" style="justify-content:center; padding:14px">
-    ➕ Новая транзакция
-  </a>
-  <a href="{{ url_for('transactions') }}" class="btn btn-ghost" style="justify-content:center; padding:14px">
-    📋 Все транзакции
-  </a>
-  <a href="{{ url_for('analytics') }}" class="btn btn-ghost" style="justify-content:center; padding:14px">
-    📊 Аналитика
-  </a>
+<div class="grid g4 stagger" style="margin-top:16px">
+  <a href="{{ url_for('add_transaction') }}" class="btn btn-primary" style="justify-content:center">+ Транзакция</a>
+  <a href="{{ url_for('upload_file') }}"     class="btn btn-ghost"   style="justify-content:center">↑ Загрузить файл</a>
+  <a href="{{ url_for('reports') }}"         class="btn btn-ghost"   style="justify-content:center">◈ PDF Отчёт</a>
+  <a href="{{ url_for('analytics') }}"       class="btn btn-ghost"   style="justify-content:center">↗ Аналитика</a>
 </div>
 {% endblock %}
 
@@ -123,10 +122,17 @@
 const labels  = {{ chart_labels | tojson }};
 const income  = {{ chart_income  | tojson }};
 const expense = {{ chart_expense | tojson }};
+const sections= {{ section_labels | tojson }};
+const secVals = {{ section_values | tojson }};
 
-const ctx = document.getElementById('mainChart');
-if (ctx && labels.length) {
-  new Chart(ctx, {
+Chart.defaults.color = '#60607a';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 10;
+
+// Bar chart
+const ctx1 = document.getElementById('mainChart');
+if (ctx1 && labels.length) {
+  new Chart(ctx1, {
     type: 'bar',
     data: {
       labels,
@@ -134,37 +140,56 @@ if (ctx && labels.length) {
         {
           label: 'Доходы',
           data: income,
-          backgroundColor: 'rgba(34,197,94,0.6)',
-          borderColor: 'rgba(34,197,94,0.9)',
+          backgroundColor: 'rgba(79,255,176,0.5)',
+          borderColor: '#4fffb0',
           borderWidth: 1,
-          borderRadius: 4,
+          borderRadius: 3,
         },
         {
           label: 'Расходы',
           data: expense,
-          backgroundColor: 'rgba(239,68,68,0.6)',
-          borderColor: 'rgba(239,68,68,0.9)',
+          backgroundColor: 'rgba(255,77,109,0.4)',
+          borderColor: '#ff4d6d',
           borderWidth: 1,
-          borderRadius: 4,
+          borderRadius: 3,
         }
       ]
     },
     options: {
       responsive: true,
-      plugins: {
-        legend: { labels: { color: '#6b6b85', font: { family: 'Inter' } } }
-      },
+      plugins: { legend: { labels: { color: '#60607a', boxWidth: 10 } } },
       scales: {
-        x: {
-          grid: { color: 'rgba(42,42,56,0.8)' },
-          ticks: { color: '#6b6b85', font: { size: 11 } }
-        },
+        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#60607a' } },
         y: {
-          grid: { color: 'rgba(42,42,56,0.8)' },
-          ticks: {
-            color: '#6b6b85', font: { size: 11 },
-            callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k ₽' : v + ' ₽'
-          }
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(0)+'K' : v }
+        }
+      }
+    }
+  });
+}
+
+// Donut
+const ctx2 = document.getElementById('donutChart');
+if (ctx2 && sections.length) {
+  new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: sections,
+      datasets: [{
+        data: secVals,
+        backgroundColor: ['#ffb84d','#ff4d6d','#9d7aff','#4fffb0'],
+        borderWidth: 2,
+        borderColor: '#0d0d1a',
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '68%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#a0a0c0', padding: 12, boxWidth: 10 }
         }
       }
     }

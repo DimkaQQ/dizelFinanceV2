@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Месячный отчёт</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0d0d14;
+    --card:    #13131e;
+    --border:  #1e1e2e;
+    --text:    #e8e8f0;
+    --muted:   #6b6b85;
+    --accent:  #7c6aff;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --amber:   #f59e0b;
+    --blue:    #6366f1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── Страница ── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 20mm 16mm;
+    page-break-after: always;
+    position: relative;
+    background: var(--bg);
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* ── Шапка ── */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .report-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+  }
+  .report-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .report-period {
+    text-align: right;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .report-period strong {
+    display: block;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ── Headline ── */
+  .headline {
+    background: linear-gradient(135deg, rgba(124,106,255,0.12), rgba(168,85,247,0.06));
+    border: 1px solid rgba(124,106,255,0.2);
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+  .headline-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .headline-text {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.4;
+  }
+
+  /* ── KPI сетка ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .kpi-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .kpi-value {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .kpi-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .kpi-delta {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .positive { color: var(--green); }
+  .negative { color: var(--red); }
+  .neutral  { color: var(--muted); }
+
+  /* ── Секции ── */
+  .section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Прогресс бар ── */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .progress-label { flex: 0 0 160px; font-size: 12px; font-weight: 500; }
+  .progress-bar   { flex: 1; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-fill  { height: 100%; border-radius: 99px; }
+  .progress-value { flex: 0 0 80px; text-align: right; font-size: 12px; color: var(--muted); }
+  .progress-pct   { flex: 0 0 36px; text-align: right; font-size: 11px; color: var(--muted); }
+
+  /* ── Таблица транзакций ── */
+  .tx-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .tx-table th {
+    text-align: left;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tx-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(30,30,46,0.5);
+    vertical-align: middle;
+  }
+  .tx-table tr:last-child td { border-bottom: none; }
+  .tx-amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 9px;
+    font-weight: 600;
+  }
+  .badge-income  { background: rgba(34,197,94,0.12);  color: var(--green); }
+  .badge-expense { background: rgba(239,68,68,0.12);  color: var(--red); }
+  .badge-asset   { background: rgba(99,102,241,0.12); color: var(--blue); }
+
+  /* ── Колонки ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  /* ── Футер ── */
+  .page-footer {
+    position: absolute;
+    bottom: 12mm;
+    left: 16mm;
+    right: 16mm;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+
+  /* ── Цвета разделов ── */
+  .color-income  { background: var(--green); }
+  .color-regular { background: var(--amber); }
+  .color-big     { background: var(--red); }
+  .color-assets  { background: var(--blue); }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<script>
+// Данные инжектируются сервером в window.__DATA__
+const D = window.__DATA__ || {};
+const fmt = (n, sign=false) => {
+  const v = Math.abs(n||0);
+  const s = v >= 1000000
+    ? (v/1000000).toFixed(1)+'M'
+    : v >= 1000
+    ? (v/1000).toFixed(0)+'K'
+    : v.toFixed(0);
+  return (sign && n > 0 ? '+' : (n < 0 ? '-' : '')) + s + ' ₽';
+};
+const fmtFull = n => new Intl.NumberFormat('ru-RU').format(Math.round(n||0)) + ' ₽';
+const pct = (a, b) => b ? Math.round((a-b)/b*100) : 0;
+const MONTHS = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
+                'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+document.addEventListener('DOMContentLoaded', () => {
+  const income  = D.total_income  || 0;
+  const expense = D.total_expense || 0;
+  const assets  = D.total_assets  || 0;
+  const delta   = income - expense;
+  const prevExp = D.prev_expense  || 0;
+  const prevInc = D.prev_income   || 0;
+  const month   = MONTHS[D.month] || '';
+  const year    = D.year || new Date().getFullYear();
+  const topCats = D.top_categories || [];
+  const sections= D.sections || [];
+  const txs     = D.transactions || [];
+  const prevMonth = MONTHS[D.prev_month] || '';
+
+  // ── Страница 1: Обзор ──────────────────────────────────────────────────────
+  const p1 = document.getElementById('page1');
+
+  // Headline
+  const deltaSign = delta >= 0 ? 'Профицит' : 'Дефицит';
+  const expChange = prevExp ? `${pct(expense,prevExp) > 0 ? '+' : ''}${pct(expense,prevExp)}% к прошлому месяцу` : '';
+  p1.querySelector('.headline-text').textContent =
+    `${deltaSign} ${fmt(Math.abs(delta))}. Расходы ${fmtFull(expense)}${expChange ? ' — ' + expChange : ''}.`;
+
+  // KPI
+  const kpis = p1.querySelectorAll('.kpi-card');
+  const expPct = pct(expense, prevExp);
+  const incPct = pct(income, prevInc);
+
+  kpis[0].querySelector('.kpi-value').textContent = fmtFull(income);
+  kpis[0].querySelector('.kpi-value').className = 'kpi-value positive';
+  kpis[0].querySelector('.kpi-delta').textContent = prevInc ? `${incPct > 0 ? '+' : ''}${incPct}% vs ${prevMonth}` : '';
+  kpis[0].querySelector('.kpi-delta').className = `kpi-delta ${incPct >= 0 ? 'positive' : 'negative'}`;
+
+  kpis[1].querySelector('.kpi-value').textContent = fmtFull(expense);
+  kpis[1].querySelector('.kpi-value').className = 'kpi-value negative';
+  kpis[1].querySelector('.kpi-delta').textContent = prevExp ? `${expPct > 0 ? '+' : ''}${expPct}% vs ${prevMonth}` : '';
+  kpis[1].querySelector('.kpi-delta').className = `kpi-delta ${expPct <= 0 ? 'positive' : 'negative'}`;
+
+  kpis[2].querySelector('.kpi-value').textContent = fmt(delta, true);
+  kpis[2].querySelector('.kpi-value').className = `kpi-value ${delta >= 0 ? 'positive' : 'negative'}`;
+  kpis[2].querySelector('.kpi-delta').textContent = delta >= 0 ? 'Профицит' : 'Дефицит';
+
+  // Пончик — структура
+  const ctx1 = document.getElementById('donut1').getContext('2d');
+  const sectionExpenses = sections.filter(s => parseFloat(s.expense||0) > 0);
+  new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: sectionExpenses.map(s => s.section),
+      datasets: [{
+        data: sectionExpenses.map(s => parseFloat(s.expense||0)),
+        backgroundColor: ['#f59e0b','#ef4444','#6366f1','#22c55e'],
+        borderWidth: 2,
+        borderColor: '#0d0d14',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#e8e8f0', font: { size: 10 }, padding: 12 } }
+      },
+      cutout: '65%',
+    }
+  });
+
+  // Прогресс-бары топ категорий
+  const progContainer = p1.querySelector('.progress-list');
+  const maxVal = topCats.length ? parseFloat(topCats[0].total) : 1;
+  topCats.slice(0,8).forEach(cat => {
+    const pctVal = (parseFloat(cat.total) / expense * 100).toFixed(1);
+    const fillPct = (parseFloat(cat.total) / maxVal * 100).toFixed(0);
+    progContainer.innerHTML += `
+      <div class="progress-row">
+        <div class="progress-label">${cat.category}</div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${fillPct}%;background:linear-gradient(90deg,#7c6aff,#a855f7)"></div>
+        </div>
+        <div class="progress-value">${fmtFull(parseFloat(cat.total))}</div>
+        <div class="progress-pct">${pctVal}%</div>
+      </div>`;
+  });
+
+  // ── Страница 2: Расходы по категориям ─────────────────────────────────────
+  const p2 = document.getElementById('page2');
+
+  // Бар-чарт топ-10
+  const ctx2 = document.getElementById('barChart').getContext('2d');
+  new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: topCats.slice(0,10).map(c => c.category.length > 14 ? c.category.slice(0,14)+'…' : c.category),
+      datasets: [{
+        label: 'Расходы ₽',
+        data: topCats.slice(0,10).map(c => parseFloat(c.total)),
+        backgroundColor: 'rgba(124,106,255,0.7)',
+        borderColor:     'rgba(124,106,255,1)',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(30,30,46,0.8)' }, ticks: { color: '#6b6b85', font:{size:9} } },
+        y: { grid: { display: false }, ticks: { color: '#e8e8f0', font:{size:10} } },
+      }
+    }
+  });
+
+  // Таблица категорий
+  const catTableBody = p2.querySelector('.cat-table-body');
+  topCats.forEach((cat, i) => {
+    const pctV = expense ? (parseFloat(cat.total)/expense*100).toFixed(1) : '0';
+    catTableBody.innerHTML += `
+      <tr>
+        <td style="color:var(--muted)">${i+1}</td>
+        <td><strong>${cat.category}</strong></td>
+        <td style="color:var(--muted)">${cat.section||''}</td>
+        <td class="tx-amount">${fmtFull(parseFloat(cat.total))}</td>
+        <td style="text-align:right;color:var(--muted)">${pctV}%</td>
+      </tr>`;
+  });
+
+  // ── Страница 3: Транзакции ─────────────────────────────────────────────────
+  const p3 = document.getElementById('page3');
+  const txBody = p3.querySelector('.tx-body');
+  txs.slice(0, 30).forEach(tx => {
+    const d = tx.date || '';
+    const dateStr = typeof d === 'string' ? d.slice(0,10) : d;
+    const isIncome = tx.tx_type === 'Доход';
+    const badgeClass = isIncome ? 'badge-income' : (tx.tx_type === 'Актив' ? 'badge-asset' : 'badge-expense');
+    const amtClass   = isIncome ? 'positive' : 'negative';
+    txBody.innerHTML += `
+      <tr>
+        <td style="color:var(--muted);white-space:nowrap">${dateStr}</td>
+        <td><strong>${tx.category||'—'}</strong></td>
+        <td style="color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis">${(tx.merchant||'').slice(0,18)}</td>
+        <td><span class="badge ${badgeClass}">${tx.tx_type}</span></td>
+        <td class="tx-amount ${amtClass}">${fmtFull(parseFloat(tx.amount_rub||tx.amount||0))}</td>
+      </tr>`;
+  });
+
+  // ── Страница 4: Динамика и выводы ─────────────────────────────────────────
+  const p4 = document.getElementById('page4');
+
+  // Линейный график по месяцам
+  const trend = D.trend || [];
+  if (trend.length > 1) {
+    const ctx4 = document.getElementById('trendChart').getContext('2d');
+    new Chart(ctx4, {
+      type: 'line',
+      data: {
+        labels: trend.map(r => `${MONTHS[r.month]?.slice(0,3)} ${r.year}`),
+        datasets: [
+          {
+            label: 'Доходы',
+            data: trend.map(r => parseFloat(r.income||0)),
+            borderColor: '#22c55e',
+            backgroundColor: 'rgba(34,197,94,0.08)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+          },
+          {
+            label: 'Расходы',
+            data: trend.map(r => parseFloat(r.expense||0)),
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239,68,68,0.08)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#6b6b85', font:{size:10} } } },
+        scales: {
+          x: { grid: { color:'rgba(30,30,46,0.8)' }, ticks: { color:'#6b6b85', font:{size:9} } },
+          y: {
+            grid: { color:'rgba(30,30,46,0.8)' },
+            ticks: { color:'#6b6b85', font:{size:9},
+              callback: v => v >= 1000 ? (v/1000).toFixed(0)+'K' : v }
+          }
+        }
+      }
+    });
+  }
+
+  // Сводка-вывод
+  const summaryEl = p4.querySelector('.summary-text');
+  const savingsRate = income ? Math.round(delta/income*100) : 0;
+  const topCat = topCats[0]?.category || '—';
+  const topCatSum = topCats[0] ? fmtFull(parseFloat(topCats[0].total)) : '—';
+  summaryEl.innerHTML = `
+    <p>За <strong>${month} ${year}</strong> зафиксировано доходов на <strong>${fmtFull(income)}</strong>
+    и расходов на <strong>${fmtFull(expense)}</strong>.</p>
+    <p style="margin-top:8px">Норма сбережений составила <strong>${savingsRate}%</strong>.
+    Крупнейшая статья расходов — <strong>${topCat}</strong> (${topCatSum}).</p>
+    ${assets ? `<p style="margin-top:8px">Движение активов за период: <strong>${fmtFull(assets)}</strong>.</p>` : ''}
+    ${prevExp ? `<p style="margin-top:8px">По сравнению с ${prevMonth}:
+      расходы ${expPct > 0 ? 'выросли на ' + Math.abs(expPct) + '%' : 'снизились на ' + Math.abs(expPct) + '%'}.</p>` : ''}
+  `;
+});
+</script>
+
+<!-- ═══════════════════════════════ PAGE 1 ═══════════════════════════════ -->
+<div class="page" id="page1">
+  <div class="page-header">
+    <div>
+      <div class="report-title">Месячный<br>отчёт</div>
+      <div class="report-subtitle">DizelFinance · Personal Finance</div>
+    </div>
+    <div class="report-period">
+      <strong id="period-label">— период —</strong>
+      Сформирован: <span id="gen-date"></span>
+    </div>
+  </div>
+
+  <div class="headline">
+    <div class="headline-label">Главный вывод</div>
+    <div class="headline-text">—</div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">💚 Доходы</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-sub">за месяц</div>
+      <div class="kpi-delta neutral">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">❤️ Расходы</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-sub">за месяц</div>
+      <div class="kpi-delta neutral">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">📊 Дельта</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-sub">профицит / дефицит</div>
+      <div class="kpi-delta neutral">—</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="section-title">Структура расходов</div>
+      <canvas id="donut1" height="160"></canvas>
+    </div>
+    <div class="card">
+      <div class="section-title">Топ категорий</div>
+      <div class="progress-list"></div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>DizelFinance</span>
+    <span>Страница 1 из 4</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ PAGE 2 ═══════════════════════════════ -->
+<div class="page" id="page2">
+  <div class="page-header">
+    <div>
+      <div class="report-title" style="font-size:16px">Расходы по категориям</div>
+      <div class="report-subtitle">Детализация за месяц</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-title">Топ-10 категорий расходов</div>
+    <canvas id="barChart" height="200"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Все категории</div>
+    <table class="tx-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Категория</th>
+          <th>Раздел</th>
+          <th style="text-align:right">Сумма</th>
+          <th style="text-align:right">%</th>
+        </tr>
+      </thead>
+      <tbody class="cat-table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="page-footer">
+    <span>DizelFinance</span>
+    <span>Страница 2 из 4</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ PAGE 3 ═══════════════════════════════ -->
+<div class="page" id="page3">
+  <div class="page-header">
+    <div>
+      <div class="report-title" style="font-size:16px">Транзакции</div>
+      <div class="report-subtitle">Все операции за месяц (до 30)</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <table class="tx-table">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Категория</th>
+          <th>Место</th>
+          <th>Тип</th>
+          <th style="text-align:right">Сумма</th>
+        </tr>
+      </thead>
+      <tbody class="tx-body"></tbody>
+    </table>
+  </div>
+
+  <div class="page-footer">
+    <span>DizelFinance</span>
+    <span>Страница 3 из 4</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ PAGE 4 ═══════════════════════════════ -->
+<div class="page" id="page4">
+  <div class="page-header">
+    <div>
+      <div class="report-title" style="font-size:16px">Динамика и выводы</div>
+      <div class="report-subtitle">Тренд и интерпретация</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-title">Динамика доходов и расходов</div>
+    <canvas id="trendChart" height="180"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Выводы за период</div>
+    <div class="summary-text" style="line-height:1.7;color:var(--text)"></div>
+  </div>
+
+  <div class="page-footer">
+    <span>DizelFinance</span>
+    <span>Страница 4 из 4</span>
+  </div>
+</div>
+
+<script>
+// Устанавливаем период в шапку
+document.addEventListener('DOMContentLoaded', () => {
+  const D = window.__DATA__ || {};
+  const MONTHS = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
+                  'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const periodEl = document.getElementById('period-label');
+  if (periodEl && D.month && D.year) {
+    periodEl.textContent = `${MONTHS[D.month]} ${D.year}`;
+  }
+  const genEl = document.getElementById('gen-date');
+  if (genEl) {
+    genEl.textContent = new Date().toLocaleDateString('ru-RU');
+  }
+});
+</script>
+</body>
+</html>

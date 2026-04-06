@@ -1,0 +1,13 @@
+{
+  "name": "dizelfinance-pdf-service",
+  "version": "1.0.0",
+  "description": "PDF generation service for DizelFinance",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "puppeteer": "^21.0.0"
+  }
+}
