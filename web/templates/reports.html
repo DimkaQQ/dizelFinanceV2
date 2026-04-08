@@ -1,140 +1,163 @@
 {% extends "base.html" %}
-{% block title %}PDF Отчёты — DizelFinance{% endblock %}
+{% block title %}PDF Отчёты — Wealth Control{% endblock %}
 {% block page_title %}PDF Отчёты{% endblock %}
 
+{% block extra_css %}
+<style>
+  .report-card {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    transition: border-color 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .report-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 60px; height: 60px;
+    border-radius: 0 10px 0 0;
+  }
+  .rc-monthly::before   { background: linear-gradient(135deg,transparent,rgba(61,255,160,0.07)); }
+  .rc-quarterly::before { background: linear-gradient(135deg,transparent,rgba(90,255,224,0.07)); }
+  .rc-yearly::before    { background: linear-gradient(135deg,transparent,rgba(167,139,255,0.07)); }
+  .rc-networth::before  { background: linear-gradient(135deg,transparent,rgba(255,186,61,0.07)); }
+
+  .report-card:hover { border-color: var(--border2); }
+  .rc-icon { font-size: 22px; margin-bottom: 10px; }
+  .rc-title { font-family: var(--sans); font-weight: 700; font-size: 14px; margin-bottom: 4px; letter-spacing: -0.02em; }
+  .rc-desc  { font-size: 11px; color: var(--text3); margin-bottom: 14px; line-height: 1.5; }
+
+  .rc-form-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .rc-form-row select { font-size: 11px; padding: 7px 10px; flex: 1; }
+
+  .pdf-status { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+
+  /* Comparative card — full width */
+  .rc-comparative {
+    border: 1px solid rgba(90,255,224,0.15);
+    background: linear-gradient(135deg, rgba(90,255,224,0.03), var(--bg1));
+  }
+  .cmp-periods { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 12px; }
+  .cmp-period-col { display: flex; flex-direction: column; gap: 6px; }
+  .cmp-period-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); }
+
+  @media (max-width: 600px) {
+    .cmp-periods { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="max-width:720px">
+<p style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.6">
+  Профессиональные PDF отчёты с графиками. Каждый шаблон под свой горизонт анализа.
+</p>
 
-  <p style="font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.6">
-    Premium-отчёты с графиками и аналитикой. Каждый шаблон адаптирован под свой горизонт —
-    от месячного обзора до капитального отчёта.
-  </p>
+<!-- 4 основных отчёта -->
+<div class="grid g2 stagger" style="margin-bottom:14px">
 
-  <!-- Шаблоны -->
-  <div class="grid g2 stagger" style="margin-bottom:20px">
-
-    <div class="card" style="position:relative;overflow:hidden">
-      <div style="position:absolute;top:0;right:0;width:80px;height:80px;background:linear-gradient(135deg,transparent,rgba(79,255,176,0.06));border-radius:0 10px 0 0"></div>
-      <div style="font-size:24px;margin-bottom:10px">📅</div>
-      <div style="font-family:var(--display);font-weight:700;font-size:15px;margin-bottom:4px">Месячный</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">
-        4 страницы · Доходы, расходы, топ категорий, тренд
+  <!-- Monthly -->
+  <div class="report-card rc-monthly">
+    <div class="rc-icon">📅</div>
+    <div class="rc-title">Месячный</div>
+    <div class="rc-desc">4 стр · Доходы, расходы, топ категорий, тренд</div>
+    <form method="POST" action="{{ url_for('generate_report') }}">
+      <input type="hidden" name="template" value="monthly">
+      <div class="rc-form-row">
+        <select name="year">{% for y in years %}<option {{ 'selected' if y==now.year }}>{{ y }}</option>{% endfor %}</select>
+        <select name="month">{% for num,name in months.items() %}<option value="{{ num }}" {{ 'selected' if num==now.month }}>{{ name[:3] }}</option>{% endfor %}</select>
       </div>
-      <form method="POST" action="{{ url_for('generate_report') }}">
-        <input type="hidden" name="template" value="monthly">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <select name="year" style="font-size:12px;padding:7px 10px">
-            {% for y in years %}<option {{ 'selected' if y == now.year }}>{{ y }}</option>{% endfor %}
-          </select>
-          <select name="month" style="font-size:12px;padding:7px 10px">
-            {% for num, name in months.items() %}<option value="{{ num }}" {{ 'selected' if num == now.month }}>{{ name }}</option>{% endfor %}
-          </select>
-        </div>
-        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center">Скачать PDF →</button>
-      </form>
-    </div>
-
-    <div class="card" style="position:relative;overflow:hidden">
-      <div style="position:absolute;top:0;right:0;width:80px;height:80px;background:linear-gradient(135deg,transparent,rgba(0,212,255,0.06));border-radius:0 10px 0 0"></div>
-      <div style="font-size:24px;margin-bottom:10px">📊</div>
-      <div style="font-family:var(--display);font-weight:700;font-size:15px;margin-bottom:4px">Квартальный</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">
-        6 страниц · Квартальная динамика и сравнение месяцев
-      </div>
-      <form method="POST" action="{{ url_for('generate_report') }}">
-        <input type="hidden" name="template" value="quarterly">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <select name="year" style="font-size:12px;padding:7px 10px">
-            {% for y in years %}<option {{ 'selected' if y == now.year }}>{{ y }}</option>{% endfor %}
-          </select>
-          <select name="quarter" style="font-size:12px;padding:7px 10px">
-            <option value="1">Q1 (янв-март)</option>
-            <option value="2">Q2 (апр-июнь)</option>
-            <option value="3" {{ 'selected' if now.month >= 7 }}>Q3 (июл-сент)</option>
-            <option value="4" {{ 'selected' if now.month >= 10 }}>Q4 (окт-дек)</option>
-          </select>
-        </div>
-        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Скачать PDF →</button>
-      </form>
-    </div>
-
-    <div class="card" style="position:relative;overflow:hidden">
-      <div style="position:absolute;top:0;right:0;width:80px;height:80px;background:linear-gradient(135deg,transparent,rgba(157,122,255,0.06));border-radius:0 10px 0 0"></div>
-      <div style="font-size:24px;margin-bottom:10px">📈</div>
-      <div style="font-family:var(--display);font-weight:700;font-size:15px;margin-bottom:4px">Годовой</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">
-        8 страниц · Полный годовой анализ, тренды, категории
-      </div>
-      <form method="POST" action="{{ url_for('generate_report') }}">
-        <input type="hidden" name="template" value="yearly">
-        <div style="margin-bottom:10px">
-          <select name="year" style="font-size:12px;padding:7px 10px;width:100%">
-            {% for y in years %}<option {{ 'selected' if y == now.year }}>{{ y }}</option>{% endfor %}
-          </select>
-        </div>
-        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Скачать PDF →</button>
-      </form>
-    </div>
-
-    <div class="card" style="position:relative;overflow:hidden">
-      <div style="position:absolute;top:0;right:0;width:80px;height:80px;background:linear-gradient(135deg,transparent,rgba(255,184,77,0.06));border-radius:0 10px 0 0"></div>
-      <div style="font-size:24px;margin-bottom:10px">💎</div>
-      <div style="font-family:var(--display);font-weight:700;font-size:15px;margin-bottom:4px">Капитал и активы</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">
-        5 страниц · Чистый капитал, портфели, динамика роста
-      </div>
-      <form method="POST" action="{{ url_for('generate_report') }}">
-        <input type="hidden" name="template" value="networth">
-        <div style="margin-bottom:10px">
-          <select name="year" style="font-size:12px;padding:7px 10px;width:100%">
-            {% for y in years %}<option {{ 'selected' if y == now.year }}>{{ y }}</option>{% endfor %}
-          </select>
-        </div>
-        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Скачать PDF →</button>
-      </form>
-    </div>
-
+      <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center">Скачать PDF →</button>
+    </form>
   </div>
 
-  <!-- Сравнительный — отдельно, шире -->
-  <div class="card fade-in">
-    <div style="display:flex;align-items:flex-start;gap:16px">
-      <div style="font-size:32px">⚡</div>
-      <div style="flex:1">
-        <div style="font-family:var(--display);font-weight:700;font-size:16px;margin-bottom:4px">Сравнительный отчёт</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:16px;line-height:1.5">
-          4 страницы · Сравнение 2-3 периодов: месяц к месяцу, квартал к кварталу.
-          Видны тренды без перегруза данными.
-        </div>
-        <form method="POST" action="{{ url_for('generate_report') }}">
-          <input type="hidden" name="template" value="comparative">
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
-            {% for i in range(1, 4) %}
-            <div>
-              <div class="form-label" style="margin-bottom:4px">Период {{ i }}</div>
-              <div style="display:flex;flex-direction:column;gap:6px">
-                <select name="year_{{ i }}" style="font-size:11px;padding:6px 8px">
-                  {% for y in years %}<option {{ 'selected' if y == now.year }}>{{ y }}</option>{% endfor %}
-                </select>
-                <select name="month_{{ i }}" style="font-size:11px;padding:6px 8px">
-                  {% for num, name in months.items() %}
-                  <option value="{{ num }}" {{ 'selected' if num == (now.month - i + 1) if (now.month - i + 1) > 0 else 12 }}>{{ name[:3] }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
-            {% endfor %}
+  <!-- Quarterly -->
+  <div class="report-card rc-quarterly">
+    <div class="rc-icon">📊</div>
+    <div class="rc-title">Квартальный</div>
+    <div class="rc-desc">6 стр · Квартал, помесячная разбивка, топ</div>
+    <form method="POST" action="{{ url_for('generate_report') }}">
+      <input type="hidden" name="template" value="quarterly">
+      <div class="rc-form-row">
+        <select name="year">{% for y in years %}<option {{ 'selected' if y==now.year }}>{{ y }}</option>{% endfor %}</select>
+        <select name="quarter">
+          <option value="1">Q1</option><option value="2">Q2</option>
+          <option value="3" {{ 'selected' if now.month>=7 }}>Q3</option>
+          <option value="4" {{ 'selected' if now.month>=10 }}>Q4</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Скачать PDF →</button>
+    </form>
+  </div>
+
+  <!-- Yearly -->
+  <div class="report-card rc-yearly">
+    <div class="rc-icon">📈</div>
+    <div class="rc-title">Годовой</div>
+    <div class="rc-desc">8 стр · Полный анализ, тренды, квартальная разбивка</div>
+    <form method="POST" action="{{ url_for('generate_report') }}">
+      <input type="hidden" name="template" value="yearly">
+      <div class="rc-form-row">
+        <select name="year" style="width:100%">{% for y in years %}<option {{ 'selected' if y==now.year }}>{{ y }}</option>{% endfor %}</select>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Скачать PDF →</button>
+    </form>
+  </div>
+
+  <!-- Net Worth -->
+  <div class="report-card rc-networth">
+    <div class="rc-icon">💎</div>
+    <div class="rc-title">Капитал и активы</div>
+    <div class="rc-desc">5 стр · Чистый капитал, портфели, динамика роста</div>
+    <form method="POST" action="{{ url_for('generate_report') }}">
+      <input type="hidden" name="template" value="networth">
+      <div class="rc-form-row">
+        <select name="year" style="width:100%">{% for y in years %}<option {{ 'selected' if y==now.year }}>{{ y }}</option>{% endfor %}</select>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Скачать PDF →</button>
+    </form>
+  </div>
+
+</div>
+
+<!-- Comparative — full width -->
+<div class="report-card rc-comparative" style="margin-bottom:16px">
+  <div style="display:flex;align-items:flex-start;gap:14px">
+    <div style="font-size:28px;flex-shrink:0">⚡</div>
+    <div style="flex:1">
+      <div class="rc-title" style="font-size:15px">Сравнительный отчёт</div>
+      <div class="rc-desc" style="margin-bottom:16px">
+        4 стр · Сравнение 2–3 периодов. Видны тренды без перегруза.
+      </div>
+      <form method="POST" action="{{ url_for('generate_report') }}">
+        <input type="hidden" name="template" value="comparative">
+        <div class="cmp-periods">
+          {% for i in range(1, 4) %}
+          <div class="cmp-period-col">
+            <div class="cmp-period-label">Период {{ i }}</div>
+            <select name="year_{{ i }}" style="font-size:11px;padding:6px 8px">
+              {% for y in years %}<option {{ 'selected' if y==now.year }}>{{ y }}</option>{% endfor %}
+            </select>
+            <select name="month_{{ i }}" style="font-size:11px;padding:6px 8px">
+              {% for num,name in months.items() %}
+              <option value="{{ num }}" {{ 'selected' if num==(now.month - i + 1) if (now.month - i + 1) > 0 else 12 }}>{{ name[:3] }}</option>
+              {% endfor %}
+            </select>
           </div>
-          <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center">Сравнить и скачать →</button>
-        </form>
-      </div>
+          {% endfor %}
+        </div>
+        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center">Сравнить и скачать →</button>
+      </form>
     </div>
   </div>
+</div>
 
-  <!-- Статус PDF сервиса -->
-  <div style="margin-top:16px;display:flex;align-items:center;gap:8px">
-    <span id="pdfStatus" class="topbar-tag">Проверяю PDF сервис...</span>
-  </div>
+<!-- Статус PDF сервиса -->
+<div class="pdf-status">
+  <span id="pdfStatus" class="chip">Проверяю PDF сервис...</span>
+  <span style="font-size:11px;color:var(--text3)">Puppeteer · Node.js</span>
 </div>
 {% endblock %}
 
@@ -146,16 +169,15 @@ fetch('/api/pdf-status')
     const el = document.getElementById('pdfStatus');
     if (d.ok) {
       el.textContent = '● PDF сервис онлайн';
-      el.className   = 'topbar-tag live';
+      el.className   = 'chip live';
     } else {
       el.textContent = '✕ PDF сервис недоступен';
       el.style.color = 'var(--red)';
     }
   })
   .catch(() => {
-    const el = document.getElementById('pdfStatus');
-    el.textContent = '✕ PDF сервис недоступен';
-    el.style.color = 'var(--red)';
+    document.getElementById('pdfStatus').textContent = '✕ PDF сервис недоступен';
+    document.getElementById('pdfStatus').style.color = 'var(--red)';
   });
 </script>
 {% endblock %}
