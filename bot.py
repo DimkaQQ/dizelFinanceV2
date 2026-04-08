@@ -65,6 +65,8 @@ class TxForm(StatesGroup):
     confirm       = State()
     edit_amount   = State()
     edit_currency = State()
+    quick_expense_amount = State()
+    quick_expense_month  = State()
 
 class PDFReview(StatesGroup):
     reviewing = State()
@@ -90,6 +92,7 @@ def kb_analytics() -> ReplyKeyboardMarkup:
         [KeyboardButton(text="📊 За этот месяц"), KeyboardButton(text="📅 Выбрать месяц")],
         [KeyboardButton(text="📈 Сравнить месяцы"), KeyboardButton(text="🏆 Топ-10 категорий")],
         [KeyboardButton(text="💸 Все расходы"), KeyboardButton(text="📄 Выписка PDF")],
+        [KeyboardButton(text="✏️ Общий расход за месяц")],  # ← новая кнопка
         [KeyboardButton(text="⏪ Главное меню")],
     ], resize_keyboard=True)
 
@@ -109,6 +112,7 @@ def kb_section(tx_type: str) -> ReplyKeyboardMarkup:
     else:
         rows.append([KeyboardButton(text="🛒 Регулярные расходы")])
         rows.append([KeyboardButton(text="💳 Крупные траты")])
+        rows.append([KeyboardButton(text="✏️ Общий расход за месяц")])  # ← добавить
     rows.append([KeyboardButton(text="⏪ Назад")])
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, one_time_keyboard=True)
 
@@ -831,6 +835,88 @@ async def analytics_pdf(msg: Message, state: FSMContext):
 # Транзакции
 # ══════════════════════════════════════════════════════════════════════════════
 
+@dp.message(StateFilter("*"), F.text == "✏️ Общий расход за месяц")
+async def quick_expense_start(msg: Message, state: FSMContext):
+    if not allowed(msg.from_user.id): return
+    now = datetime.now()
+    await state.update_data(
+        quick_year=now.year,
+        quick_month=now.month,
+    )
+    await state.set_state(TxForm.quick_expense_amount)
+    month_name = MONTH_NAMES.get(now.month, "")
+    await msg.answer(
+        f"✏️ <b>Общий расход за {month_name} {now.year}</b>\n\n"
+        f"Введите общую сумму расходов за месяц.\n"
+        f"Например: <code>100000</code> или <code>85500.50</code>\n\n"
+        f"Этот расход запишется как «Прочее (рег)» в Регулярные расходы.",
+        reply_markup=ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text="📅 Другой месяц")],
+            [KeyboardButton(text="⏪ Назад")],
+        ], resize_keyboard=True, one_time_keyboard=True)
+    )
+
+@dp.message(TxForm.quick_expense_amount)
+async def quick_expense_amount(msg: Message, state: FSMContext):
+    if msg.text == "⏪ Назад":
+        await state.clear()
+        await msg.answer("Аналитика:", reply_markup=kb_analytics())
+        return
+    if msg.text == "📅 Другой месяц":
+        await state.set_state(TxForm.quick_expense_month)
+        await msg.answer(
+            "Выберите месяц:",
+            reply_markup=kb_month_picker("qem")
+        )
+        return
+    try:
+        amount = float(msg.text.replace(",", ".").replace(" ", "").replace("\xa0", ""))
+        assert amount > 0
+    except Exception:
+        await msg.answer("Введите корректную сумму, например <code>100000</code>:", reply_markup=kb_back())
+        return
+
+    data = await state.get_data()
+    year  = data.get("quick_year",  datetime.now().year)
+    month = data.get("quick_month", datetime.now().month)
+    month_name = MONTH_NAMES.get(month, "")
+
+    # Сохраняем
+    db.save_transaction(msg.from_user.id, {
+        "date":       f"01.{month:02d}.{year}",
+        "section":    "Регулярные расходы",
+        "category":   "Прочее (рег)",
+        "amount":     amount,
+        "currency":   "RUB",
+        "rate":       1.0,
+        "amount_rub": amount,
+        "tx_type":    "Расход",
+        "merchant":   f"Общий расход за {month_name} {year}",
+        "comment":    "Быстрый ввод общего расхода",
+        "source":     "quick_expense",
+    })
+    await state.clear()
+    await msg.answer(
+        f"✅ Записано!\n\n"
+        f"💸 Общий расход за <b>{month_name} {year}</b>\n"
+        f"<code>{amount:,.0f} ₽</code>",
+        reply_markup=kb_main()
+    )
+
+@dp.callback_query(F.data.startswith("qem|"))
+async def quick_expense_month_pick(cb: CallbackQuery, state: FSMContext):
+    _, year, month = cb.data.split("|")
+    await state.update_data(quick_year=int(year), quick_month=int(month))
+    await state.set_state(TxForm.quick_expense_amount)
+    month_name = MONTH_NAMES.get(int(month), "")
+    try: await cb.message.edit_reply_markup(reply_markup=None)
+    except Exception: pass
+    await cb.message.answer(
+        f"✏️ Общий расход за <b>{month_name} {year}</b>\n\nВведите сумму:",
+        reply_markup=kb_back()
+    )
+    await cb.answer()
+
 @dp.message(StateFilter("*"), F.text == "📋 Транзакции")
 async def my_txs(msg: Message, state: FSMContext):
     if not allowed(msg.from_user.id): return
@@ -957,6 +1043,22 @@ async def proc_section(msg: Message, state: FSMContext):
         await state.set_state(TxForm.tx_type)
         await msg.answer("Тип операции:", reply_markup=kb_tx_type())
         return
+
+    if msg.text == "✏️ Общий расход за месяц":
+        now = datetime.now()
+        await state.update_data(quick_year=now.year, quick_month=now.month)
+        await state.set_state(TxForm.quick_expense_amount)
+        month_name = MONTH_NAMES.get(now.month, "")
+        await msg.answer(
+            f"✏️ <b>Общий расход за {month_name} {now.year}</b>\n\n"
+            f"Введите сумму:",
+            reply_markup=ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text="📅 Другой месяц")],
+                [KeyboardButton(text="⏪ Назад")],
+            ], resize_keyboard=True, one_time_keyboard=True)
+        )
+        return
+
     section = SECTION_LABEL.get(msg.text)
     if not section:
         await msg.answer("Выберите раздел:", reply_markup=kb_section(data.get("tx_type", "Расход")))
