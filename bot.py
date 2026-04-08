@@ -92,7 +92,6 @@ def kb_analytics() -> ReplyKeyboardMarkup:
         [KeyboardButton(text="📊 За этот месяц"), KeyboardButton(text="📅 Выбрать месяц")],
         [KeyboardButton(text="📈 Сравнить месяцы"), KeyboardButton(text="🏆 Топ-10 категорий")],
         [KeyboardButton(text="💸 Все расходы"), KeyboardButton(text="📄 Выписка PDF")],
-        [KeyboardButton(text="✏️ Общий расход за месяц")],  # ← новая кнопка
         [KeyboardButton(text="⏪ Главное меню")],
     ], resize_keyboard=True)
 
