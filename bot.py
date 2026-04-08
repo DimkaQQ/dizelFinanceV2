@@ -1424,6 +1424,100 @@ async def handle_photo(msg: Message, state: FSMContext):
         await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
 
 # ══════════════════════════════════════════════════════════════════════════════
+# Голосовые и аудио
+# ══════════════════════════════════════════════════════════════════════════════
+
+@dp.message(StateFilter("*"), F.voice)
+async def handle_voice(msg: Message, state: FSMContext):
+    """Голосовое сообщение → Whisper → парсинг транзакции."""
+    if not allowed(msg.from_user.id):
+        return
+
+    await msg.answer("🎙 Слушаю голосовое...")
+
+    try:
+        # Скачиваем аудио
+        f = await bot.get_file(msg.voice.file_id)
+        raw = await bot.download_file(f.file_path)
+        audio_bytes = raw.read()
+
+        # Транскрибируем через faster-whisper (локально)
+        text = transcribe(audio_bytes, filename="voice.ogg")
+
+        # Фоллбэк при ошибке
+        if not text:
+            await msg.answer("⚠️ Не удалось распознать, пробую ещё раз...")
+            text = transcribe_fallback(audio_bytes)
+
+        if not text:
+            await msg.answer(
+                "❌ Не удалось распознать голосовое.\n\n"
+                "Попробуйте:\n— Говорить чётче\n— Меньше шума\n— Отправить текстом",
+                reply_markup=kb_main()
+            )
+            return
+
+        await msg.answer(f"🎙 Распознано:\n<i>«{text}»</i>")
+
+        # Пытаемся распарсить как транзакцию
+        tx = parse_sms(text)
+
+        if tx and tx.get("amount"):
+            # Успешно распознали транзакцию
+            await _send_single_tx(msg, {
+                **tx,
+                "date": tx.get("date") or datetime.now().strftime("%d.%m.%Y, %H:%M"),
+            })
+        else:
+            # Не транзакция — предлагаем подсказки
+            await msg.answer(
+                "Не смог распознать транзакцию из голосового.\n\n"
+                "Скажите например:\n"
+                "«Потратил пять тысяч в пятёрочке»\n"
+                "«Зачислено зарплата 150 тысяч»\n"
+                "«Заплатил за такси 800 рублей»",
+                reply_markup=kb_main()
+            )
+
+    except Exception as e:
+        log.error(f"handle_voice: {e}")
+        await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
+
+
+@dp.message(StateFilter("*"), F.audio)
+async def handle_audio(msg: Message, state: FSMContext):
+    """Аудиофайл (mp3, wav и т.д.) — та же логика что и голосовое."""
+    if not allowed(msg.from_user.id):
+        return
+
+    await msg.answer("🎵 Обрабатываю аудиофайл...")
+    try:
+        f = await bot.get_file(msg.audio.file_id)
+        raw = await bot.download_file(f.file_path)
+        audio_bytes = raw.read()
+        fname = msg.audio.file_name or "audio.mp3"
+
+        text = transcribe(audio_bytes, filename=fname)
+        if not text:
+            await msg.answer("❌ Не удалось распознать аудио.", reply_markup=kb_main())
+            return
+
+        await msg.answer(f"🎵 Распознано:\n<i>«{text}»</i>")
+        
+        tx = parse_sms(text)
+        if tx and tx.get("amount"):
+            await _send_single_tx(msg, {
+                **tx,
+                "date": tx.get("date") or datetime.now().strftime("%d.%m.%Y, %H:%M"),
+            })
+        else:
+            await msg.answer("Транзакция не найдена в аудио.", reply_markup=kb_main())
+
+    except Exception as e:
+        log.error(f"handle_audio: {e}")
+        await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Quick cat callbacks
 # ══════════════════════════════════════════════════════════════════════════════
 
