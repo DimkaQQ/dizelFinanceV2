@@ -1,217 +1,368 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Капитал и активы</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{--bg:#080810;--card:#0d0d1a;--border:rgba(255,255,255,0.07);--text:#f0f0fa;--muted:#60607a;--text2:#a0a0c0;--green:#4fffb0;--red:#ff4d6d;--amber:#ffb84d;--violet:#9d7aff;--blue:#00d4ff;}
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;}
-  .page{width:210mm;min-height:297mm;padding:18mm 16mm;page-break-after:always;position:relative;background:var(--bg);}
-  .page:last-child{page-break-after:auto;}
-  .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid var(--border);}
-  .ph-title{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.03em;}
-  .ph-sub{font-size:11px;color:var(--muted);margin-top:3px;}
-  .ph-right{text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
-  .ph-right strong{display:block;font-size:14px;color:var(--text);margin-bottom:2px;}
-  .hl{background:linear-gradient(135deg,rgba(157,122,255,0.12),rgba(0,212,255,0.05));border:1px solid rgba(157,122,255,0.25);border-radius:12px;padding:18px 22px;margin-bottom:20px;}
-  .hl-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--violet);margin-bottom:8px;}
-  .hl-text{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;line-height:1.4;}
-  .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
-  .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;}
-  .kpi-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
-  .kpi-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;letter-spacing:-0.02em;}
-  .kpi-sub{font-size:10px;color:var(--muted);margin-top:5px;}
-  .c-green{color:var(--green);} .c-red{color:var(--red);} .c-violet{color:var(--violet);} .c-amber{color:var(--amber);} .c-blue{color:var(--blue);}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;}
-  .sec-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .asset-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;}
-  .asset-row:last-child{border-bottom:none;}
-  .asset-name{font-weight:500;}
-  .asset-val{font-family:'DM Mono',monospace;font-weight:500;}
-  .timeline-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-  .timeline-month{min-width:60px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
-  .timeline-bar-wrap{flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden;}
-  .timeline-bar-fill{height:100%;border-radius:99px;}
-  .timeline-val{min-width:80px;text-align:right;font-family:'DM Mono',monospace;font-size:10px;}
-  .footer{position:absolute;bottom:10mm;left:16mm;right:16mm;display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;}
-  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Капитал и активы — Wealth Control</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    @page { size: A4; margin: 0; }
+    :root {
+      --color-primary: #1e3a5f; --color-primary-light: #2c5282;
+      --color-success: #059669; --color-warning: #d97706; --color-danger: #dc2626;
+      --color-neutral-50: #f8fafc; --color-neutral-100: #f1f5f9; --color-neutral-200: #e2e8f0;
+      --color-neutral-300: #cbd5e1; --color-neutral-600: #475569; --color-neutral-700: #334155;
+      --color-neutral-800: #1e293b; --color-neutral-900: #0f172a;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05); --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+      --radius: 8px; --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      --font-mono: "SF Mono", Monaco, "Roboto Mono", monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 13px; }
+    body { font-family: var(--font-sans); background: #fff; color: var(--color-neutral-800); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    .page { width: 210mm; min-height: 297mm; padding: 20mm 16mm; margin: 0 auto; background: #fff; page-break-after: always; position: relative; }
+    .page:last-child { page-break-after: auto; }
+    
+    .report-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 2px solid var(--color-primary); margin-bottom: 24px; }
+    .report-header .brand { display: flex; align-items: center; gap: 12px; }
+    .report-header .logo { width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; }
+    .report-header .title h1 { font-size: 18px; font-weight: 700; color: var(--color-primary); letter-spacing: -0.02em; }
+    .report-header .title .subtitle { font-size: 12px; color: var(--color-neutral-600); margin-top: 2px; }
+    .report-header .meta { text-align: right; font-size: 11px; color: var(--color-neutral-600); line-height: 1.6; }
+    .report-header .meta strong { color: var(--color-neutral-800); font-weight: 600; }
+    
+    .networth-hero { text-align: center; padding: 28px 0; margin-bottom: 28px; background: linear-gradient(135deg, var(--color-neutral-50), #fff); border-radius: var(--radius); border: 1px solid var(--color-neutral-200); }
+    .networth-hero .label { font-size: 12px; color: var(--color-neutral-600); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .networth-hero .value { font-size: 32px; font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); letter-spacing: -0.03em; margin: 4px 0; }
+    .networth-hero .value.positive { color: var(--color-success); }
+    .networth-hero .value.negative { color: var(--color-danger); }
+    .networth-hero .sub { font-size: 11px; color: var(--color-neutral-500); margin-top: 6px; }
+    
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+    .summary-card { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 16px 14px; text-align: center; }
+    .summary-card .label { font-size: 11px; font-weight: 500; color: var(--color-neutral-600); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .summary-card .value { font-size: 18px; font-weight: 700; color: var(--color-neutral-900); font-family: var(--font-mono); margin-bottom: 4px; }
+    .summary-card .value.positive { color: var(--color-success); }
+    .summary-card .sub { font-size: 10px; color: var(--color-neutral-500); }
+    
+    .section { margin: 28px 0; }
+    .section-title { font-size: 14px; font-weight: 700; color: var(--color-primary); padding-bottom: 10px; border-bottom: 1px solid var(--color-neutral-200); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ""; width: 4px; height: 16px; background: var(--color-primary); border-radius: 2px; }
+    
+    .bar-list { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: flex; align-items: center; gap: 12px; font-size: 12px; }
+    .bar-row .label { width: 150px; font-weight: 500; color: var(--color-neutral-700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-row .track { flex: 1; height: 10px; background: var(--color-neutral-200); border-radius: 5px; overflow: hidden; }
+    .bar-row .fill { height: 100%; background: var(--color-primary); border-radius: 5px; }
+    .bar-row .value { width: 85px; text-align: right; font-weight: 600; font-family: var(--font-mono); }
+    .bar-row .pct { width: 42px; text-align: right; font-size: 11px; color: var(--color-neutral-500); font-family: var(--font-mono); }
+    
+    .data-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 12px 0; }
+    .data-table thead { background: var(--color-neutral-100); border-bottom: 2px solid var(--color-neutral-300); }
+    .data-table th { font-weight: 600; color: var(--color-neutral-700); text-align: left; padding: 10px 8px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+    .data-table td { padding: 9px 8px; border-bottom: 1px solid var(--color-neutral-200); color: var(--color-neutral-700); }
+    .data-table .amount { font-family: var(--font-mono); font-weight: 500; text-align: right; white-space: nowrap; }
+    .data-table .amount.pos { color: var(--color-success); }
+    .data-table .amount.neg { color: var(--color-danger); }
+    
+    .chart-wrapper { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
+    .chart-container { height: 220px; position: relative; }
+    
+    .insights { background: linear-gradient(135deg, var(--color-neutral-50), #fff); border: 1px solid var(--color-neutral-200); border-left: 4px solid var(--color-primary); border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 18px; margin: 20px 0; }
+    .insights ul { margin-left: 18px; margin-top: 8px; }
+    .insights li { margin: 6px 0; font-size: 12px; color: var(--color-neutral-700); line-height: 1.5; }
+    .insights li strong { color: var(--color-neutral-900); font-weight: 600; }
+    
+    .final-summary { text-align: center; padding: 32px 24px; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); border-radius: var(--radius); color: white; margin: 24px 0; }
+    .final-summary .emoji { font-size: 42px; margin-bottom: 12px; }
+    .final-summary .headline { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .final-summary .stats { margin: 18px 0; font-size: 13px; line-height: 1.8; }
+    .final-summary .stats div { display: flex; justify-content: center; gap: 8px; }
+    .final-summary .stats .label { opacity: 0.9; }
+    .final-summary .stats .value { font-weight: 600; font-family: var(--font-mono); }
+    .final-summary .footer-note { font-size: 11px; opacity: 0.85; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.3); }
+    
+    .page-footer { position: absolute; bottom: 16mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--color-neutral-500); border-top: 1px solid var(--color-neutral-200); padding-top: 10px; }
+    .page-footer .brand { display: flex; align-items: center; gap: 6px; font-weight: 500; color: var(--color-neutral-700); }
+    .page-footer .brand .dot { width: 6px; height: 6px; background: var(--color-primary); border-radius: 50%; }
+    .page-footer .page-num { font-family: var(--font-mono); color: var(--color-neutral-600); }
+    
+    .text-success { color: var(--color-success); }
+    .text-danger { color: var(--color-danger); }
+    .text-muted { color: var(--color-neutral-500); }
+    .font-mono { font-family: var(--font-mono); }
+    .font-semibold { font-weight: 600; }
+    .text-right { text-align: right; }
+    .mt-4 { margin-top: 16px; }
+    
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { box-shadow: none; margin: 0; } }
+    [data-field] { opacity: 0; }
+    [data-field].loaded { opacity: 1; transition: opacity 0.15s; }
+  </style>
 </head>
 <body>
-<script>
-const D=window.__DATA__||{};
-const fmt=n=>new Intl.NumberFormat('ru-RU').format(Math.round(n||0))+' ₽';
-const fmtK=n=>{n=n||0;return n>=1000000?(n/1000000).toFixed(1)+'M ₽':n>=1000?(n/1000).toFixed(0)+'K ₽':Math.round(n)+' ₽';};
-const MONTHS=['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-document.addEventListener('DOMContentLoaded',()=>{
-  const totalAssets  = D.total_assets  || 0;
-  const totalSavings = D.total_savings || 0;
-  const trend        = D.net_worth_trend || [];
-  const assetCats    = D.asset_categories || [];
-  const year         = D.year || 2026;
+  <!-- Страница 1: Чистый капитал -->
+  <div class="page">
+    <header class="report-header">
+      <div class="brand">
+        <div class="logo">WC</div>
+        <div class="title">
+          <h1>Капитал и активы</h1>
+          <div class="subtitle">Wealth Control Net Worth Report</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div><strong data-field="year">—</strong></div>
+        <div>Сформирован: <span data-field="generated_at">—</span></div>
+      </div>
+    </header>
 
-  // Final cumulative
-  const finalNW = trend.length ? trend[trend.length-1].cumulative||0 : totalSavings;
+    <div class="networth-hero">
+      <div class="label">Чистый капитал на конец периода</div>
+      <div class="value" data-field="net_worth_fmt" data-class="net_worth">— ₽</div>
+      <div class="sub" id="nw-subtitle">—</div>
+    </div>
 
-  // Headline
-  document.querySelectorAll('.hl-text').forEach(el=>{
-    el.textContent = `Накопленный капитал за ${year} год: ${fmtK(finalNW)}. Движение активов: ${fmtK(totalAssets)}.`;
-  });
-  document.querySelectorAll('.period-label').forEach(el=>el.textContent=`${year} год`);
-  document.querySelectorAll('.gen-date').forEach(el=>el.textContent=new Date().toLocaleDateString('ru-RU'));
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="label">🏦 Активы</div>
+        <div class="value" data-field="total_assets_fmt">— ₽</div>
+        <div class="sub">инвестиции, депозиты</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">💵 Сбережения</div>
+        <div class="value" data-field="total_savings_fmt" data-class="total_savings">— ₽</div>
+        <div class="sub">доходы − расходы</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">📊 Норма сбережений</div>
+        <div class="value" data-field="savings_rate">—%</div>
+        <div class="sub">от общего дохода</div>
+      </div>
+    </div>
 
-  // KPI
-  const kpis=document.querySelectorAll('.kpi');
-  if(kpis[0]){kpis[0].querySelector('.kpi-val').textContent=fmtK(finalNW);kpis[0].querySelector('.kpi-val').className='kpi-val c-violet';}
-  if(kpis[1]){kpis[1].querySelector('.kpi-val').textContent=fmtK(totalAssets);kpis[1].querySelector('.kpi-val').className='kpi-val c-blue';}
-  if(kpis[2]){kpis[2].querySelector('.kpi-val').textContent=fmtK(totalSavings);kpis[2].querySelector('.kpi-val').className='kpi-val '+(totalSavings>=0?'c-green':'c-red');}
-
-  // Cumulative line chart
-  const ctx1=document.getElementById('nwChart');
-  if(ctx1&&trend.length){
-    new Chart(ctx1,{
-      type:'line',
-      data:{
-        labels:trend.map(r=>MONTHS[r.month]?.slice(0,3)||''),
-        datasets:[{
-          label:'Накопленный капитал',
-          data:trend.map(r=>r.cumulative||0),
-          borderColor:'#9d7aff',
-          backgroundColor:'rgba(157,122,255,0.08)',
-          tension:0.4,fill:true,pointRadius:4,
-          pointBackgroundColor:'#9d7aff',
-        }]
-      },
-      options:{responsive:true,plugins:{legend:{labels:{color:'#60607a',font:{size:10}}}},
-        scales:{
-          x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#60607a',font:{size:9}}},
-          y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#60607a',font:{size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}
-        }}
-    });
-  }
-
-  // Monthly delta timeline
-  const tlEl=document.getElementById('timeline');
-  if(tlEl&&trend.length){
-    const maxAbs=Math.max(...trend.map(r=>Math.abs(r.delta||0)),1);
-    trend.forEach(r=>{
-      const d=r.delta||0;
-      const pct=(Math.abs(d)/maxAbs*100).toFixed(0);
-      const color=d>=0?'rgba(79,255,176,0.7)':'rgba(255,77,109,0.6)';
-      tlEl.innerHTML+=`
-        <div class="timeline-row">
-          <div class="timeline-month">${MONTHS[r.month]?.slice(0,3)||''}</div>
-          <div class="timeline-bar-wrap"><div class="timeline-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-          <div class="timeline-val" style="color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'+':''}${fmtK(d)}</div>
-        </div>`;
-    });
-  }
-
-  // Asset categories
-  const acEl=document.getElementById('assetCats');
-  if(acEl&&assetCats.length){
-    assetCats.forEach(c=>{
-      acEl.innerHTML+=`
-        <div class="asset-row">
-          <div class="asset-name">${c.category||'—'}</div>
-          <div class="asset-val c-blue">${fmt(parseFloat(c.total||0))}</div>
-        </div>`;
-    });
-  }
-
-  // Conclusions
-  const concl=document.getElementById('conclusions');
-  if(concl){
-    const posMonths=trend.filter(r=>(r.delta||0)>0).length;
-    concl.innerHTML=`
-      <p>За <strong>${year} год</strong> накопленный капитал составил <strong>${fmtK(finalNW)}</strong>.</p>
-      <p style="margin-top:10px">Положительная дельта зафиксирована в <strong>${posMonths} из ${trend.length} месяцев</strong>.</p>
-      <p style="margin-top:10px">Движение по инвестиционным инструментам: <strong>${fmtK(totalAssets)}</strong>.</p>
-      <p style="margin-top:10px">${finalNW>0?'Капитал растёт — продолжайте придерживаться текущей стратегии.':'Обратите внимание на оптимизацию расходов для улучшения показателя.'}</p>
-    `;
-  }
-});
-</script>
-
-<!-- PAGE 1 -->
-<div class="page">
-  <div class="ph">
-    <div><div class="ph-title">Капитал<br>и активы</div><div class="ph-sub">DizelFinance · Net Worth Report</div></div>
-    <div class="ph-right"><strong class="period-label">—</strong><span class="gen-date"></span></div>
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 1 из 5</div>
+    </footer>
   </div>
-  <div class="hl"><div class="hl-label">Главный вывод</div><div class="hl-text">—</div></div>
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-label">Чистый капитал</div><div class="kpi-val">—</div><div class="kpi-sub">накоплено за год</div></div>
-    <div class="kpi"><div class="kpi-label">Движение активов</div><div class="kpi-val">—</div><div class="kpi-sub">инвестиции, портфели</div></div>
-    <div class="kpi"><div class="kpi-label">Сбережения</div><div class="kpi-val">—</div><div class="kpi-sub">доходы минус расходы</div></div>
-  </div>
-  <div class="card">
-    <div class="sec-title">Динамика накопленного капитала</div>
-    <canvas id="nwChart" height="200"></canvas>
-  </div>
-  <div class="footer"><span>DizelFinance</span><span>1 / 5</span></div>
-</div>
 
-<!-- PAGE 2 -->
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Помесячная дельта</div></div></div>
-  <div class="card">
-    <div class="sec-title">Изменение капитала по месяцам</div>
-    <div id="timeline"></div>
-  </div>
-  <div class="footer"><span>DizelFinance</span><span>2 / 5</span></div>
-</div>
+  <!-- Страница 2: Динамика капитала -->
+  <div class="page">
+    <div class="section">
+      <div class="section-title">Динамика накопленного капитала</div>
+      <div class="chart-wrapper">
+        <div class="chart-container">
+          <canvas id="networthChart"></canvas>
+        </div>
+      </div>
+    </div>
 
-<!-- PAGE 3 -->
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Инвестиционные инструменты</div></div></div>
-  <div class="card">
-    <div class="sec-title">Категории активов</div>
-    <div id="assetCats"></div>
-  </div>
-  <div class="footer"><span>DizelFinance</span><span>3 / 5</span></div>
-</div>
+    <div class="section">
+      <div class="section-title">Помесячная дельта</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th width="80">Месяц</th>
+            <th class="text-right">Дельта</th>
+            <th class="text-right">Накоплено</th>
+          </tr>
+        </thead>
+        <tbody id="nw-monthly-body"></tbody>
+      </table>
+    </div>
 
-<!-- PAGE 4 -->
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Выводы</div></div></div>
-  <div class="card">
-    <div class="sec-title" style="margin-bottom:14px">Анализ капитала</div>
-    <div id="conclusions" style="font-size:12px;line-height:1.8;color:var(--text2)"></div>
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 2 из 5</div>
+    </footer>
   </div>
-  <div class="footer"><span>DizelFinance</span><span>4 / 5</span></div>
-</div>
 
-<!-- PAGE 5 -->
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Итоговая сводка</div></div></div>
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-label">Чистый капитал</div><div class="kpi-val c-violet" id="s-nw">—</div></div>
-    <div class="kpi"><div class="kpi-label">Активы</div><div class="kpi-val c-blue" id="s-assets">—</div></div>
-    <div class="kpi"><div class="kpi-label">Сбережения</div><div class="kpi-val c-green" id="s-sav">—</div></div>
+  <!-- Страница 3: Категории активов -->
+  <div class="page">
+    <div class="section">
+      <div class="section-title">Категории активов</div>
+      <div class="bar-list" id="assets-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Анализ капитала</div>
+      <div class="insights">
+        <ul>
+          <li>Общая стоимость активов: <strong><span data-field="total_assets_fmt">—</span> ₽</strong></li>
+          <li>Чистые сбережения за период: <strong><span data-field="total_savings_fmt">—</span> ₽</strong></li>
+          <li>Крупнейшая категория: <strong id="top-asset-cat">—</strong></li>
+          <li>Рекомендация: <strong id="nw-recommendation">—</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 3 из 5</div>
+    </footer>
   </div>
-  <div class="footer"><span>DizelFinance</span><span>5 / 5</span></div>
-</div>
 
-<script>
-document.addEventListener('DOMContentLoaded',()=>{
-  const D=window.__DATA__||{};
-  const fmt=n=>new Intl.NumberFormat('ru-RU').format(Math.round(n||0))+' ₽';
-  const fmtK=n=>{n=n||0;return n>=1000000?(n/1000000).toFixed(1)+'M ₽':n>=1000?(n/1000).toFixed(0)+'K ₽':Math.round(n)+' ₽';};
-  const trend=D.net_worth_trend||[];
-  const finalNW=trend.length?trend[trend.length-1].cumulative||0:0;
-  const el1=document.getElementById('s-nw');
-  const el2=document.getElementById('s-assets');
-  const el3=document.getElementById('s-sav');
-  if(el1)el1.textContent=fmtK(finalNW);
-  if(el2)el2.textContent=fmtK(D.total_assets||0);
-  if(el3)el3.textContent=fmtK(D.total_savings||0);
-});
-</script>
+  <!-- Страница 4: Итог -->
+  <div class="page">
+    <div class="final-summary">
+      <div class="emoji" id="nw-final-emoji">—</div>
+      <div class="headline" id="nw-final-headline">—</div>
+      <div class="stats">
+        <div><span class="label">Чистый капитал:</span> <span class="value" data-field="net_worth_fmt">—</span> ₽</div>
+        <div><span class="label">Активы:</span> <span class="value" data-field="total_assets_fmt">—</span> ₽</div>
+        <div><span class="label">Сбережения:</span> <span class="value" data-field="total_savings_fmt">—</span> ₽</div>
+        <div><span class="label">Норма:</span> <span class="value" data-field="savings_rate">—</span>%</div>
+      </div>
+      <div class="footer-note">
+        Отчёт сформирован автоматически • Wealth Control  • Конфиденциально
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
+      <div class="page-num">Страница 4 из 5</div>
+    </footer>
+  </div>
+
+  <!-- Страница 5: Заключительная -->
+  <div class="page">
+    <div style="text-align: center; padding: 40px 24px;">
+      <div style="font-size: 56px; margin-bottom: 16px;">🎯</div>
+      <div style="font-size: 18px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">
+        Ваш финансовый прогресс
+      </div>
+      <div style="font-size: 13px; color: var(--color-neutral-600); max-width: 400px; margin: 0 auto 24px; line-height: 1.6;">
+        Регулярный мониторинг капитала — ключ к долгосрочному финансовому благополучию. 
+        Продолжайте отслеживать доходы, расходы и активы для достижения целей.
+      </div>
+      <div style="font-size: 11px; color: var(--color-neutral-500);">
+        Следующий отчёт: <span data-field="next_report_date">—</span>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
+      <div class="page-num">Страница 5 из 5</div>
+    </footer>
+  </div>
+
+  <script>
+    (function() {
+      const data = window.__DATA__ || {};
+      
+      function fill(fields) {
+        for (const [key, val] of Object.entries(fields)) {
+          document.querySelectorAll(`[data-field="${key}"]`).forEach(el => {
+            if (el.dataset.class && val !== undefined && val !== null) {
+              el.classList.toggle('positive', val >= 0);
+              el.classList.toggle('negative', val < 0);
+            }
+            if (val !== undefined && val !== null) {
+              el.textContent = typeof val === 'number' ? val.toLocaleString('ru-RU') : val;
+            }
+            el.classList.add('loaded');
+          });
+        }
+      }
+
+      fill({
+        year: data.year,
+        generated_at: data.generated_at,
+        net_worth_fmt: data.net_worth_fmt,
+        total_assets_fmt: data.total_assets_fmt,
+        total_savings_fmt: data.total_savings_fmt,
+        savings_rate: data.savings_rate,
+        next_report_date: `${data.year + 1}`,
+      });
+
+      // Hero subtitle
+      const nwSubtitle = document.getElementById('nw-subtitle');
+      if (data.net_worth !== undefined) {
+        nwSubtitle.textContent = data.net_worth >= 0 ? '📈 Рост капитала' : '⚠️ Снижение капитала';
+        document.querySelector('.networth-hero .value').classList.toggle('positive', data.net_worth >= 0);
+        document.querySelector('.networth-hero .value').classList.toggle('negative', data.net_worth < 0);
+      }
+
+      // Assets bar list
+      const assetsList = document.getElementById('assets-list');
+      if (data.asset_categories?.length) {
+        assetsList.innerHTML = data.asset_categories.map(asset => `
+          <div class="bar-row">
+            <div class="label">${asset.name}</div>
+            <div class="track"><div class="fill" style="width: ${Math.min(100, asset.pct)}%"></div></div>
+            <div class="value font-mono">${asset.total_fmt} ₽</div>
+            <div class="pct">${asset.pct}%</div>
+          </div>
+        `).join('');
+        document.getElementById('top-asset-cat').textContent = data.asset_categories[0]?.name || '—';
+      }
+
+      // Monthly delta table
+      const nwBody = document.getElementById('nw-monthly-body');
+      if (data.net_worth_trend?.length) {
+        nwBody.innerHTML = data.net_worth_trend.map(m => `
+          <tr>
+            <td class="font-semibold">${m.month_name}</td>
+            <td class="amount ${m.delta >= 0 ? 'pos' : 'neg'}">${m.delta_fmt} ₽</td>
+            <td class="amount font-semibold">${m.cumulative_fmt} ₽</td>
+          </tr>
+        `).join('');
+      }
+
+      // Net worth chart
+      const ctx = document.getElementById('networthChart');
+      if (ctx && data.net_worth_trend?.length) {
+        Chart.defaults.font.family = 'var(--font-sans)';
+        Chart.defaults.font.size = 10;
+        new Chart(ctx, {
+          type: 'line',
+           {
+            labels: data.net_worth_trend.map(m => m.month_name),
+            datasets: [{
+              label: 'Накопленный капитал',
+              data: data.net_worth_trend.map(m => m.cumulative),
+              borderColor: '#1e3a5f',
+              backgroundColor: 'rgba(30,58,95,0.1)',
+              tension: 0.35,
+              fill: true,
+              borderWidth: 2.5,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              pointBackgroundColor: '#fff',
+              pointBorderColor: '#1e3a5f',
+              pointBorderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(226,232,240,0.6)' },
+                ticks: { callback: v => v.toLocaleString('ru-RU') + ' ₽', maxTicksLimit: 5 }
+              },
+              x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } }
+            }
+          }
+        });
+      }
+
+      // Insights recommendation
+      const rec = document.getElementById('nw-recommendation');
+      if (data.savings_rate < 10) rec.textContent = 'Сфокусироваться на создании финансовой подушки (3-6 месяцев расходов)';
+      else if (data.savings_rate > 25) rec.textContent = 'Рассмотреть диверсификацию портфеля: акции, облигации, недвижимость';
+      else rec.textContent = 'Поддерживать баланс между ликвидностью и доходностью активов';
+
+      // Final summary
+      document.getElementById('nw-final-emoji').textContent = data.net_worth >= 0 ? '🎯' : '📊';
+      document.getElementById('nw-final-headline').textContent = 
+        data.net_worth >= 0 ? `Капитал растёт` : `Требуется оптимизация`;
+
+      setTimeout(() => document.querySelectorAll('[data-field]').forEach(el => el.classList.add('loaded')), 50);
+    })();
+  </script>
 </body>
 </html>

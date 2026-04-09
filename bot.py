@@ -75,6 +75,11 @@ class CompareForm(StatesGroup):
     pick_month1 = State()
     pick_month2 = State()
 
+class AnalyticsForm(StatesGroup):
+    report_type   = State()  # monthly, quarterly, yearly, comparative, networth
+    pick_period   = State()  # выбор месяца/квартала/года
+    pick_compare  = State()  # для сравнения двух периодов
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Клавиатуры
 # ══════════════════════════════════════════════════════════════════════════════
@@ -89,9 +94,10 @@ def kb_main() -> ReplyKeyboardMarkup:
 
 def kb_analytics() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="📊 За этот месяц"), KeyboardButton(text="📅 Выбрать месяц")],
-        [KeyboardButton(text="📈 Сравнить месяцы"), KeyboardButton(text="🏆 Топ-10 категорий")],
-        [KeyboardButton(text="💸 Все расходы"), KeyboardButton(text="📄 Выписка PDF")],
+        [KeyboardButton(text="📄 Месячный отчёт"), KeyboardButton(text="📊 Квартальный отчёт")],
+        [KeyboardButton(text="📅 Годовой отчёт"),  KeyboardButton(text="📈 Сравнить периоды")],
+        [KeyboardButton(text="💰 Net Worth"),      KeyboardButton(text="📋 Топ категорий")],
+        [KeyboardButton(text="💸 Детализация"),    KeyboardButton(text="📤 Экспорт CSV")],
         [KeyboardButton(text="⏪ Главное меню")],
     ], resize_keyboard=True)
 
@@ -182,14 +188,25 @@ def kb_pdf_item(idx: int, total: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def kb_quick_cats(tx_id: str, category: str, section: str) -> InlineKeyboardMarkup:
+    """Клавиатура быстрых категорий — с короткими callback_data (<64 байт)."""
     cats = SECTIONS.get(section, {}).get("categories", [])
     alts = [c for c in cats if c != category][:3]
+    
+    # Сохраняем маппинг в pending (уже есть в коде, просто используем)
+    # pending[tx_id] уже содержит category и section
+    
     rows = [[InlineKeyboardButton(
         text=f"✅ {category}",
-        callback_data=f"qc|{tx_id}|{category}|{section}"
+        callback_data=f"qc|{tx_id}"  # ← Коротко! ~12 байт
     )]]
-    for alt in alts:
-        rows.append([InlineKeyboardButton(text=alt, callback_data=f"qc|{tx_id}|{alt}|{section}")])
+    for i, alt in enumerate(alts):
+        # Для альтернатив тоже используем короткий формат + индекс
+        alt_key = f"{tx_id}_{i}"
+        pending[alt_key] = {"category": alt, "section": section, "tx_id": tx_id}
+        rows.append([InlineKeyboardButton(
+            text=alt,
+            callback_data=f"qc|{alt_key}"  # ← ~20 байт, безопасно
+        )])
     rows.append([
         InlineKeyboardButton(text="📋 Все категории", callback_data=f"qa|{tx_id}"),
         InlineKeyboardButton(text="❌ Пропустить",    callback_data="qn|skip"),
@@ -228,6 +245,47 @@ def kb_month_picker(prefix: str) -> InlineKeyboardMarkup:
     if py_row:
         rows.append(py_row)
     rows.append([InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_pick")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def kb_report_period_picker(report_type: str) -> InlineKeyboardMarkup:
+    """Универсальная клавиатура выбора периода для аналитики."""
+    now = datetime.now()
+    rows = []
+    
+    if report_type in ("monthly", "comparative", "networth"):
+        # Выбор месяца
+        for m in range(1, 13):
+            if len(rows) % 3 == 0:
+                rows.append([])
+            rows[-1].append(InlineKeyboardButton(
+                text=MONTH_NAMES[m][:3],
+                callback_data=f"ap|{report_type}|{now.year}|{m}"
+            ))
+        # Кнопка перехода на прошлый год
+        rows.append([InlineKeyboardButton(
+            text=f"◀️ {now.year - 1}",
+            callback_data=f"ay|{report_type}|{now.year - 1}"
+        )])
+    
+    elif report_type == "quarterly":
+        # Выбор квартала
+        for q in range(1, 5):
+            rows.append([InlineKeyboardButton(
+                text=f"Q{q} ({(q-1)*3+1}–{q*3} мес)",
+                callback_data=f"aq|{now.year}|{q}"
+            )])
+    
+    elif report_type == "yearly":
+        # Выбор года (последние 6 лет)
+        for y in range(now.year - 5, now.year + 1):
+            if len(rows) % 2 == 0:
+                rows.append([])
+            rows[-1].append(InlineKeyboardButton(
+                text=str(y),
+                callback_data=f"ay|{report_type}|{y}"
+            ))
+    
+    rows.append([InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_report")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def kb_expenses_nav(year: int, month: int, offset: int,
@@ -633,6 +691,7 @@ async def cb_top(cb: CallbackQuery):
 
 @dp.callback_query(F.data.startswith("rpdf|"))
 async def cb_report_pdf(cb: CallbackQuery):
+    """Быстрая выписка за текущий месяц из дашборда."""
     _, year, month = cb.data.split("|")
     uid = cb.from_user.id
     await cb.message.answer("⏳ Генерирую PDF отчёт...")
@@ -764,71 +823,96 @@ async def cb_noop(cb: CallbackQuery):
 @dp.message(StateFilter("*"), F.text == "📈 Аналитика")
 async def analytics_menu(msg: Message, state: FSMContext):
     if not allowed(msg.from_user.id): return
-    await msg.answer("Выберите тип аналитики:", reply_markup=kb_analytics())
+    await state.set_state(AnalyticsForm.report_type)
+    await msg.answer(
+        "📈 <b>Аналитика и экспорт</b>\n\n"
+        "Выберите тип отчёта:",
+        reply_markup=kb_analytics()
+    )
 
-@dp.message(StateFilter("*"), F.text == "📊 За этот месяц")
-async def analytics_this_month(msg: Message, state: FSMContext):
-    if not allowed(msg.from_user.id): return
-    now  = datetime.now()
-    text = build_dashboard(msg.from_user.id, now.year, now.month)
-    await msg.answer(text)
+# 📄 Месячный отчёт
+@dp.message(AnalyticsForm.report_type, F.text == "📄 Месячный отчёт")
+async def analytics_monthly(msg: Message, state: FSMContext):
+    await state.update_data(report_type="monthly")
+    await state.set_state(AnalyticsForm.pick_period)
+    await msg.answer(
+        "🗓️ <b>Выберите месяц для отчёта:</b>",
+        reply_markup=kb_report_period_picker("monthly")
+    )
 
-@dp.message(StateFilter("*"), F.text == "📅 Выбрать месяц")
-async def analytics_pick_month(msg: Message, state: FSMContext):
-    await msg.answer("Выберите месяц:", reply_markup=kb_month_picker("dash"))
+# 📊 Квартальный отчёт
+@dp.message(AnalyticsForm.report_type, F.text == "📊 Квартальный отчёт")
+async def analytics_quarterly(msg: Message, state: FSMContext):
+    await state.update_data(report_type="quarterly")
+    await state.set_state(AnalyticsForm.pick_period)
+    now = datetime.now()
+    await msg.answer(
+        f"📊 <b>Выберите квартал за {now.year} год:</b>",
+        reply_markup=kb_report_period_picker("quarterly")
+    )
 
-@dp.message(StateFilter("*"), F.text == "🏆 Топ-10 категорий")
-async def analytics_top10(msg: Message, state: FSMContext):
-    if not allowed(msg.from_user.id): return
-    now  = datetime.now()
+# 📅 Годовой отчёт
+@dp.message(AnalyticsForm.report_type, F.text == "📅 Годовой отчёт")
+async def analytics_yearly(msg: Message, state: FSMContext):
+    await state.update_data(report_type="yearly")
+    await state.set_state(AnalyticsForm.pick_period)
+    await msg.answer(
+        "📅 <b>Выберите год:</b>",
+        reply_markup=kb_report_period_picker("yearly")
+    )
+
+# 📈 Сравнить периоды (первый шаг)
+@dp.message(AnalyticsForm.report_type, F.text == "📈 Сравнить периоды")
+async def analytics_comparative(msg: Message, state: FSMContext):
+    await state.update_data(report_type="comparative", step=1)
+    await state.set_state(AnalyticsForm.pick_compare)
+    await msg.answer(
+        "1️⃣ <b>Выберите первый период для сравнения:</b>",
+        reply_markup=kb_report_period_picker("comparative")
+    )
+
+# 💰 Net Worth
+@dp.message(AnalyticsForm.report_type, F.text == "💰 Net Worth")
+async def analytics_networth(msg: Message, state: FSMContext):
+    await state.update_data(report_type="networth")
+    await state.set_state(AnalyticsForm.pick_period)
+    await msg.answer(
+        "💰 <b>Выберите дату для расчёта капитала:</b>",
+        reply_markup=kb_report_period_picker("networth")
+    )
+
+# 📋 Топ категорий (текстовый)
+@dp.message(AnalyticsForm.report_type, F.text == "📋 Топ категорий")
+async def analytics_top_categories(msg: Message, state: FSMContext):
+    await state.clear()
+    now = datetime.now()
     cats = db.get_top_categories(msg.from_user.id, now.year, now.month, limit=10)
     if not cats:
         await msg.answer("Нет данных за этот месяц.", reply_markup=kb_analytics())
         return
-    month_name = MONTH_NAMES.get(now.month, "")
     total = sum(float(c["total"]) for c in cats)
-    text  = f"🏆 <b>Топ-10 расходов — {month_name} {now.year}</b>\n\n"
-    max_v = float(cats[0]["total"])
+    text = f"🏆 <b>Топ-10 расходов — {MONTH_NAMES.get(now.month,'')} {now.year}</b>\n\n"
     for i, c in enumerate(cats):
-        v   = float(c["total"])
-        pct = v / total * 100
-        bar = _bar(v / max_v * 100, 10)
-        text += f"{i+1:2}. {c['category'][:20]:<20}\n    {bar} {pct:.1f}%  <code>{v:,.0f} ₽</code>\n"
-    await msg.answer(text)
+        pct = float(c["total"]) / total * 100 if total else 0
+        text += f"{i+1}. {c['category'][:25]:<25} <code>{float(c['total']):>8,.0f} ₽</code> ({pct:.1f}%)\n"
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📤 Экспорт CSV", callback_data=f"exp_csv|top|{now.year}|{now.month}")]
+    ])
+    await msg.answer(text, reply_markup=kb)
 
-@dp.message(StateFilter("*"), F.text == "💸 Все расходы")
-async def analytics_all_expenses(msg: Message, state: FSMContext):
-    if not allowed(msg.from_user.id): return
-    now  = datetime.now()
+# 💸 Детализация расходов
+@dp.message(AnalyticsForm.report_type, F.text == "💸 Детализация")
+async def analytics_details(msg: Message, state: FSMContext):
+    await state.clear()
+    now = datetime.now()
     text, total = build_expenses_list(msg.from_user.id, now.year, now.month)
     if total == 0:
         await msg.answer("Нет расходов за этот месяц.", reply_markup=kb_analytics())
         return
-    await msg.answer(
-        text,
-        reply_markup=kb_expenses_nav(now.year, now.month, 0, total)
-    )
-
-@dp.message(StateFilter("*"), F.text == "📄 Выписка PDF")
-async def analytics_pdf(msg: Message, state: FSMContext):
-    if not allowed(msg.from_user.id): return
-    now = datetime.now()
-    await msg.answer("⏳ Генерирую PDF отчёт за текущий месяц...")
-    try:
-        from pdf_caller import generate_pdf, build_monthly_data
-        data = build_monthly_data(msg.from_user.id, now.year, now.month)
-        pdf_bytes = generate_pdf("monthly", data)
-        month_name = MONTH_NAMES.get(now.month, "")
-        filename = f"DizelFinance_{month_name}_{now.year}.pdf"
-        await bot.send_document(
-            msg.from_user.id,
-            document=BufferedInputFile(pdf_bytes, filename=filename),
-            caption=f"📄 Месячный отчёт · {month_name} {now.year}"
-        )
-    except RuntimeError as e:
-        await msg.answer(f"❌ {e}\n\nУбедитесь что PDF сервис запущен:\n`pm2 start pdf-service`")
-    except Exception as e:
-        await msg.answer(f"❌ Ошибка: {e}")
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📤 Экспорт CSV", callback_data=f"exp_csv|details|{now.year}|{now.month}")]
+    ])
+    await msg.answer(text, reply_markup=kb)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Транзакции
@@ -901,6 +985,208 @@ async def quick_expense_amount(msg: Message, state: FSMContext):
         f"<code>{amount:,.0f} ₽</code>",
         reply_markup=kb_main()
     )
+
+# 📄 Месячный отчёт (callback)
+@dp.callback_query(F.data.startswith("ap|monthly|"))
+async def cb_analytics_monthly(cb: CallbackQuery, state: FSMContext):
+    _, _, year, month = cb.data.split("|")
+    await cb.message.answer("⏳ Генерирую месячный отчёт...")
+    try:
+        from pdf_caller import generate_pdf, build_monthly_data
+        data = build_monthly_data(cb.from_user.id, int(year), int(month))
+        pdf_bytes = generate_pdf("monthly", data)
+        month_name = MONTH_NAMES.get(int(month), "")
+        filename = f"DizelFinance_{month_name}_{year}.pdf"
+        await bot.send_document(
+            cb.from_user.id,
+            document=BufferedInputFile(pdf_bytes, filename=filename),
+            caption=f"📄 Отчёт за {month_name} {year}"
+        )
+        await cb.message.answer("✅ Отчёт отправлен!", reply_markup=kb_analytics())
+    except Exception as e:
+        await cb.message.answer(f"❌ Ошибка: {e}")
+    await state.clear()
+    await cb.answer()
+
+# 📊 Квартальный отчёт (callback)
+@dp.callback_query(F.data.startswith("aq|"))
+async def cb_analytics_quarterly(cb: CallbackQuery, state: FSMContext):
+    _, year, quarter = cb.data.split("|")
+    await cb.message.answer(f"⏳ Генерирую отчёт за Q{quarter} {year}...")
+    try:
+        from pdf_caller import generate_pdf, build_quarterly_data
+        data = build_quarterly_data(cb.from_user.id, int(year), int(quarter))
+        pdf_bytes = generate_pdf("quarterly", data)
+        filename = f"DizelFinance_Q{quarter}_{year}.pdf"
+        await bot.send_document(
+            cb.from_user.id,
+            document=BufferedInputFile(pdf_bytes, filename=filename),
+            caption=f"📊 Квартальный отчёт · Q{quarter} {year}"
+        )
+        await cb.message.answer("✅ Отчёт отправлен!", reply_markup=kb_analytics())
+    except Exception as e:
+        await cb.message.answer(f"❌ Ошибка: {e}")
+    await state.clear()
+    await cb.answer()
+
+# 📅 Годовой отчёт (callback)
+@dp.callback_query(F.data.startswith("ay|yearly|"))
+async def cb_analytics_yearly(cb: CallbackQuery, state: FSMContext):
+    _, _, year = cb.data.split("|")
+    await cb.message.answer(f"⏳ Генерирую годовой отчёт за {year}...")
+    try:
+        from pdf_caller import generate_pdf, build_yearly_data
+        data = build_yearly_data(cb.from_user.id, int(year))
+        pdf_bytes = generate_pdf("yearly", data)
+        filename = f"DizelFinance_{year}.pdf"
+        await bot.send_document(
+            cb.from_user.id,
+            document=BufferedInputFile(pdf_bytes, filename=filename),
+            caption=f"📅 Годовой отчёт · {year}"
+        )
+        await cb.message.answer("✅ Отчёт отправлен!", reply_markup=kb_analytics())
+    except Exception as e:
+        await cb.message.answer(f"❌ Ошибка: {e}")
+    await state.clear()
+    await cb.answer()
+
+# 💰 Net Worth (callback)
+@dp.callback_query(F.data.startswith("ap|networth|"))
+async def cb_analytics_networth(cb: CallbackQuery, state: FSMContext):
+    _, _, year, month = cb.data.split("|")  # ← извлекаем и месяц!
+    await cb.message.answer("⏳ Рассчитываю Net Worth...")
+    try:
+        from pdf_caller import generate_pdf, build_networth_data
+        data = build_networth_data(cb.from_user.id, int(year))  # ← год для данных
+        pdf_bytes = generate_pdf("networth", data)
+        month_name = MONTH_NAMES.get(int(month), "")  # ← месяц для названия
+        filename = f"DizelFinance_NetWorth_{month_name}_{year}.pdf"
+        await bot.send_document(
+            cb.from_user.id,
+            document=BufferedInputFile(pdf_bytes, filename=filename),
+            caption=f"💰 Net Worth · {month_name} {year}"
+        )
+        await cb.message.answer("✅ Отчёт отправлен!", reply_markup=kb_analytics())
+    except Exception as e:
+        await cb.message.answer(f"❌ Ошибка: {e}")
+    await state.clear()
+    await cb.answer()
+
+# 📈 Сравнить периоды (первый период выбран)
+@dp.callback_query(F.data.startswith("ap|comparative|"))
+async def cb_comparative_first(cb: CallbackQuery, state: FSMContext):
+    _, _, year, month = cb.data.split("|")
+    await state.update_data(c1_year=int(year), c1_month=int(month))
+    await cb.message.answer(
+        "2️⃣ <b>Выберите второй период для сравнения:</b>",
+        reply_markup=kb_report_period_picker("comparative")  # ← тот же picker, тот же префикс
+    )
+    await cb.answer()
+
+# 📈 Сравнить периоды (второй период выбран — генерация)
+@dp.callback_query(F.data.startswith("ap|comparative|"))
+async def cb_comparative_second(cb: CallbackQuery, state: FSMContext):
+    _, _, year, month = cb.data.split("|")  # ← 4 части: ap, comparative, year, month
+    data = await state.get_data()
+    
+    # Проверяем, что первый период уже выбран
+    if "c1_year" not in data:
+        await cb.answer("❌ Сначала выберите первый период", show_alert=True)
+        return
+    
+    y1, m1 = data["c1_year"], data["c1_month"]
+    y2, m2 = int(year), int(month)
+    
+    await cb.message.answer("⏳ Генерирую сравнительный отчёт...")
+    try:
+        from pdf_caller import generate_pdf, build_comparative_data
+        pdf_data = build_comparative_data(cb.from_user.id, [
+            {"year": y1, "month": m1}, 
+            {"year": y2, "month": m2}
+        ])
+        pdf_bytes = generate_pdf("comparative", pdf_data)
+        mn1 = f"{MONTH_NAMES.get(m1,'')} {y1}"
+        mn2 = f"{MONTH_NAMES.get(m2,'')} {y2}"
+        filename = f"DizelFinance_compare_{mn1}_{mn2}.pdf"
+        await bot.send_document(
+            cb.from_user.id,
+            document=BufferedInputFile(pdf_bytes, filename=filename),
+            caption=f"📈 Сравнение: {mn1} vs {mn2}"
+        )
+        await cb.message.answer("✅ Отчёт отправлен!", reply_markup=kb_analytics())
+    except Exception as e:
+        await cb.message.answer(f"❌ Ошибка: {e}")
+    await state.clear()
+    await cb.answer()
+
+# 📤 Экспорт в CSV (универсальный)
+@dp.callback_query(F.data.startswith("exp_csv|"))
+async def cb_export_csv(cb: CallbackQuery):
+    await cb.answer("⏳ Готовлю CSV...")
+    try:
+        from io import StringIO
+        import csv
+        _, report_type, year, month = cb.data.split("|")
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        if report_type == "top":
+            writer.writerow(["Категория", "Сумма (₽)", "Доля (%)"])
+            cats = db.get_top_categories(cb.from_user.id, int(year), int(month), limit=50)
+            total = sum(float(c["total"]) for c in cats)
+            for c in cats:
+                pct = float(c["total"]) / total * 100 if total else 0
+                writer.writerow([c["category"], f"{float(c['total']):.2f}", f"{pct:.1f}"])
+            filename = f"top_categories_{year}_{month}.csv"
+        elif report_type == "details":
+            writer.writerow(["Дата", "Категория", "Мерчант", "Сумма", "Валюта", "Сумма в RUB"])
+            records = db.get_month_expenses_list(cb.from_user.id, int(year), int(month), limit=1000)
+            for r in records:
+                writer.writerow([
+                    r.get("date", ""), r.get("category", ""), r.get("merchant", ""),
+                    f"{float(r.get('amount',0)):.2f}", r.get("currency", "RUB"),
+                    f"{float(r.get('amount_rub',0)):.2f}"
+                ])
+            filename = f"expenses_details_{year}_{month}.csv"
+        
+        output.seek(0)
+        await bot.send_document(
+            cb.from_user.id,
+            document=BufferedInputFile(output.getvalue().encode('utf-8-sig'), filename=filename),
+            caption=f"📤 Экспорт: {filename}"
+        )
+    except Exception as e:
+        await cb.message.answer(f"❌ Ошибка экспорта: {e}")
+    await cb.answer()
+
+# ◀️ Смена года в picker
+@dp.callback_query(F.data.startswith("ay|"))
+async def cb_analytics_change_year(cb: CallbackQuery, state: FSMContext):
+    _, report_type, year = cb.data.split("|")
+    year = int(year)
+    if report_type in ("monthly", "comparative", "networth"):
+        await cb.message.edit_text(
+            f"🗓️ Выберите месяц за {year} год:",
+            reply_markup=kb_report_period_picker(report_type)
+        )
+    elif report_type == "quarterly":
+        await cb.message.edit_text(
+            f"📊 Выберите квартал за {year} год:",
+            reply_markup=kb_report_period_picker("quarterly")
+        )
+    elif report_type == "yearly":
+        await cb.message.edit_text(
+            f"📅 Выберите год:",
+            reply_markup=kb_report_period_picker("yearly")
+        )
+    await cb.answer()
+
+# ❌ Отмена выбора отчёта
+@dp.callback_query(F.data == "cancel_report")
+async def cb_cancel_report(cb: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await cb.message.delete()
+    await cb.answer("Отменено")
 
 @dp.callback_query(F.data.startswith("qem|"))
 async def quick_expense_month_pick(cb: CallbackQuery, state: FSMContext):
@@ -1523,18 +1809,44 @@ async def handle_audio(msg: Message, state: FSMContext):
 
 @dp.callback_query(F.data.startswith("qc|"))
 async def cb_quick_cat(cb: CallbackQuery, state: FSMContext):
-    _, tx_id, cat, sec = cb.data.split("|", 3)
-    tx = pending.pop(tx_id, None)
-    if not tx:
+    _, key = cb.data.split("|", 1)
+    
+    # Сначала проверяем, есть ли ключ в pending, до pop()
+    if key not in pending:
         await cb.message.edit_text("❌ Транзакция устарела.")
         await cb.answer()
         return
+    
+    tx = pending.get(key)  # не pop, а get — чтобы не удалить основную транзакцию случайно
+    
+    # Определяем тип данных
+    if tx and "category" in tx and "section" in tx and "tx_id" in tx:
+        # Это альтернативная категория
+        category = tx["category"]
+        section = tx["section"]
+        main_tx_id = tx["tx_id"]
+        tx = pending.get(main_tx_id)  # получаем основную транзакцию
+        if not tx:
+            await cb.message.edit_text("❌ Транзакция устарела.")
+            await cb.answer()
+            return
+        # Удаляем альтернативу из pending
+        pending.pop(key, None)
+    elif tx and "a" in tx:  # основная транзакция
+        category = tx.get("category", "Прочее (рег)")
+        section = tx.get("section", "Регулярные расходы")
+    else:
+        await cb.message.edit_text("❌ Данные не найдены.")
+        await cb.answer()
+        return
+
     try: await cb.message.edit_reply_markup(reply_markup=None)
     except Exception: pass
+    
     await state.update_data(
         amount=tx["a"], currency=tx["cur"], rate=tx["rate"],
         amount_rub=tx["a_rub"], date=tx["d"],
-        tx_type=tx["tx_type"], category=cat, section=sec, merchant=tx["m"],
+        tx_type=tx["tx_type"], category=category, section=section, merchant=tx["m"],
     )
     await state.set_state(TxForm.confirm)
     data = await state.get_data()
@@ -1653,12 +1965,17 @@ def webhook_sms():
             f"🤖 <b>{sec} → {cat}</b>"
         )
         kb = [
-            [{"text": f"✅ {cat}", "callback_data": f"qc|{tx_id}|{cat}|{sec}"}],
+            [{"text": f"✅ {cat}", "callback_data": f"qc|{tx_id}"}],  # ← коротко!
             [
                 {"text": "📋 Все категории", "callback_data": f"qa|{tx_id}"},
                 {"text": "❌ Пропустить",    "callback_data": "qn|skip"},
             ],
         ]
+        # Альтернативные категории добавляем в pending (как в kb_quick_cats)
+        for i, alt_cat in enumerate([c for c in SECTIONS.get(sec, {}).get("categories", []) if c != cat][:3]):
+            alt_key = f"{tx_id}_alt_{i}"
+            pending[alt_key] = {"category": alt_cat, "section": sec, "tx_id": tx_id}
+            kb.insert(1, [{"text": alt_cat, "callback_data": f"qc|{alt_key}"}])
         _send_tg_sync(uid_int, text, kb)
         return jsonify({"status": "ok"}), 200
     except Exception as e:
@@ -1703,12 +2020,17 @@ def webhook_transaction():
             f"🤖 <b>{sec} → {cat}</b>"
         )
         kb = [
-            [{"text": f"✅ {cat}", "callback_data": f"qc|{tx_id}|{cat}|{sec}"}],
+            [{"text": f"✅ {cat}", "callback_data": f"qc|{tx_id}"}],  # ← коротко!
             [
                 {"text": "📋 Все категории", "callback_data": f"qa|{tx_id}"},
                 {"text": "❌ Пропустить",    "callback_data": "qn|skip"},
             ],
         ]
+        # Альтернативные категории (как в kb_quick_cats)
+        for i, alt_cat in enumerate([c for c in SECTIONS.get(sec, {}).get("categories", []) if c != cat][:3]):
+            alt_key = f"{tx_id}_alt_{i}"
+            pending[alt_key] = {"category": alt_cat, "section": sec, "tx_id": tx_id}
+            kb.insert(1, [{"text": alt_cat, "callback_data": f"qc|{alt_key}"}])
         _send_tg_sync(uid_int, text, kb)
         return jsonify({"status": "ok"}), 200
     except Exception as e:

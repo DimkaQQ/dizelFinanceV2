@@ -1,305 +1,380 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Годовой отчёт</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{--bg:#080810;--card:#0d0d1a;--border:rgba(255,255,255,0.07);--text:#f0f0fa;--muted:#60607a;--text2:#a0a0c0;--green:#4fffb0;--red:#ff4d6d;--amber:#ffb84d;--violet:#9d7aff;--blue:#00d4ff;}
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;}
-  .page{width:210mm;min-height:297mm;padding:18mm 16mm;page-break-after:always;position:relative;background:var(--bg);}
-  .page:last-child{page-break-after:auto;}
-  .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid var(--border);}
-  .ph-title{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.03em;}
-  .ph-sub{font-size:11px;color:var(--muted);margin-top:3px;}
-  .ph-right{text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
-  .ph-right strong{display:block;font-size:14px;color:var(--text);margin-bottom:2px;}
-  .hl{background:linear-gradient(135deg,rgba(157,122,255,0.1),rgba(79,255,176,0.05));border:1px solid rgba(157,122,255,0.2);border-radius:12px;padding:16px 20px;margin-bottom:18px;}
-  .hl-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--violet);margin-bottom:6px;}
-  .hl-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;line-height:1.4;}
-  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
-  .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;}
-  .kpi-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-  .kpi-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;letter-spacing:-0.02em;}
-  .kpi-sub{font-size:10px;color:var(--muted);margin-top:4px;}
-  .c-green{color:var(--green);} .c-red{color:var(--red);} .c-violet{color:var(--violet);} .c-amber{color:var(--amber);}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;}
-  .sec-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .month-row{display:grid;grid-template-columns:80px 1fr 1fr 1fr 80px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:11px;}
-  .month-row:last-child{border-bottom:none;}
-  .month-bar-wrap{height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;}
-  .month-bar-fill{height:100%;border-radius:99px;}
-  .prog-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-  .prog-label{min-width:150px;font-size:11px;}
-  .prog-bar{flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;}
-  .prog-fill{height:100%;border-radius:99px;}
-  .prog-val{min-width:75px;text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
-  .tbl{width:100%;border-collapse:collapse;font-size:11px;}
-  .tbl th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);font-weight:400;}
-  .tbl td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.03);}
-  .tbl tr:last-child td{border-bottom:none;}
-  .tbl .num{text-align:right;font-family:'DM Mono',monospace;}
-  .footer{position:absolute;bottom:10mm;left:16mm;right:16mm;display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;}
-  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Годовой финансовый отчёт — Wealth Control</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    @page { size: A4; margin: 0; }
+    :root {
+      --color-primary: #1e3a5f; --color-primary-light: #2c5282;
+      --color-success: #059669; --color-warning: #d97706; --color-danger: #dc2626;
+      --color-neutral-50: #f8fafc; --color-neutral-100: #f1f5f9; --color-neutral-200: #e2e8f0;
+      --color-neutral-300: #cbd5e1; --color-neutral-600: #475569; --color-neutral-700: #334155;
+      --color-neutral-800: #1e293b; --color-neutral-900: #0f172a;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05); --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+      --radius: 8px; --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      --font-mono: "SF Mono", Monaco, "Roboto Mono", monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 13px; }
+    body { font-family: var(--font-sans); background: #fff; color: var(--color-neutral-800); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    .page { width: 210mm; min-height: 297mm; padding: 20mm 16mm; margin: 0 auto; background: #fff; page-break-after: always; position: relative; }
+    .page:last-child { page-break-after: auto; }
+    
+    .report-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 2px solid var(--color-primary); margin-bottom: 24px; }
+    .report-header .brand { display: flex; align-items: center; gap: 12px; }
+    .report-header .logo { width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; }
+    .report-header .title h1 { font-size: 18px; font-weight: 700; color: var(--color-primary); letter-spacing: -0.02em; }
+    .report-header .title .subtitle { font-size: 12px; color: var(--color-neutral-600); margin-top: 2px; }
+    .report-header .meta { text-align: right; font-size: 11px; color: var(--color-neutral-600); line-height: 1.6; }
+    .report-header .meta strong { color: var(--color-neutral-800); font-weight: 600; }
+    
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+    .summary-card { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 16px 14px; text-align: center; }
+    .summary-card .label { font-size: 11px; font-weight: 500; color: var(--color-neutral-600); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .summary-card .value { font-size: 20px; font-weight: 700; color: var(--color-neutral-900); font-family: var(--font-mono); letter-spacing: -0.02em; margin-bottom: 4px; }
+    .summary-card .value.positive { color: var(--color-success); }
+    .summary-card .value.negative { color: var(--color-danger); }
+    .summary-card .sub { font-size: 10px; color: var(--color-neutral-500); }
+    
+    .section { margin: 28px 0; }
+    .section-title { font-size: 14px; font-weight: 700; color: var(--color-primary); padding-bottom: 10px; border-bottom: 1px solid var(--color-neutral-200); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ""; width: 4px; height: 16px; background: var(--color-primary); border-radius: 2px; }
+    
+    .quarter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
+    .quarter-card { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 12px; text-align: center; }
+    .quarter-card .q-name { font-weight: 700; color: var(--color-primary); margin-bottom: 8px; font-size: 12px; }
+    .quarter-card .row { display: flex; justify-content: space-between; font-size: 10px; margin: 4px 0; color: var(--color-neutral-700); }
+    .quarter-card .row .val { font-weight: 600; font-family: var(--font-mono); }
+    .quarter-card .row .val.pos { color: var(--color-success); }
+    .quarter-card .row .val.neg { color: var(--color-danger); }
+    
+    .bar-list { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: flex; align-items: center; gap: 12px; font-size: 12px; }
+    .bar-row .label { width: 150px; font-weight: 500; color: var(--color-neutral-700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-row .track { flex: 1; height: 10px; background: var(--color-neutral-200); border-radius: 5px; overflow: hidden; }
+    .bar-row .fill { height: 100%; background: var(--color-primary); border-radius: 5px; }
+    .bar-row .value { width: 85px; text-align: right; font-weight: 600; font-family: var(--font-mono); }
+    .bar-row .pct { width: 42px; text-align: right; font-size: 11px; color: var(--color-neutral-500); font-family: var(--font-mono); }
+    
+    .data-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 12px 0; }
+    .data-table thead { background: var(--color-neutral-100); border-bottom: 2px solid var(--color-neutral-300); }
+    .data-table th { font-weight: 600; color: var(--color-neutral-700); text-align: left; padding: 10px 8px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+    .data-table td { padding: 9px 8px; border-bottom: 1px solid var(--color-neutral-200); color: var(--color-neutral-700); }
+    .data-table .amount { font-family: var(--font-mono); font-weight: 500; text-align: right; white-space: nowrap; }
+    .data-table .amount.pos { color: var(--color-success); }
+    .data-table .amount.neg { color: var(--color-danger); }
+    
+    .chart-wrapper { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
+    .chart-container { height: 220px; position: relative; }
+    
+    .insights { background: linear-gradient(135deg, var(--color-neutral-50), #fff); border: 1px solid var(--color-neutral-200); border-left: 4px solid var(--color-primary); border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 18px; margin: 20px 0; }
+    .insights ul { margin-left: 18px; margin-top: 8px; }
+    .insights li { margin: 6px 0; font-size: 12px; color: var(--color-neutral-700); line-height: 1.5; }
+    .insights li strong { color: var(--color-neutral-900); font-weight: 600; }
+    
+    .final-summary { text-align: center; padding: 32px 24px; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); border-radius: var(--radius); color: white; margin: 24px 0; }
+    .final-summary .emoji { font-size: 42px; margin-bottom: 12px; }
+    .final-summary .headline { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .final-summary .stats { margin: 18px 0; font-size: 13px; line-height: 1.8; }
+    .final-summary .stats div { display: flex; justify-content: center; gap: 8px; }
+    .final-summary .stats .label { opacity: 0.9; }
+    .final-summary .stats .value { font-weight: 600; font-family: var(--font-mono); }
+    .final-summary .footer-note { font-size: 11px; opacity: 0.85; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.3); }
+    
+    .page-footer { position: absolute; bottom: 16mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--color-neutral-500); border-top: 1px solid var(--color-neutral-200); padding-top: 10px; }
+    .page-footer .brand { display: flex; align-items: center; gap: 6px; font-weight: 500; color: var(--color-neutral-700); }
+    .page-footer .brand .dot { width: 6px; height: 6px; background: var(--color-primary); border-radius: 50%; }
+    .page-footer .page-num { font-family: var(--font-mono); color: var(--color-neutral-600); }
+    
+    .text-success { color: var(--color-success); }
+    .text-danger { color: var(--color-danger); }
+    .text-muted { color: var(--color-neutral-500); }
+    .font-mono { font-family: var(--font-mono); }
+    .font-semibold { font-weight: 600; }
+    .text-right { text-align: right; }
+    .mt-4 { margin-top: 16px; }
+    
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { box-shadow: none; margin: 0; } }
+    [data-field] { opacity: 0; }
+    [data-field].loaded { opacity: 1; transition: opacity 0.15s; }
+  </style>
 </head>
 <body>
-<script>
-const D = window.__DATA__ || {};
-const MONTHS=['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-const fmt = n => new Intl.NumberFormat('ru-RU').format(Math.round(n||0)) + ' ₽';
-const fmtK = n => { n=n||0; return n>=1000000?(n/1000000).toFixed(1)+'M ₽':n>=1000?(n/1000).toFixed(0)+'K ₽':Math.round(n)+' ₽'; };
 
-document.addEventListener('DOMContentLoaded', () => {
-  const income  = D.total_income  || 0;
-  const expense = D.total_expense || 0;
-  const assets  = D.total_assets  || 0;
-  const delta   = income - expense;
-  const year    = D.year || 2026;
-  const monthly = D.monthly_data || [];
-  const topCats = D.top_categories || [];
-  const trend   = D.trend || [];
+  <!-- Страница 1: Сводка -->
+  <div class="page">
+    <header class="report-header">
+      <div class="brand">
+        <div class="logo">WC</div>
+        <div class="title">
+          <h1>Годовой финансовый отчёт</h1>
+          <div class="subtitle">Wealth Control Personal Finance OS</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div><strong data-field="year">—</strong></div>
+        <div>Сформирован: <span data-field="generated_at">—</span></div>
+      </div>
+    </header>
 
-  // Headline
-  document.querySelectorAll('.hl-text').forEach(el => {
-    el.textContent = `${year} год: доходы ${fmtK(income)}, расходы ${fmtK(expense)}. ${delta>=0?'Профицит':'Дефицит'} ${fmtK(Math.abs(delta))}.`;
-  });
-  document.querySelectorAll('.period-label').forEach(el => el.textContent = `${year} год`);
-  document.querySelectorAll('.gen-date').forEach(el => el.textContent = new Date().toLocaleDateString('ru-RU'));
-
-  // KPI
-  const kpis = document.querySelectorAll('.kpi');
-  if(kpis[0]){kpis[0].querySelector('.kpi-val').textContent=fmtK(income);kpis[0].querySelector('.kpi-val').className='kpi-val c-green';}
-  if(kpis[1]){kpis[1].querySelector('.kpi-val').textContent=fmtK(expense);kpis[1].querySelector('.kpi-val').className='kpi-val c-red';}
-  if(kpis[2]){kpis[2].querySelector('.kpi-val').textContent=(delta>=0?'+':'')+fmtK(delta);kpis[2].querySelector('.kpi-val').className='kpi-val '+(delta>=0?'c-green':'c-red');}
-  if(kpis[3]){kpis[3].querySelector('.kpi-val').textContent=income>0?Math.round(delta/income*100)+'%':'—';kpis[3].querySelector('.kpi-val').className='kpi-val c-violet';}
-
-  // Годовой line chart
-  const ctx1 = document.getElementById('yearLine');
-  if(ctx1 && monthly.length){
-    new Chart(ctx1,{
-      type:'line',
-      data:{
-        labels:monthly.map(m=>MONTHS[m.month]?.slice(0,3)||''),
-        datasets:[
-          {label:'Доходы',data:monthly.map(m=>m.income||0),borderColor:'#4fffb0',backgroundColor:'rgba(79,255,176,0.06)',tension:0.4,fill:true,pointRadius:3},
-          {label:'Расходы',data:monthly.map(m=>m.expense||0),borderColor:'#ff4d6d',backgroundColor:'rgba(255,77,109,0.06)',tension:0.4,fill:true,pointRadius:3},
-        ]
-      },
-      options:{responsive:true,plugins:{legend:{labels:{color:'#60607a',font:{size:10}}}},
-        scales:{
-          x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#60607a',font:{size:9}}},
-          y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#60607a',font:{size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}
-        }}
-    });
-  }
-
-  // Месячная таблица
-  const mTable = document.getElementById('monthTable');
-  if(mTable){
-    const maxExp = Math.max(...monthly.map(m=>m.expense||0),1);
-    monthly.forEach(m=>{
-      const d = (m.income||0)-(m.expense||0);
-      const pct = ((m.expense||0)/maxExp*100).toFixed(0);
-      mTable.innerHTML+=`
-        <div class="month-row">
-          <div style="font-weight:500">${MONTHS[m.month]?.slice(0,3)||''}</div>
-          <div style="font-family:'DM Mono',monospace;color:var(--green)">${fmtK(m.income||0)}</div>
-          <div style="font-family:'DM Mono',monospace;color:var(--red)">${fmtK(m.expense||0)}</div>
-          <div class="month-bar-wrap"><div class="month-bar-fill" style="width:${pct}%;background:rgba(255,77,109,0.6)"></div></div>
-          <div style="font-family:'DM Mono',monospace;text-align:right;color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'+':''}${fmtK(d)}</div>
-        </div>`;
-    });
-  }
-
-  // Top категорий
-  const topEl = document.getElementById('topCats');
-  if(topEl && topCats.length){
-    const maxV = parseFloat(topCats[0]?.total||1);
-    topCats.slice(0,12).forEach(c=>{
-      const pct = expense?(parseFloat(c.total)/expense*100).toFixed(1):0;
-      const fill= (parseFloat(c.total)/maxV*100).toFixed(0);
-      topEl.innerHTML+=`
-        <div class="prog-row">
-          <div class="prog-label">${c.category.slice(0,24)}</div>
-          <div class="prog-bar"><div class="prog-fill" style="width:${fill}%;background:linear-gradient(90deg,#9d7aff,#4fffb0)"></div></div>
-          <div class="prog-val">${fmt(parseFloat(c.total))} · ${pct}%</div>
-        </div>`;
-    });
-  }
-
-  // Тренд multi-year
-  const ctx2 = document.getElementById('trendChart');
-  if(ctx2 && trend.length>1){
-    new Chart(ctx2,{
-      type:'bar',
-      data:{
-        labels:trend.map(r=>`${MONTHS[r.month]?.slice(0,3)} ${r.year}`),
-        datasets:[
-          {label:'Доходы',data:trend.map(r=>r.income||0),backgroundColor:'rgba(79,255,176,0.5)',borderRadius:3},
-          {label:'Расходы',data:trend.map(r=>r.expense||0),backgroundColor:'rgba(255,77,109,0.4)',borderRadius:3},
-        ]
-      },
-      options:{responsive:true,plugins:{legend:{labels:{color:'#60607a',font:{size:10}}}},
-        scales:{
-          x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#60607a',font:{size:8}}},
-          y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#60607a',font:{size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}
-        }}
-    });
-  }
-
-  // Summary page
-  ['sum-income','sum-expense','sum-delta','sum-assets','sum-rate'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(!el) return;
-    if(id==='sum-income'){el.textContent=fmt(income);el.className='kpi-val c-green';}
-    if(id==='sum-expense'){el.textContent=fmt(expense);el.className='kpi-val c-red';}
-    if(id==='sum-delta'){el.textContent=(delta>=0?'+':'')+fmt(delta);el.className='kpi-val '+(delta>=0?'c-green':'c-red');}
-    if(id==='sum-assets'){el.textContent=fmt(assets);el.className='kpi-val c-violet';}
-    if(id==='sum-rate'){el.textContent=income>0?Math.round(delta/income*100)+'%':'—';el.className='kpi-val c-amber';}
-  });
-
-  // Conclusions
-  const concl = document.getElementById('conclusions');
-  if(concl){
-    const rate = income>0?Math.round(delta/income*100):0;
-    const top1 = topCats[0]?.category||'—';
-    const top1sum = topCats[0]?fmt(parseFloat(topCats[0].total)):'—';
-    const bestMonth = monthly.reduce((best,m)=>((m.income||0)-(m.expense||0))>((best.income||0)-(best.expense||0))?m:best, monthly[0]||{});
-    concl.innerHTML=`
-      <p>За <strong>${year} год</strong> зафиксировано доходов <strong>${fmt(income)}</strong> и расходов <strong>${fmt(expense)}</strong>.</p>
-      <p style="margin-top:10px">Норма сбережений составила <strong>${rate}%</strong>. ${rate>=20?'Отличный результат.':rate>=10?'Хороший показатель.':'Есть резервы для оптимизации.'}</p>
-      <p style="margin-top:10px">Крупнейшая категория расходов — <strong>${top1}</strong> (${top1sum} за год).</p>
-      ${bestMonth.month?`<p style="margin-top:10px">Лучший месяц по дельте — <strong>${MONTHS[bestMonth.month]}</strong>.</p>`:''}
-    `;
-  }
-});
-</script>
-
-<!-- PAGE 1 -->
-<div class="page">
-  <div class="ph">
-    <div><div class="ph-title">Годовой<br>отчёт</div><div class="ph-sub">DizelFinance · Personal Finance</div></div>
-    <div class="ph-right"><strong class="period-label">—</strong><span class="gen-date"></span></div>
-  </div>
-  <div class="hl"><div class="hl-label">Главный вывод</div><div class="hl-text">—</div></div>
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-label">Доходы</div><div class="kpi-val">—</div><div class="kpi-sub">за год</div></div>
-    <div class="kpi"><div class="kpi-label">Расходы</div><div class="kpi-val">—</div><div class="kpi-sub">за год</div></div>
-    <div class="kpi"><div class="kpi-label">Дельта</div><div class="kpi-val">—</div><div class="kpi-sub">итог</div></div>
-    <div class="kpi"><div class="kpi-label">Сбережения</div><div class="kpi-val">—</div><div class="kpi-sub">% от дохода</div></div>
-  </div>
-  <div class="card">
-    <div class="sec-title">Динамика по месяцам</div>
-    <canvas id="yearLine" height="180"></canvas>
-  </div>
-  <div class="footer"><span>DizelFinance</span><span>1 / 8</span></div>
-</div>
-
-<!-- PAGE 2 -->
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Помесячная таблица</div></div></div>
-  <div class="card">
-    <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr 80px;gap:8px;padding:0 0 8px;margin-bottom:8px;border-bottom:1px solid var(--border);">
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">МЕС</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">ДОХОДЫ</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">РАСХОДЫ</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">ГРАФИК</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-align:right">ДЕЛЬТА</div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="label">💚 Доходы</div>
+        <div class="value positive" data-field="total_income_fmt">— ₽</div>
+        <div class="sub">за год</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">❤️ Расходы</div>
+        <div class="value negative" data-field="total_expense_fmt">— ₽</div>
+        <div class="sub">за год</div>
+      </div>
+      <div class="summary-card">
+        <div class="label" data-field="delta_label">Итог</div>
+        <div class="value" data-field="delta_fmt" data-class="delta">— ₽</div>
+        <div class="sub">Норма: <span data-field="savings_rate">—</span>%</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">🏦 Активы</div>
+        <div class="value" data-field="total_assets_fmt">— ₽</div>
+        <div class="sub">движение</div>
+      </div>
     </div>
-    <div id="monthTable"></div>
-  </div>
-  <div class="footer"><span>DizelFinance</span><span>2 / 8</span></div>
-</div>
 
-<!-- PAGE 3 -->
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Топ категорий расходов</div></div></div>
-  <div class="card"><div id="topCats"></div></div>
-  <div class="footer"><span>DizelFinance</span><span>3 / 8</span></div>
-</div>
+    <div class="section">
+      <div class="section-title">Квартальная разбивка</div>
+      <div class="quarter-grid" id="quarters-grid"></div>
+    </div>
 
-<!-- PAGE 4 -->
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Многолетний тренд</div></div></div>
-  <div class="card">
-    <div class="sec-title">Сравнение с предыдущими периодами</div>
-    <canvas id="trendChart" height="220"></canvas>
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 1 из 8</div>
+    </footer>
   </div>
-  <div class="footer"><span>DizelFinance</span><span>4 / 8</span></div>
-</div>
 
-<!-- PAGE 5-6-7: placeholder для дополнительных данных -->
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Квартальная разбивка</div></div></div>
-  <div class="grid2">
-    <div class="card"><div class="sec-title">Q1 (янв–март)</div><div id="q1"></div></div>
-    <div class="card"><div class="sec-title">Q2 (апр–июнь)</div><div id="q2"></div></div>
-  </div>
-  <div class="grid2" style="margin-top:12px">
-    <div class="card"><div class="sec-title">Q3 (июл–сент)</div><div id="q3"></div></div>
-    <div class="card"><div class="sec-title">Q4 (окт–дек)</div><div id="q4"></div></div>
-  </div>
-  <div class="footer"><span>DizelFinance</span><span>5 / 8</span></div>
-</div>
+  <!-- Страница 2: Помесячная таблица -->
+  <div class="page">
+    <div class="section">
+      <div class="section-title">Помесячная детализация</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th width="60">Мес</th>
+            <th class="text-right">Доходы</th>
+            <th class="text-right">Расходы</th>
+            <th class="text-right">Дельта</th>
+            <th class="text-right">Активы</th>
+          </tr>
+        </thead>
+        <tbody id="monthly-body"></tbody>
+      </table>
+    </div>
 
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Выводы и рекомендации</div></div></div>
-  <div class="card">
-    <div class="sec-title" style="margin-bottom:14px">Итоги года</div>
-    <div id="conclusions" style="font-size:12px;line-height:1.8;color:var(--text2)"></div>
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 2 из 8</div>
+    </footer>
   </div>
-  <div class="footer"><span>DizelFinance</span><span>6 / 8</span></div>
-</div>
 
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Итоговая сводка</div></div></div>
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-label">Доходы</div><div class="kpi-val" id="sum-income">—</div></div>
-    <div class="kpi"><div class="kpi-label">Расходы</div><div class="kpi-val" id="sum-expense">—</div></div>
-    <div class="kpi"><div class="kpi-label">Дельта</div><div class="kpi-val" id="sum-delta">—</div></div>
-    <div class="kpi"><div class="kpi-label">Активы</div><div class="kpi-val" id="sum-assets">—</div></div>
-  </div>
-  <div class="kpi-grid" style="grid-template-columns:1fr;margin-top:-4px">
-    <div class="kpi"><div class="kpi-label">Норма сбережений</div><div class="kpi-val" id="sum-rate">—</div></div>
-  </div>
-  <div class="footer"><span>DizelFinance</span><span>7 / 8</span></div>
-</div>
+  <!-- Страница 3: Топ категорий -->
+  <div class="page">
+    <div class="section">
+      <div class="section-title">Топ-10 категорий за год</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th width="40">#</th>
+            <th>Категория</th>
+            <th class="text-right">Сумма</th>
+            <th class="text-right">Доля</th>
+          </tr>
+        </thead>
+        <tbody id="year-cats-body"></tbody>
+      </table>
+    </div>
 
-<div class="page">
-  <div class="ph"><div><div class="ph-title" style="font-size:16px">Конец отчёта</div></div></div>
-  <div class="card" style="text-align:center;padding:48px">
-    <div style="font-size:32px;margin-bottom:16px">⚡</div>
-    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px">DizelFinance</div>
-    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Personal Finance OS · <span class="period-label">—</span></div>
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 3 из 8</div>
+    </footer>
   </div>
-  <div class="footer"><span>DizelFinance</span><span>8 / 8</span></div>
-</div>
 
-<script>
-document.addEventListener('DOMContentLoaded',()=>{
-  const D=window.__DATA__||{};
-  const monthly=D.monthly_data||[];
-  const fmt=n=>new Intl.NumberFormat('ru-RU').format(Math.round(n||0))+' ₽';
-  const fmtK=n=>{n=n||0;return n>=1000000?(n/1000000).toFixed(1)+'M ₽':n>=1000?(n/1000).toFixed(0)+'K ₽':Math.round(n)+' ₽';};
-  const quarters={1:[1,2,3],2:[4,5,6],3:[7,8,9],4:[10,11,12]};
-  [1,2,3,4].forEach(q=>{
-    const el=document.getElementById('q'+q);
-    if(!el) return;
-    const ms=monthly.filter(m=>quarters[q].includes(m.month));
-    const inc=ms.reduce((s,m)=>s+(m.income||0),0);
-    const exp=ms.reduce((s,m)=>s+(m.expense||0),0);
-    const d=inc-exp;
-    el.innerHTML=`
-      <div style="font-size:11px;margin-bottom:6px"><span style="color:var(--muted)">Доходы:</span> <span style="color:var(--green);font-family:'DM Mono',monospace">${fmtK(inc)}</span></div>
-      <div style="font-size:11px;margin-bottom:6px"><span style="color:var(--muted)">Расходы:</span> <span style="color:var(--red);font-family:'DM Mono',monospace">${fmtK(exp)}</span></div>
-      <div style="font-size:11px"><span style="color:var(--muted)">Дельта:</span> <span style="color:${d>=0?'var(--green)':'var(--red)'};font-family:'DM Mono',monospace">${d>=0?'+':''}${fmtK(d)}</span></div>
-    `;
-  });
-});
-</script>
+  <!-- Страница 4: Многолетний тренд -->
+  <div class="page">
+    <div class="section">
+      <div class="section-title">Многолетняя динамика</div>
+      <div class="chart-wrapper">
+        <div class="chart-container">
+          <canvas id="yearlyTrend"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 4 из 8</div>
+    </footer>
+  </div>
+
+  <!-- Страница 5: Выводы -->
+  <div class="page">
+    <div class="section">
+      <div class="section-title">Итоги года</div>
+      <div class="insights">
+        <ul>
+          <li>Общие доходы: <strong><span data-field="total_income_fmt">—</span> ₽</strong></li>
+          <li>Общие расходы: <strong><span data-field="total_expense_fmt">—</span> ₽</strong></li>
+          <li>Чистый результат: <strong class="font-semibold" id="net-result">—</strong></li>
+          <li>Средняя норма сбережений: <strong><span data-field="savings_rate">—</span>%</strong></li>
+          <li>Рекомендация на <span data-field="next_year">—</span>: <strong id="year-rec">—</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 5 из 8</div>
+    </footer>
+  </div>
+
+  <!-- Страница 6: Итог -->
+  <div class="page">
+    <div class="final-summary">
+      <div class="emoji" id="y-final-emoji">—</div>
+      <div class="headline" id="y-final-headline">—</div>
+      <div class="stats">
+        <div><span class="label">Доходы:</span> <span class="value" data-field="total_income_fmt">—</span> ₽</div>
+        <div><span class="label">Расходы:</span> <span class="value" data-field="total_expense_fmt">—</span> ₽</div>
+        <div><span class="label">Дельта:</span> <span class="value" data-field="delta_fmt">—</span> ₽</div>
+        <div><span class="label">Активы:</span> <span class="value" data-field="total_assets_fmt">—</span> ₽</div>
+        <div><span class="label">Сбережения:</span> <span class="value" data-field="savings_rate">—</span>%</div>
+      </div>
+      <div class="footer-note">
+        Отчёт сформирован автоматически • Wealth Control • Конфиденциально
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
+      <div class="page-num">Страница 6 из 8</div>
+    </footer>
+  </div>
+
+  <script>
+    (function() {
+      const data = window.__DATA__ || {};
+      
+      function fill(fields) {
+        for (const [key, val] of Object.entries(fields)) {
+          document.querySelectorAll(`[data-field="${key}"]`).forEach(el => {
+            if (el.dataset.class && val !== undefined && val !== null) {
+              el.classList.toggle('positive', val >= 0);
+              el.classList.toggle('negative', val < 0);
+            }
+            if (val !== undefined && val !== null) {
+              el.textContent = typeof val === 'number' ? val.toLocaleString('ru-RU') : val;
+            }
+            el.classList.add('loaded');
+          });
+        }
+      }
+
+      fill({
+        year: data.year,
+        generated_at: data.generated_at,
+        total_income_fmt: data.total_income_fmt,
+        total_expense_fmt: data.total_expense_fmt,
+        total_assets_fmt: data.total_assets_fmt,
+        delta_fmt: data.delta_fmt,
+        delta_label: data.delta >= 0 ? '📈 Итог' : '⚠️ Дефицит',
+        savings_rate: data.savings_rate,
+        next_year: data.year + 1,
+      });
+
+      // Quarters grid
+      const qGrid = document.getElementById('quarters-grid');
+      if (data.quarters?.length) {
+        qGrid.innerHTML = data.quarters.map(q => `
+          <div class="quarter-card">
+            <div class="q-name">${q.label}</div>
+            <div class="row"><span>Доходы:</span><span class="val pos">${q.income_fmt} ₽</span></div>
+            <div class="row"><span>Расходы:</span><span class="val neg">${q.expense_fmt} ₽</span></div>
+            <div class="row"><span>Дельта:</span><span class="val ${q.delta >= 0 ? 'pos' : 'neg'}">${q.delta_fmt} ₽</span></div>
+          </div>
+        `).join('');
+      }
+
+      // Monthly table
+      const mBody = document.getElementById('monthly-body');
+      if (data.monthly_data?.length) {
+        mBody.innerHTML = data.monthly_data.map(m => `
+          <tr>
+            <td class="font-semibold">${m.month_name}</td>
+            <td class="amount pos">${m.income_fmt} ₽</td>
+            <td class="amount neg">${m.expense_fmt} ₽</td>
+            <td class="amount ${m.delta >= 0 ? 'pos' : 'neg'}">${m.delta_fmt} ₽</td>
+            <td class="amount">${m.assets_fmt} ₽</td>
+          </tr>
+        `).join('');
+      }
+
+      // Year categories
+      const yCatBody = document.getElementById('year-cats-body');
+      if (data.top_categories?.length) {
+        yCatBody.innerHTML = data.top_categories.slice(0,10).map((cat, i) => `
+          <tr>
+            <td class="font-mono">${String(i+1).padStart(2, '0')}</td>
+            <td class="font-semibold">${cat.name}</td>
+            <td class="amount">${cat.total_fmt} ₽</td>
+            <td class="pct-col">${cat.pct}%</td>
+          </tr>
+        `).join('');
+      }
+
+      // Multi-year chart
+      const ctx = document.getElementById('yearlyTrend');
+      if (ctx && data.trend?.length) {
+        Chart.defaults.font.family = 'var(--font-sans)';
+        Chart.defaults.font.size = 10;
+        new Chart(ctx, {
+          type: 'line',
+           {
+            labels: data.trend.map(t => t.label),
+            datasets: [
+              { label: 'Доходы',  data.trend.map(t => t.income), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.1)', tension: 0.35, fill: true, borderWidth: 2 },
+              { label: 'Расходы',  data.trend.map(t => t.expense), borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.1)', tension: 0.35, fill: true, borderWidth: 2 }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU')+' ₽' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // Insights
+      const netResult = document.getElementById('net-result');
+      netResult.textContent = `${data.delta_fmt} ₽`;
+      netResult.classList.toggle('text-success', data.delta >= 0);
+      netResult.classList.toggle('text-danger', data.delta < 0);
+      
+      const rec = document.getElementById('year-rec');
+      if (data.savings_rate < 15) rec.textContent = 'Создать финансовую подушку и автоматизировать накопления';
+      else if (data.savings_rate > 30) rec.textContent = 'Рассмотреть диверсификацию инвестиций';
+      else rec.textContent = 'Поддерживать текущий баланс и планировать крупные цели';
+
+      // Final
+      document.getElementById('y-final-emoji').textContent = data.delta >= 0 ? '🏆' : '📊';
+      document.getElementById('y-final-headline').textContent = `${data.year} год завершён`;
+
+      setTimeout(() => document.querySelectorAll('[data-field]').forEach(el => el.classList.add('loaded')), 50);
+    })();
+  </script>
 </body>
 </html>

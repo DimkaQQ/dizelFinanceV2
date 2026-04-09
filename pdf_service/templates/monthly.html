@@ -1,631 +1,721 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Месячный отчёт</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:      #0d0d14;
-    --card:    #13131e;
-    --border:  #1e1e2e;
-    --text:    #e8e8f0;
-    --muted:   #6b6b85;
-    --accent:  #7c6aff;
-    --green:   #22c55e;
-    --red:     #ef4444;
-    --amber:   #f59e0b;
-    --blue:    #6366f1;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    line-height: 1.5;
-  }
-
-  /* ── Страница ── */
-  .page {
-    width: 210mm;
-    min-height: 297mm;
-    padding: 20mm 16mm;
-    page-break-after: always;
-    position: relative;
-    background: var(--bg);
-  }
-  .page:last-child { page-break-after: auto; }
-
-  /* ── Шапка ── */
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .report-title {
-    font-family: 'Unbounded', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1.2;
-  }
-  .report-subtitle {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 4px;
-  }
-  .report-period {
-    text-align: right;
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .report-period strong {
-    display: block;
-    font-family: 'Unbounded', sans-serif;
-    font-size: 14px;
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  /* ── Headline ── */
-  .headline {
-    background: linear-gradient(135deg, rgba(124,106,255,0.12), rgba(168,85,247,0.06));
-    border: 1px solid rgba(124,106,255,0.2);
-    border-radius: 14px;
-    padding: 20px 24px;
-    margin-bottom: 20px;
-  }
-  .headline-label {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 8px;
-  }
-  .headline-text {
-    font-family: 'Unbounded', sans-serif;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1.4;
-  }
-
-  /* ── KPI сетка ── */
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-  .kpi-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
-  }
-  .kpi-label {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-  .kpi-value {
-    font-family: 'Unbounded', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1;
-  }
-  .kpi-sub {
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 4px;
-  }
-  .kpi-delta {
-    font-size: 11px;
-    font-weight: 600;
-    margin-top: 4px;
-  }
-  .positive { color: var(--green); }
-  .negative { color: var(--red); }
-  .neutral  { color: var(--muted); }
-
-  /* ── Секции ── */
-  .section-title {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .section-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  /* ── Прогресс бар ── */
-  .progress-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  .progress-label { flex: 0 0 160px; font-size: 12px; font-weight: 500; }
-  .progress-bar   { flex: 1; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
-  .progress-fill  { height: 100%; border-radius: 99px; }
-  .progress-value { flex: 0 0 80px; text-align: right; font-size: 12px; color: var(--muted); }
-  .progress-pct   { flex: 0 0 36px; text-align: right; font-size: 11px; color: var(--muted); }
-
-  /* ── Таблица транзакций ── */
-  .tx-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  .tx-table th {
-    text-align: left;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--border);
-  }
-  .tx-table td {
-    padding: 7px 8px;
-    border-bottom: 1px solid rgba(30,30,46,0.5);
-    vertical-align: middle;
-  }
-  .tx-table tr:last-child td { border-bottom: none; }
-  .tx-amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-
-  /* ── Badge ── */
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 99px;
-    font-size: 9px;
-    font-weight: 600;
-  }
-  .badge-income  { background: rgba(34,197,94,0.12);  color: var(--green); }
-  .badge-expense { background: rgba(239,68,68,0.12);  color: var(--red); }
-  .badge-asset   { background: rgba(99,102,241,0.12); color: var(--blue); }
-
-  /* ── Колонки ── */
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
-  }
-
-  /* ── Футер ── */
-  .page-footer {
-    position: absolute;
-    bottom: 12mm;
-    left: 16mm;
-    right: 16mm;
-    display: flex;
-    justify-content: space-between;
-    font-size: 9px;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
-    padding-top: 8px;
-  }
-
-  /* ── Цвета разделов ── */
-  .color-income  { background: var(--green); }
-  .color-regular { background: var(--amber); }
-  .color-big     { background: var(--red); }
-  .color-assets  { background: var(--blue); }
-
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Месячный финансовый отчёт — Wealth Control</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    @page {
+      size: A4;
+      margin: 0;
+    }
+    :root {
+      /* Corporate Finance Palette */
+      --color-primary: #1e3a5f;
+      --color-primary-light: #2c5282;
+      --color-success: #059669;
+      --color-warning: #d97706;
+      --color-danger: #dc2626;
+      --color-neutral-50: #f8fafc;
+      --color-neutral-100: #f1f5f9;
+      --color-neutral-200: #e2e8f0;
+      --color-neutral-300: #cbd5e1;
+      --color-neutral-600: #475569;
+      --color-neutral-700: #334155;
+      --color-neutral-800: #1e293b;
+      --color-neutral-900: #0f172a;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+      --radius: 8px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      --font-mono: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 13px; }
+    body {
+      font-family: var(--font-sans);
+      background: #ffffff;
+      color: var(--color-neutral-800);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Page Layout */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 20mm 16mm;
+      margin: 0 auto;
+      background: #fff;
+      position: relative;
+      page-break-after: always;
+    }
+    .page:last-child { page-break-after: auto; }
+    
+    /* Header */
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--color-primary);
+      margin-bottom: 24px;
+    }
+    .report-header .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .report-header .logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .report-header .title h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-primary);
+      letter-spacing: -0.02em;
+    }
+    .report-header .title .subtitle {
+      font-size: 12px;
+      color: var(--color-neutral-600);
+      margin-top: 2px;
+    }
+    .report-header .meta {
+      text-align: right;
+      font-size: 11px;
+      color: var(--color-neutral-600);
+      line-height: 1.6;
+    }
+    .report-header .meta strong {
+      color: var(--color-neutral-800);
+      font-weight: 600;
+    }
+    
+    /* Summary Cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .summary-card {
+      background: var(--color-neutral-50);
+      border: 1px solid var(--color-neutral-200);
+      border-radius: var(--radius);
+      padding: 16px 14px;
+      text-align: center;
+      transition: box-shadow 0.2s;
+    }
+    .summary-card:hover { box-shadow: var(--shadow-md); }
+    .summary-card .label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--color-neutral-600);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .summary-card .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-neutral-900);
+      font-family: var(--font-mono);
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+    .summary-card .value.positive { color: var(--color-success); }
+    .summary-card .value.negative { color: var(--color-danger); }
+    .summary-card .sub {
+      font-size: 10px;
+      color: var(--color-neutral-500);
+    }
+    
+    /* Section Titles */
+    .section { margin: 28px 0; }
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-primary);
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--color-neutral-200);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::before {
+      content: "";
+      width: 4px;
+      height: 16px;
+      background: var(--color-primary);
+      border-radius: 2px;
+    }
+    
+    /* Bar Chart Rows */
+    .bar-list { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .bar-row .label {
+      width: 150px;
+      font-weight: 500;
+      color: var(--color-neutral-700);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bar-row .track {
+      flex: 1;
+      height: 10px;
+      background: var(--color-neutral-200);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .bar-row .fill {
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: 5px;
+      transition: width 0.4s ease;
+    }
+    .bar-row .fill.warning { background: var(--color-warning); }
+    .bar-row .fill.danger { background: var(--color-danger); }
+    .bar-row .value {
+      width: 85px;
+      text-align: right;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      color: var(--color-neutral-800);
+    }
+    .bar-row .pct {
+      width: 42px;
+      text-align: right;
+      font-size: 11px;
+      color: var(--color-neutral-500);
+      font-family: var(--font-mono);
+    }
+    
+    /* Tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin: 12px 0;
+    }
+    .data-table thead {
+      background: var(--color-neutral-100);
+      border-bottom: 2px solid var(--color-neutral-300);
+    }
+    .data-table th {
+      font-weight: 600;
+      color: var(--color-neutral-700);
+      text-align: left;
+      padding: 10px 8px;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+    .data-table td {
+      padding: 9px 8px;
+      border-bottom: 1px solid var(--color-neutral-200);
+      color: var(--color-neutral-700);
+    }
+    .data-table tbody tr:hover { background: var(--color-neutral-50); }
+    .data-table .amount {
+      font-family: var(--font-mono);
+      font-weight: 500;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .data-table .amount.positive { color: var(--color-success); }
+    .data-table .amount.negative { color: var(--color-danger); }
+    .data-table .pct-col {
+      text-align: right;
+      font-family: var(--font-mono);
+      color: var(--color-neutral-600);
+    }
+    
+    /* Chart Container */
+    .chart-wrapper {
+      background: var(--color-neutral-50);
+      border: 1px solid var(--color-neutral-200);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .chart-container {
+      height: 220px;
+      position: relative;
+    }
+    
+    /* Insights Box */
+    .insights {
+      background: linear-gradient(135deg, var(--color-neutral-50), #fff);
+      border: 1px solid var(--color-neutral-200);
+      border-left: 4px solid var(--color-primary);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 16px 18px;
+      margin: 20px 0;
+    }
+    .insights ul {
+      margin-left: 18px;
+      margin-top: 8px;
+    }
+    .insights li {
+      margin: 6px 0;
+      font-size: 12px;
+      color: var(--color-neutral-700);
+      line-height: 1.5;
+    }
+    .insights li strong {
+      color: var(--color-neutral-900);
+      font-weight: 600;
+    }
+    
+    /* Final Summary */
+    .final-summary {
+      text-align: center;
+      padding: 32px 24px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+      border-radius: var(--radius);
+      color: white;
+      margin: 24px 0;
+    }
+    .final-summary .emoji {
+      font-size: 42px;
+      margin-bottom: 12px;
+      line-height: 1;
+    }
+    .final-summary .headline {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .final-summary .stats {
+      margin: 18px 0;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    .final-summary .stats div {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+    .final-summary .stats .label {
+      opacity: 0.9;
+    }
+    .final-summary .stats .value {
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+    .final-summary .footer-note {
+      font-size: 11px;
+      opacity: 0.85;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    /* Page Footer */
+    .page-footer {
+      position: absolute;
+      bottom: 16mm;
+      left: 16mm;
+      right: 16mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: var(--color-neutral-500);
+      border-top: 1px solid var(--color-neutral-200);
+      padding-top: 10px;
+    }
+    .page-footer .brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      color: var(--color-neutral-700);
+    }
+    .page-footer .brand .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--color-primary);
+      border-radius: 50%;
+    }
+    .page-footer .page-num {
+      font-family: var(--font-mono);
+      color: var(--color-neutral-600);
+    }
+    
+    /* Utility Classes */
+    .text-success { color: var(--color-success); }
+    .text-danger { color: var(--color-danger); }
+    .text-warning { color: var(--color-warning); }
+    .text-muted { color: var(--color-neutral-500); }
+    .font-mono { font-family: var(--font-mono); }
+    .font-semibold { font-weight: 600; }
+    .text-right { text-align: right; }
+    .mt-4 { margin-top: 16px; }
+    .mb-4 { margin-bottom: 16px; }
+    
+    /* Print Optimizations */
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page { box-shadow: none; margin: 0; }
+      .no-print { display: none !important; }
+    }
+    
+    /* Loading State */
+    [data-field] { opacity: 0; }
+    [data-field].loaded { opacity: 1; transition: opacity 0.15s; }
+  </style>
 </head>
 <body>
-<script>
-// Данные инжектируются сервером в window.__DATA__
-const D = window.__DATA__ || {};
-const fmt = (n, sign=false) => {
-  const v = Math.abs(n||0);
-  const s = v >= 1000000
-    ? (v/1000000).toFixed(1)+'M'
-    : v >= 1000
-    ? (v/1000).toFixed(0)+'K'
-    : v.toFixed(0);
-  return (sign && n > 0 ? '+' : (n < 0 ? '-' : '')) + s + ' ₽';
-};
-const fmtFull = n => new Intl.NumberFormat('ru-RU').format(Math.round(n||0)) + ' ₽';
-const pct = (a, b) => b ? Math.round((a-b)/b*100) : 0;
-const MONTHS = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
-                'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-document.addEventListener('DOMContentLoaded', () => {
-  const income  = D.total_income  || 0;
-  const expense = D.total_expense || 0;
-  const assets  = D.total_assets  || 0;
-  const delta   = income - expense;
-  const prevExp = D.prev_expense  || 0;
-  const prevInc = D.prev_income   || 0;
-  const month   = MONTHS[D.month] || '';
-  const year    = D.year || new Date().getFullYear();
-  const topCats = D.top_categories || [];
-  const sections= D.sections || [];
-  const txs     = D.transactions || [];
-  const prevMonth = MONTHS[D.prev_month] || '';
-
-  // ── Страница 1: Обзор ──────────────────────────────────────────────────────
-  const p1 = document.getElementById('page1');
-
-  // Headline
-  const deltaSign = delta >= 0 ? 'Профицит' : 'Дефицит';
-  const expChange = prevExp ? `${pct(expense,prevExp) > 0 ? '+' : ''}${pct(expense,prevExp)}% к прошлому месяцу` : '';
-  p1.querySelector('.headline-text').textContent =
-    `${deltaSign} ${fmt(Math.abs(delta))}. Расходы ${fmtFull(expense)}${expChange ? ' — ' + expChange : ''}.`;
-
-  // KPI
-  const kpis = p1.querySelectorAll('.kpi-card');
-  const expPct = pct(expense, prevExp);
-  const incPct = pct(income, prevInc);
-
-  kpis[0].querySelector('.kpi-value').textContent = fmtFull(income);
-  kpis[0].querySelector('.kpi-value').className = 'kpi-value positive';
-  kpis[0].querySelector('.kpi-delta').textContent = prevInc ? `${incPct > 0 ? '+' : ''}${incPct}% vs ${prevMonth}` : '';
-  kpis[0].querySelector('.kpi-delta').className = `kpi-delta ${incPct >= 0 ? 'positive' : 'negative'}`;
-
-  kpis[1].querySelector('.kpi-value').textContent = fmtFull(expense);
-  kpis[1].querySelector('.kpi-value').className = 'kpi-value negative';
-  kpis[1].querySelector('.kpi-delta').textContent = prevExp ? `${expPct > 0 ? '+' : ''}${expPct}% vs ${prevMonth}` : '';
-  kpis[1].querySelector('.kpi-delta').className = `kpi-delta ${expPct <= 0 ? 'positive' : 'negative'}`;
-
-  kpis[2].querySelector('.kpi-value').textContent = fmt(delta, true);
-  kpis[2].querySelector('.kpi-value').className = `kpi-value ${delta >= 0 ? 'positive' : 'negative'}`;
-  kpis[2].querySelector('.kpi-delta').textContent = delta >= 0 ? 'Профицит' : 'Дефицит';
-
-  // Пончик — структура
-  const ctx1 = document.getElementById('donut1').getContext('2d');
-  const sectionExpenses = sections.filter(s => parseFloat(s.expense||0) > 0);
-  new Chart(ctx1, {
-    type: 'doughnut',
-    data: {
-      labels: sectionExpenses.map(s => s.section),
-      datasets: [{
-        data: sectionExpenses.map(s => parseFloat(s.expense||0)),
-        backgroundColor: ['#f59e0b','#ef4444','#6366f1','#22c55e'],
-        borderWidth: 2,
-        borderColor: '#0d0d14',
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'right', labels: { color: '#e8e8f0', font: { size: 10 }, padding: 12 } }
-      },
-      cutout: '65%',
-    }
-  });
-
-  // Прогресс-бары топ категорий
-  const progContainer = p1.querySelector('.progress-list');
-  const maxVal = topCats.length ? parseFloat(topCats[0].total) : 1;
-  topCats.slice(0,8).forEach(cat => {
-    const pctVal = (parseFloat(cat.total) / expense * 100).toFixed(1);
-    const fillPct = (parseFloat(cat.total) / maxVal * 100).toFixed(0);
-    progContainer.innerHTML += `
-      <div class="progress-row">
-        <div class="progress-label">${cat.category}</div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width:${fillPct}%;background:linear-gradient(90deg,#7c6aff,#a855f7)"></div>
+  <!-- Страница 1: Сводка -->
+  <div class="page">
+    <header class="report-header">
+      <div class="brand">
+        <div class="logo">WC</div>
+        <div class="title">
+          <h1>Месячный финансовый отчёт</h1>
+          <div class="subtitle">Wealth Control Personal Finance OS</div>
         </div>
-        <div class="progress-value">${fmtFull(parseFloat(cat.total))}</div>
-        <div class="progress-pct">${pctVal}%</div>
-      </div>`;
-  });
+      </div>
+      <div class="meta">
+        <div><strong data-field="period">—</strong></div>
+        <div>Сформирован: <span data-field="generated_at">—</span></div>
+        <div class="mt-4 text-muted">ID пользователя: <span data-field="user_id">—</span></div>
+      </div>
+    </header>
 
-  // ── Страница 2: Расходы по категориям ─────────────────────────────────────
-  const p2 = document.getElementById('page2');
+    <!-- KPI Cards -->
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="label">💚 Доходы</div>
+        <div class="value positive" data-field="total_income_fmt">— ₽</div>
+        <div class="sub">vs <span data-field="prev_period">—</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="label">❤️ Расходы</div>
+        <div class="value negative" data-field="total_expense_fmt">— ₽</div>
+        <div class="sub">vs <span data-field="prev_period">—</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="label" data-field="delta_label">Дельта</div>
+        <div class="value" data-field="delta_fmt" data-class="delta">— ₽</div>
+        <div class="sub">Норма: <span data-field="savings_rate">—</span>%</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">🏦 Активы</div>
+        <div class="value" data-field="total_assets_fmt">— ₽</div>
+        <div class="sub">движение за месяц</div>
+      </div>
+    </div>
 
-  // Бар-чарт топ-10
-  const ctx2 = document.getElementById('barChart').getContext('2d');
-  new Chart(ctx2, {
-    type: 'bar',
-    data: {
-      labels: topCats.slice(0,10).map(c => c.category.length > 14 ? c.category.slice(0,14)+'…' : c.category),
-      datasets: [{
-        label: 'Расходы ₽',
-        data: topCats.slice(0,10).map(c => parseFloat(c.total)),
-        backgroundColor: 'rgba(124,106,255,0.7)',
-        borderColor:     'rgba(124,106,255,1)',
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(30,30,46,0.8)' }, ticks: { color: '#6b6b85', font:{size:9} } },
-        y: { grid: { display: false }, ticks: { color: '#e8e8f0', font:{size:10} } },
-      }
-    }
-  });
+    <!-- Structure -->
+    <div class="section">
+      <div class="section-title">Структура расходов</div>
+      <div class="bar-list" id="sections-list"></div>
+    </div>
 
-  // Таблица категорий
-  const catTableBody = p2.querySelector('.cat-table-body');
-  topCats.forEach((cat, i) => {
-    const pctV = expense ? (parseFloat(cat.total)/expense*100).toFixed(1) : '0';
-    catTableBody.innerHTML += `
-      <tr>
-        <td style="color:var(--muted)">${i+1}</td>
-        <td><strong>${cat.category}</strong></td>
-        <td style="color:var(--muted)">${cat.section||''}</td>
-        <td class="tx-amount">${fmtFull(parseFloat(cat.total))}</td>
-        <td style="text-align:right;color:var(--muted)">${pctV}%</td>
-      </tr>`;
-  });
+    <!-- Top Categories -->
+    <div class="section">
+      <div class="section-title">Топ-5 категорий расходов</div>
+      <div class="bar-list" id="top-cats-list"></div>
+    </div>
 
-  // ── Страница 3: Транзакции ─────────────────────────────────────────────────
-  const p3 = document.getElementById('page3');
-  const txBody = p3.querySelector('.tx-body');
-  txs.slice(0, 30).forEach(tx => {
-    const d = tx.date || '';
-    const dateStr = typeof d === 'string' ? d.slice(0,10) : d;
-    const isIncome = tx.tx_type === 'Доход';
-    const badgeClass = isIncome ? 'badge-income' : (tx.tx_type === 'Актив' ? 'badge-asset' : 'badge-expense');
-    const amtClass   = isIncome ? 'positive' : 'negative';
-    txBody.innerHTML += `
-      <tr>
-        <td style="color:var(--muted);white-space:nowrap">${dateStr}</td>
-        <td><strong>${tx.category||'—'}</strong></td>
-        <td style="color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis">${(tx.merchant||'').slice(0,18)}</td>
-        <td><span class="badge ${badgeClass}">${tx.tx_type}</span></td>
-        <td class="tx-amount ${amtClass}">${fmtFull(parseFloat(tx.amount_rub||tx.amount||0))}</td>
-      </tr>`;
-  });
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 1 из 4</div>
+    </footer>
+  </div>
 
-  // ── Страница 4: Динамика и выводы ─────────────────────────────────────────
-  const p4 = document.getElementById('page4');
+  <!-- Страница 2: Детализация -->
+  <div class="page">
+    <div class="section">
+      <div class="section-title">Расходы по категориям</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th width="40">#</th>
+            <th>Категория</th>
+            <th>Раздел</th>
+            <th class="text-right">Сумма</th>
+            <th class="text-right">Доля</th>
+          </tr>
+        </thead>
+        <tbody id="categories-body"></tbody>
+      </table>
+    </div>
 
-  // Линейный график по месяцам
-  const trend = D.trend || [];
-  if (trend.length > 1) {
-    const ctx4 = document.getElementById('trendChart').getContext('2d');
-    new Chart(ctx4, {
-      type: 'line',
-      data: {
-        labels: trend.map(r => `${MONTHS[r.month]?.slice(0,3)} ${r.year}`),
-        datasets: [
-          {
-            label: 'Доходы',
-            data: trend.map(r => parseFloat(r.income||0)),
-            borderColor: '#22c55e',
-            backgroundColor: 'rgba(34,197,94,0.08)',
-            tension: 0.4,
-            fill: true,
-            pointRadius: 4,
-          },
-          {
-            label: 'Расходы',
-            data: trend.map(r => parseFloat(r.expense||0)),
-            borderColor: '#ef4444',
-            backgroundColor: 'rgba(239,68,68,0.08)',
-            tension: 0.4,
-            fill: true,
-            pointRadius: 4,
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { labels: { color: '#6b6b85', font:{size:10} } } },
-        scales: {
-          x: { grid: { color:'rgba(30,30,46,0.8)' }, ticks: { color:'#6b6b85', font:{size:9} } },
-          y: {
-            grid: { color:'rgba(30,30,46,0.8)' },
-            ticks: { color:'#6b6b85', font:{size:9},
-              callback: v => v >= 1000 ? (v/1000).toFixed(0)+'K' : v }
-          }
+    <div class="section">
+      <div class="section-title">Все операции за месяц (превью)</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th width="80">Дата</th>
+            <th>Категория</th>
+            <th>Место</th>
+            <th>Тип</th>
+            <th class="text-right">Сумма</th>
+          </tr>
+        </thead>
+        <tbody id="transactions-body"></tbody>
+      </table>
+    </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 2 из 4</div>
+    </footer>
+  </div>
+
+  <!-- Страница 3: Динамика -->
+  <div class="page">
+    <div class="section">
+      <div class="section-title">Динамика доходов и расходов</div>
+      <div class="chart-wrapper">
+        <div class="chart-container">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Аналитические выводы</div>
+      <div class="insights">
+        <ul>
+          <li>Общие расходы: <strong><span data-field="total_expense_fmt">—</span> ₽</strong> (<span data-field="savings_rate">—</span>% от дохода)</li>
+          <li>Крупнейшая категория: <strong id="top-category-name">—</strong></li>
+          <li>Изменение к прошлому месяцу: <span id="delta-change" class="font-semibold">—</span></li>
+          <li>Рекомендация: <strong id="recommendation-text">—</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="page-num">Страница 3 из 4</div>
+    </footer>
+  </div>
+
+  <!-- Страница 4: Итог -->
+  <div class="page">
+    <div class="final-summary">
+      <div class="emoji" id="final-emoji">—</div>
+      <div class="headline" id="final-headline">—</div>
+      <div class="stats">
+        <div><span class="label">Доходы:</span> <span class="value" data-field="total_income_fmt">—</span> ₽</div>
+        <div><span class="label">Расходы:</span> <span class="value" data-field="total_expense_fmt">—</span> ₽</div>
+        <div><span class="label">Дельта:</span> <span class="value" data-field="delta_fmt">—</span> ₽</div>
+        <div><span class="label">Активы:</span> <span class="value" data-field="total_assets_fmt">—</span> ₽</div>
+      </div>
+      <div class="footer-note">
+        Отчёт сформирован автоматически • Wealth Control  • Конфиденциально
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
+      <div class="page-num">Страница 4 из 4</div>
+    </footer>
+  </div>
+
+  <!-- Client-side Rendering Script -->
+  <script>
+    (function() {
+      const data = window.__DATA__ || {};
+      
+      // Helper: fill simple fields
+      function fill(fields) {
+        for (const [key, val] of Object.entries(fields)) {
+          document.querySelectorAll(`[data-field="${key}"]`).forEach(el => {
+            if (el.dataset.class && val !== undefined && val !== null) {
+              el.classList.toggle('positive', val >= 0);
+              el.classList.toggle('negative', val < 0);
+            }
+            if (val !== undefined && val !== null) {
+              el.textContent = typeof val === 'number' ? val.toLocaleString('ru-RU') : val;
+            }
+            el.classList.add('loaded');
+          });
         }
       }
-    });
-  }
 
-  // Сводка-вывод
-  const summaryEl = p4.querySelector('.summary-text');
-  const savingsRate = income ? Math.round(delta/income*100) : 0;
-  const topCat = topCats[0]?.category || '—';
-  const topCatSum = topCats[0] ? fmtFull(parseFloat(topCats[0].total)) : '—';
-  summaryEl.innerHTML = `
-    <p>За <strong>${month} ${year}</strong> зафиксировано доходов на <strong>${fmtFull(income)}</strong>
-    и расходов на <strong>${fmtFull(expense)}</strong>.</p>
-    <p style="margin-top:8px">Норма сбережений составила <strong>${savingsRate}%</strong>.
-    Крупнейшая статья расходов — <strong>${topCat}</strong> (${topCatSum}).</p>
-    ${assets ? `<p style="margin-top:8px">Движение активов за период: <strong>${fmtFull(assets)}</strong>.</p>` : ''}
-    ${prevExp ? `<p style="margin-top:8px">По сравнению с ${prevMonth}:
-      расходы ${expPct > 0 ? 'выросли на ' + Math.abs(expPct) + '%' : 'снизились на ' + Math.abs(expPct) + '%'}.</p>` : ''}
-  `;
-});
-</script>
+      // Fill basic fields
+      fill({
+        period: data.period,
+        generated_at: data.generated_at,
+        user_id: data.user_id,
+        total_income_fmt: data.total_income_fmt,
+        total_expense_fmt: data.total_expense_fmt,
+        total_assets_fmt: data.total_assets_fmt,
+        delta_fmt: data.delta_fmt,
+        delta_label: data.delta_label,
+        prev_period: data.prev_period,
+        prev_income_fmt: data.prev_income_fmt,
+        prev_expense_fmt: data.prev_expense_fmt,
+        savings_rate: data.savings_rate,
+      });
 
-<!-- ═══════════════════════════════ PAGE 1 ═══════════════════════════════ -->
-<div class="page" id="page1">
-  <div class="page-header">
-    <div>
-      <div class="report-title">Месячный<br>отчёт</div>
-      <div class="report-subtitle">DizelFinance · Personal Finance</div>
-    </div>
-    <div class="report-period">
-      <strong id="period-label">— период —</strong>
-      Сформирован: <span id="gen-date"></span>
-    </div>
-  </div>
+      // Render sections bar list
+      const sectionsList = document.getElementById('sections-list');
+      if (data.sections?.length) {
+        sectionsList.innerHTML = data.sections.map(sec => `
+          <div class="bar-row">
+            <div class="label">${sec.name}</div>
+            <div class="track"><div class="fill" style="width: ${Math.min(100, sec.pct)}%"></div></div>
+            <div class="value font-mono">${sec.expense_fmt} ₽</div>
+            <div class="pct">${sec.pct}%</div>
+          </div>
+        `).join('');
+      }
 
-  <div class="headline">
-    <div class="headline-label">Главный вывод</div>
-    <div class="headline-text">—</div>
-  </div>
+      // Render top categories
+      const topCatsList = document.getElementById('top-cats-list');
+      if (data.top_categories?.length) {
+        const top5 = data.top_categories.slice(0, 5);
+        topCatsList.innerHTML = top5.map((cat, i) => `
+          <div class="bar-row">
+            <div class="label">${i+1}. ${cat.name}</div>
+            <div class="track"><div class="fill ${cat.pct > 30 ? 'warning' : cat.pct > 50 ? 'danger' : ''}" style="width: ${Math.min(100, cat.pct)}%"></div></div>
+            <div class="value font-mono">${cat.total_fmt} ₽</div>
+            <div class="pct">${cat.pct}%</div>
+          </div>
+        `).join('');
+        document.getElementById('top-category-name').textContent = data.top_categories[0]?.name || '—';
+      }
 
-  <div class="kpi-grid">
-    <div class="kpi-card">
-      <div class="kpi-label">💚 Доходы</div>
-      <div class="kpi-value">—</div>
-      <div class="kpi-sub">за месяц</div>
-      <div class="kpi-delta neutral">—</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">❤️ Расходы</div>
-      <div class="kpi-value">—</div>
-      <div class="kpi-sub">за месяц</div>
-      <div class="kpi-delta neutral">—</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">📊 Дельта</div>
-      <div class="kpi-value">—</div>
-      <div class="kpi-sub">профицит / дефицит</div>
-      <div class="kpi-delta neutral">—</div>
-    </div>
-  </div>
+      // Render categories table
+      const catBody = document.getElementById('categories-body');
+      if (data.top_categories?.length) {
+        catBody.innerHTML = data.top_categories.map((cat, i) => `
+          <tr>
+            <td class="font-mono">${String(i+1).padStart(2, '0')}</td>
+            <td class="font-semibold">${cat.name}</td>
+            <td class="text-muted">—</td>
+            <td class="amount">${cat.total_fmt} ₽</td>
+            <td class="pct-col">${cat.pct}%</td>
+          </tr>
+        `).join('');
+      }
 
-  <div class="two-col">
-    <div class="card">
-      <div class="section-title">Структура расходов</div>
-      <canvas id="donut1" height="160"></canvas>
-    </div>
-    <div class="card">
-      <div class="section-title">Топ категорий</div>
-      <div class="progress-list"></div>
-    </div>
-  </div>
+      // Render transactions table
+      const txBody = document.getElementById('transactions-body');
+      if (data.transactions?.length) {
+        txBody.innerHTML = data.transactions.slice(0, 15).map(tx => `
+          <tr>
+            <td>${tx.date}</td>
+            <td>${tx.category}</td>
+            <td class="text-muted">${tx.merchant || '—'}</td>
+            <td>${tx.tx_type}</td>
+            <td class="amount ${tx.tx_type === 'Расход' ? 'negative' : 'positive'}">${tx.amount_fmt} ${tx.currency}</td>
+          </tr>
+        `).join('');
+      }
 
-  <div class="page-footer">
-    <span>DizelFinance</span>
-    <span>Страница 1 из 4</span>
-  </div>
-</div>
+      // Insights logic
+      if (data.delta !== undefined && data.prev_delta !== undefined) {
+        const diff = data.delta - data.prev_delta;
+        const el = document.getElementById('delta-change');
+        el.textContent = `${diff >= 0 ? '+' : ''}${diff.toLocaleString('ru-RU')} ₽`;
+        el.classList.toggle('text-success', diff >= 0);
+        el.classList.toggle('text-danger', diff < 0);
+      }
+      const rec = document.getElementById('recommendation-text');
+      if (data.savings_rate < 10) rec.textContent = 'Сфокусироваться на создании финансовой подушки';
+      else if (data.savings_rate > 30) rec.textContent = 'Отличная дисциплина! Рассмотреть инвестиции';
+      else rec.textContent = 'Поддерживать текущий баланс, оптимизировать регулярные расходы';
 
-<!-- ═══════════════════════════════ PAGE 2 ═══════════════════════════════ -->
-<div class="page" id="page2">
-  <div class="page-header">
-    <div>
-      <div class="report-title" style="font-size:16px">Расходы по категориям</div>
-      <div class="report-subtitle">Детализация за месяц</div>
-    </div>
-  </div>
+      // Final summary
+      document.getElementById('final-emoji').textContent = data.delta >= 0 ? '🎯' : '📊';
+      document.getElementById('final-headline').textContent = data.delta >= 0 
+        ? `Профицит за ${data.month_name || ''}` 
+        : `Дефицит за ${data.month_name || ''}`;
 
-  <div class="card" style="margin-bottom:16px">
-    <div class="section-title">Топ-10 категорий расходов</div>
-    <canvas id="barChart" height="200"></canvas>
-  </div>
+      // Chart.js
+      const ctx = document.getElementById('trendChart');
+      if (ctx && data.trend?.length) {
+        Chart.defaults.font.family = 'var(--font-sans)';
+        Chart.defaults.font.size = 10;
+        Chart.defaults.scale.ticks.color = '#64748b';
+        Chart.defaults.plugins.legend.labels.color = '#334155';
+        
+        new Chart(ctx, {
+          type: 'line',
+           {
+            labels: data.trend.map(t => t.label),
+            datasets: [
+              {
+                label: 'Доходы',
+                data: data.trend.map(t => t.income),
+                borderColor: '#059669',
+                backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                tension: 0.35,
+                fill: true,
+                borderWidth: 2,
+                pointRadius: 2,
+                pointHoverRadius: 4
+              },
+              {
+                label: 'Расходы',
+                data: data.trend.map(t => t.expense),
+                borderColor: '#dc2626',
+                backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                tension: 0.35,
+                fill: true,
+                borderWidth: 2,
+                pointRadius: 2,
+                pointHoverRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle' } }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                ticks: { 
+                  callback: v => v.toLocaleString('ru-RU') + ' ₽',
+                  maxTicksLimit: 5
+                }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
+              }
+            }
+          }
+        });
+      }
 
-  <div class="card">
-    <div class="section-title">Все категории</div>
-    <table class="tx-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Категория</th>
-          <th>Раздел</th>
-          <th style="text-align:right">Сумма</th>
-          <th style="text-align:right">%</th>
-        </tr>
-      </thead>
-      <tbody class="cat-table-body"></tbody>
-    </table>
-  </div>
-
-  <div class="page-footer">
-    <span>DizelFinance</span>
-    <span>Страница 2 из 4</span>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════ PAGE 3 ═══════════════════════════════ -->
-<div class="page" id="page3">
-  <div class="page-header">
-    <div>
-      <div class="report-title" style="font-size:16px">Транзакции</div>
-      <div class="report-subtitle">Все операции за месяц (до 30)</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <table class="tx-table">
-      <thead>
-        <tr>
-          <th>Дата</th>
-          <th>Категория</th>
-          <th>Место</th>
-          <th>Тип</th>
-          <th style="text-align:right">Сумма</th>
-        </tr>
-      </thead>
-      <tbody class="tx-body"></tbody>
-    </table>
-  </div>
-
-  <div class="page-footer">
-    <span>DizelFinance</span>
-    <span>Страница 3 из 4</span>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════ PAGE 4 ═══════════════════════════════ -->
-<div class="page" id="page4">
-  <div class="page-header">
-    <div>
-      <div class="report-title" style="font-size:16px">Динамика и выводы</div>
-      <div class="report-subtitle">Тренд и интерпретация</div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-bottom:16px">
-    <div class="section-title">Динамика доходов и расходов</div>
-    <canvas id="trendChart" height="180"></canvas>
-  </div>
-
-  <div class="card">
-    <div class="section-title">Выводы за период</div>
-    <div class="summary-text" style="line-height:1.7;color:var(--text)"></div>
-  </div>
-
-  <div class="page-footer">
-    <span>DizelFinance</span>
-    <span>Страница 4 из 4</span>
-  </div>
-</div>
-
-<script>
-// Устанавливаем период в шапку
-document.addEventListener('DOMContentLoaded', () => {
-  const D = window.__DATA__ || {};
-  const MONTHS = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
-                  'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-  const periodEl = document.getElementById('period-label');
-  if (periodEl && D.month && D.year) {
-    periodEl.textContent = `${MONTHS[D.month]} ${D.year}`;
-  }
-  const genEl = document.getElementById('gen-date');
-  if (genEl) {
-    genEl.textContent = new Date().toLocaleDateString('ru-RU');
-  }
-});
-</script>
+      // Show all loaded fields
+      setTimeout(() => {
+        document.querySelectorAll('[data-field]').forEach(el => el.classList.add('loaded'));
+      }, 50);
+    })();
+  </script>
 </body>
 </html>
