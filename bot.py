@@ -96,8 +96,8 @@ def kb_analytics() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="📄 Месячный отчёт"), KeyboardButton(text="📊 Квартальный отчёт")],
         [KeyboardButton(text="📅 Годовой отчёт"),  KeyboardButton(text="📈 Сравнить периоды")],
-        [KeyboardButton(text="💰 Net Worth"),      KeyboardButton(text="📋 Топ категорий")],
-        [KeyboardButton(text="💸 Детализация"),    KeyboardButton(text="📤 Экспорт CSV")],
+        [KeyboardButton(text="💰 Чистый капитал"), KeyboardButton(text="📋 Топ категорий")],  # ← русский
+        [KeyboardButton(text="💸 Детализация")],  # ← убрали Экспорт CSV
         [KeyboardButton(text="⏪ Главное меню")],
     ], resize_keyboard=True)
 
@@ -620,7 +620,7 @@ async def cmd_start(msg: Message, state: FSMContext):
         return
     await state.clear()
     await msg.answer(
-        "👋 <b>DizelFinance v3</b>\n\n"
+        "👋 <b>Wealth Control</b>\n\n"
         "Личный финансовый трекер.\n\n"
         "<b>Как добавить транзакцию:</b>\n"
         "📸 Скриншот банка\n"
@@ -871,8 +871,8 @@ async def analytics_comparative(msg: Message, state: FSMContext):
         reply_markup=kb_report_period_picker("comparative")
     )
 
-# 💰 Net Worth
-@dp.message(AnalyticsForm.report_type, F.text == "💰 Net Worth")
+# 💰 Чистый капитал (бывший Net Worth)
+@dp.message(AnalyticsForm.report_type, F.text == "💰 Чистый капитал")
 async def analytics_networth(msg: Message, state: FSMContext):
     await state.update_data(report_type="networth")
     await state.set_state(AnalyticsForm.pick_period)
@@ -895,10 +895,7 @@ async def analytics_top_categories(msg: Message, state: FSMContext):
     for i, c in enumerate(cats):
         pct = float(c["total"]) / total * 100 if total else 0
         text += f"{i+1}. {c['category'][:25]:<25} <code>{float(c['total']):>8,.0f} ₽</code> ({pct:.1f}%)\n"
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📤 Экспорт CSV", callback_data=f"exp_csv|top|{now.year}|{now.month}")]
-    ])
-    await msg.answer(text, reply_markup=kb)
+    await msg.answer(text, reply_markup=kb_analytics())  # ← Просто возвращаем меню
 
 # 💸 Детализация расходов
 @dp.message(AnalyticsForm.report_type, F.text == "💸 Детализация")
@@ -909,10 +906,7 @@ async def analytics_details(msg: Message, state: FSMContext):
     if total == 0:
         await msg.answer("Нет расходов за этот месяц.", reply_markup=kb_analytics())
         return
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📤 Экспорт CSV", callback_data=f"exp_csv|details|{now.year}|{now.month}")]
-    ])
-    await msg.answer(text, reply_markup=kb)
+    await msg.answer(text, reply_markup=kb_analytics())  # ← Просто возвращаем меню
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Транзакции
@@ -1050,21 +1044,21 @@ async def cb_analytics_yearly(cb: CallbackQuery, state: FSMContext):
     await state.clear()
     await cb.answer()
 
-# 💰 Net Worth (callback)
+# 💰 Чистый капитал (callback)
 @dp.callback_query(F.data.startswith("ap|networth|"))
 async def cb_analytics_networth(cb: CallbackQuery, state: FSMContext):
-    _, _, year, month = cb.data.split("|")  # ← извлекаем и месяц!
-    await cb.message.answer("⏳ Рассчитываю Net Worth...")
+    _, _, year, month = cb.data.split("|")
+    await cb.message.answer("⏳ Рассчитываю чистый капитал...")
     try:
         from pdf_caller import generate_pdf, build_networth_data
-        data = build_networth_data(cb.from_user.id, int(year))  # ← год для данных
+        data = build_networth_data(cb.from_user.id, int(year))
         pdf_bytes = generate_pdf("networth", data)
-        month_name = MONTH_NAMES.get(int(month), "")  # ← месяц для названия
-        filename = f"DizelFinance_NetWorth_{month_name}_{year}.pdf"
+        month_name = MONTH_NAMES.get(int(month), "")
+        filename = f"DizelFinance_Capital_{month_name}_{year}.pdf"  # ← новое имя файла
         await bot.send_document(
             cb.from_user.id,
             document=BufferedInputFile(pdf_bytes, filename=filename),
-            caption=f"💰 Net Worth · {month_name} {year}"
+            caption=f"💰 Чистый капитал · {month_name} {year}"
         )
         await cb.message.answer("✅ Отчёт отправлен!", reply_markup=kb_analytics())
     except Exception as e:
@@ -1880,31 +1874,6 @@ async def cb_quick_skip(cb: CallbackQuery):
     await cb.answer()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SMS и фоллбэк
-# ══════════════════════════════════════════════════════════════════════════════
-
-SMS_KEYWORDS = [
-    "списано", "зачислено", "покупка", "оплата", "перевод",
-    "баланс", "карта", "тенге", "рублей", "сом"
-]
-
-@dp.message(StateFilter("*"), F.text)
-async def handle_text_fallback(msg: Message, state: FSMContext):
-    if not allowed(msg.from_user.id): return
-    text = msg.text or ""
-    if len(text) > 20 and any(w in text.lower() for w in SMS_KEYWORDS):
-        await msg.answer("📱 Похоже на SMS, разбираю...")
-        tx = parse_sms(text)
-        if tx:
-            await _send_single_tx(msg, tx)
-            return
-    await msg.answer(
-        "Используйте кнопки меню 👇\n\n"
-        "Или отправьте скриншот / PDF / SMS текстом",
-        reply_markup=kb_main()
-    )
-
-# ══════════════════════════════════════════════════════════════════════════════
 # Flask webhook
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -2040,6 +2009,37 @@ def webhook_transaction():
 @flask_app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "version": "3.0"}), 200
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SMS и фоллбэк
+# ══════════════════════════════════════════════════════════════════════════════
+
+SMS_KEYWORDS = [
+    "списано", "зачислено", "покупка", "оплата", "перевод",
+    "баланс", "карта", "тенге", "рублей", "сом"
+]
+
+@dp.message(StateFilter("*"), F.text)
+async def handle_text_fallback(msg: Message, state: FSMContext):
+    if not allowed(msg.from_user.id): return
+    
+    # ❗ Пропускаем, если пользователь в меню аналитики
+    current_state = await state.get_state()
+    if current_state and current_state.startswith("AnalyticsForm:"):
+        return  # Пусть другие хендлеры обработают
+    
+    text = msg.text or ""
+    if len(text) > 20 and any(w in text.lower() for w in SMS_KEYWORDS):
+        await msg.answer("📱 Похоже на SMS, разбираю...")
+        tx = parse_sms(text)
+        if tx:
+            await _send_single_tx(msg, tx)
+            return
+    await msg.answer(
+        "Используйте кнопки меню 👇\n\n"
+        "Или отправьте скриншот / PDF / SMS текстом",
+        reply_markup=kb_main()
+    )
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Запуск
