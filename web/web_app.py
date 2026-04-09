@@ -32,7 +32,11 @@ upload_sessions: dict = {}
 DEFAULT_USER = 0
 
 def uid():
-    return session.get("user_id", DEFAULT_USER)
+    """Возвращает user_id из сессии или дефолт."""
+    user_id = session.get("user_id")
+    if user_id is not None:
+        return int(user_id)
+    return DEFAULT_USER
 
 def now():
     return datetime.now()
@@ -59,10 +63,20 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        
         if WEB_USERS.get(username) == password:
             session["logged_in"] = True
-            session["user_id"]   = DEFAULT_USER
-            session["username"]  = username
+            session["username"] = username
+            
+            # ❗ КЛЮЧЕВОЕ: если логин — это Telegram ID, используем его как user_id
+            try:
+                session["user_id"] = int(username)  # Telegram ID → user_id в БД
+                log.info(f"🔐 Web login: {username} → user_id={session['user_id']}")
+            except ValueError:
+                # Если логин не число — используем дефолт
+                session["user_id"] = DEFAULT_USER
+                log.warning(f"⚠️ Web login: {username} is not numeric, using DEFAULT_USER")
+            
             return redirect(url_for("dashboard"))
         flash("Неверные данные")
     return render_template("login.html")
