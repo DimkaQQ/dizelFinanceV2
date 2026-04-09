@@ -159,14 +159,7 @@
     <div class="section">
       <div class="section-title">Топ категорий расходов</div>
       <table class="data-table">
-        <thead>
-          <tr>
-            <th width="40">#</th>
-            <th>Категория</th>
-            <th class="text-right">Сумма</th>
-            <th class="text-right">Доля</th>
-          </tr>
-        </thead>
+        <thead><tr><th width="40">#</th><th>Категория</th><th class="text-right">Сумма</th><th class="text-right">Доля</th></tr></thead>
         <tbody id="top-cats-body"></tbody>
       </table>
     </div>
@@ -174,9 +167,7 @@
     <div class="section">
       <div class="section-title">Визуализация по месяцам</div>
       <div class="chart-wrapper">
-        <div class="chart-container">
-          <canvas id="quarterChart"></canvas>
-        </div>
+        <div class="chart-container"><canvas id="quarterChart"></canvas></div>
       </div>
     </div>
 
@@ -191,19 +182,10 @@
     <div class="section">
       <div class="section-title">Все операции за квартал (превью)</div>
       <table class="data-table">
-        <thead>
-          <tr>
-            <th width="80">Дата</th>
-            <th>Категория</th>
-            <th>Место</th>
-            <th>Тип</th>
-            <th class="text-right">Сумма</th>
-          </tr>
-        </thead>
+        <thead><tr><th width="80">Дата</th><th>Категория</th><th>Место</th><th>Тип</th><th class="text-right">Сумма</th></tr></thead>
         <tbody id="tx-body"></tbody>
       </table>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 3 из 5</div>
@@ -223,7 +205,6 @@
         </ul>
       </div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 4 из 5</div>
@@ -241,11 +222,8 @@
         <div><span class="label">Дельта:</span> <span class="value" data-field="delta_fmt">—</span> ₽</div>
         <div><span class="label">Сбережения:</span> <span class="value" data-field="savings_rate">—</span>%</div>
       </div>
-      <div class="footer-note">
-        Отчёт сформирован автоматически • Wealth Control  • Конфиденциально
-      </div>
+      <div class="footer-note">Отчёт сформирован автоматически • Wealth Control • Конфиденциально</div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
       <div class="page-num">Страница 5 из 5</div>
@@ -272,17 +250,14 @@
       }
 
       fill({
-        quarter_label: data.quarter_label,
-        generated_at: data.generated_at,
-        total_income_fmt: data.total_income_fmt,
-        total_expense_fmt: data.total_expense_fmt,
-        total_assets_fmt: data.total_assets_fmt,
-        delta_fmt: data.delta_fmt,
+        quarter_label: data.quarter_label, generated_at: data.generated_at,
+        total_income_fmt: data.total_income_fmt, total_expense_fmt: data.total_expense_fmt,
+        total_assets_fmt: data.total_assets_fmt, delta_fmt: data.delta_fmt,
         delta_label: data.delta >= 0 ? '📈 Профицит' : '⚠️ Дефицит',
         savings_rate: data.savings_rate,
       });
 
-      // Render months grid
+      // Months grid
       const monthsGrid = document.getElementById('months-grid');
       if (data.monthly_data?.length) {
         monthsGrid.innerHTML = data.monthly_data.map(m => `
@@ -291,8 +266,7 @@
             <div class="row"><span>Доходы:</span><span class="val pos">${m.income_fmt} ₽</span></div>
             <div class="row"><span>Расходы:</span><span class="val neg">${m.expense_fmt} ₽</span></div>
             <div class="row"><span>Дельта:</span><span class="val ${m.delta >= 0 ? 'pos' : 'neg'}">${m.delta_fmt} ₽</span></div>
-          </div>
-        `).join('');
+          </div>`).join('');
       }
 
       // Top categories table
@@ -304,30 +278,29 @@
             <td class="font-semibold">${cat.name}</td>
             <td class="amount">${cat.total_fmt} ₽</td>
             <td class="pct-col">${cat.pct}%</td>
-          </tr>
-        `).join('');
+          </tr>`).join('');
         document.getElementById('q-top-cat').textContent = data.top_categories[0]?.name || '—';
       }
 
-      // Chart
+      // Chart - ВАЖНО: ключ "data:" перед конфигурацией!
       const ctx = document.getElementById('quarterChart');
       if (ctx && data.monthly_data?.length) {
         Chart.defaults.font.family = 'var(--font-sans)';
         Chart.defaults.font.size = 10;
         new Chart(ctx, {
           type: 'bar',
-           {
+          data: {  // ← КЛЮЧ "data:" ОБЯЗАТЕЛЕН!
             labels: data.monthly_data.map(m => m.month_name),
             datasets: [
-              { label: 'Доходы',  data.monthly_data.map(m => m.income), backgroundColor: '#059669', borderRadius: 4 },
-              { label: 'Расходы',  data.monthly_data.map(m => m.expense), backgroundColor: '#dc2626', borderRadius: 4 }
+              { label: 'Доходы', data: data.monthly_data.map(m => m.income), backgroundColor: '#059669', borderRadius: 4 },
+              { label: 'Расходы', data: data.monthly_data.map(m => m.expense), backgroundColor: '#dc2626', borderRadius: 4 }
             ]
           },
           options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: 'top' } },
             scales: {
-              y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU')+' ₽' } },
+              y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU') + ' ₽' } },
               x: { grid: { display: false } }
             }
           }
@@ -344,8 +317,7 @@
             <td class="text-muted">${tx.merchant || '—'}</td>
             <td>${tx.tx_type}</td>
             <td class="amount ${tx.tx_type === 'Расход' ? 'neg' : 'pos'}">${tx.amount_fmt} ${tx.currency}</td>
-          </tr>
-        `).join('');
+          </tr>`).join('');
       }
 
       // Insights

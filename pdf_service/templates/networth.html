@@ -153,26 +153,17 @@
     <div class="section">
       <div class="section-title">Динамика накопленного капитала</div>
       <div class="chart-wrapper">
-        <div class="chart-container">
-          <canvas id="networthChart"></canvas>
-        </div>
+        <div class="chart-container"><canvas id="networthChart"></canvas></div>
       </div>
     </div>
 
     <div class="section">
       <div class="section-title">Помесячная дельта</div>
       <table class="data-table">
-        <thead>
-          <tr>
-            <th width="80">Месяц</th>
-            <th class="text-right">Дельта</th>
-            <th class="text-right">Накоплено</th>
-          </tr>
-        </thead>
+        <thead><tr><th width="80">Месяц</th><th class="text-right">Дельта</th><th class="text-right">Накоплено</th></tr></thead>
         <tbody id="nw-monthly-body"></tbody>
       </table>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 2 из 5</div>
@@ -197,7 +188,6 @@
         </ul>
       </div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 3 из 5</div>
@@ -215,11 +205,8 @@
         <div><span class="label">Сбережения:</span> <span class="value" data-field="total_savings_fmt">—</span> ₽</div>
         <div><span class="label">Норма:</span> <span class="value" data-field="savings_rate">—</span>%</div>
       </div>
-      <div class="footer-note">
-        Отчёт сформирован автоматически • Wealth Control  • Конфиденциально
-      </div>
+      <div class="footer-note">Отчёт сформирован автоматически • Wealth Control • Конфиденциально</div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
       <div class="page-num">Страница 4 из 5</div>
@@ -230,18 +217,13 @@
   <div class="page">
     <div style="text-align: center; padding: 40px 24px;">
       <div style="font-size: 56px; margin-bottom: 16px;">🎯</div>
-      <div style="font-size: 18px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">
-        Ваш финансовый прогресс
-      </div>
+      <div style="font-size: 18px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">Ваш финансовый прогресс</div>
       <div style="font-size: 13px; color: var(--color-neutral-600); max-width: 400px; margin: 0 auto 24px; line-height: 1.6;">
         Регулярный мониторинг капитала — ключ к долгосрочному финансовому благополучию. 
         Продолжайте отслеживать доходы, расходы и активы для достижения целей.
       </div>
-      <div style="font-size: 11px; color: var(--color-neutral-500);">
-        Следующий отчёт: <span data-field="next_report_date">—</span>
-      </div>
+      <div style="font-size: 11px; color: var(--color-neutral-500);">Следующий отчёт: <span data-field="next_report_date">—</span></div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
       <div class="page-num">Страница 5 из 5</div>
@@ -268,12 +250,9 @@
       }
 
       fill({
-        year: data.year,
-        generated_at: data.generated_at,
-        net_worth_fmt: data.net_worth_fmt,
-        total_assets_fmt: data.total_assets_fmt,
-        total_savings_fmt: data.total_savings_fmt,
-        savings_rate: data.savings_rate,
+        year: data.year, generated_at: data.generated_at,
+        net_worth_fmt: data.net_worth_fmt, total_assets_fmt: data.total_assets_fmt,
+        total_savings_fmt: data.total_savings_fmt, savings_rate: data.savings_rate,
         next_report_date: `${data.year + 1}`,
       });
 
@@ -294,8 +273,7 @@
             <div class="track"><div class="fill" style="width: ${Math.min(100, asset.pct)}%"></div></div>
             <div class="value font-mono">${asset.total_fmt} ₽</div>
             <div class="pct">${asset.pct}%</div>
-          </div>
-        `).join('');
+          </div>`).join('');
         document.getElementById('top-asset-cat').textContent = data.asset_categories[0]?.name || '—';
       }
 
@@ -307,43 +285,32 @@
             <td class="font-semibold">${m.month_name}</td>
             <td class="amount ${m.delta >= 0 ? 'pos' : 'neg'}">${m.delta_fmt} ₽</td>
             <td class="amount font-semibold">${m.cumulative_fmt} ₽</td>
-          </tr>
-        `).join('');
+          </tr>`).join('');
       }
 
-      // Net worth chart
+      // Net worth chart - ВАЖНО: ключ "" перед конфигурацией!
       const ctx = document.getElementById('networthChart');
       if (ctx && data.net_worth_trend?.length) {
         Chart.defaults.font.family = 'var(--font-sans)';
         Chart.defaults.font.size = 10;
         new Chart(ctx, {
           type: 'line',
-           {
+          data: {  // ← КЛЮЧ "" ОБЯЗАТЕЛЕН!
             labels: data.net_worth_trend.map(m => m.month_name),
             datasets: [{
               label: 'Накопленный капитал',
-              data: data.net_worth_trend.map(m => m.cumulative),
-              borderColor: '#1e3a5f',
-              backgroundColor: 'rgba(30,58,95,0.1)',
-              tension: 0.35,
-              fill: true,
-              borderWidth: 2.5,
-              pointRadius: 3,
-              pointHoverRadius: 5,
-              pointBackgroundColor: '#fff',
-              pointBorderColor: '#1e3a5f',
-              pointBorderWidth: 2
+              data: data.net_worth_trend.map(m => m.cumulative),  // ← КЛЮЧ "data:" ОБЯЗАТЕЛЕН!
+              borderColor: '#1e3a5f', backgroundColor: 'rgba(30,58,95,0.1)',
+              tension: 0.35, fill: true, borderWidth: 2.5,
+              pointRadius: 3, pointHoverRadius: 5,
+              pointBackgroundColor: '#fff', pointBorderColor: '#1e3a5f', pointBorderWidth: 2
             }]
           },
           options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-              y: {
-                beginAtZero: true,
-                grid: { color: 'rgba(226,232,240,0.6)' },
-                ticks: { callback: v => v.toLocaleString('ru-RU') + ' ₽', maxTicksLimit: 5 }
-              },
+              y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU') + ' ₽', maxTicksLimit: 5 } },
               x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } }
             }
           }
@@ -359,7 +326,7 @@
       // Final summary
       document.getElementById('nw-final-emoji').textContent = data.net_worth >= 0 ? '🎯' : '📊';
       document.getElementById('nw-final-headline').textContent = 
-        data.net_worth >= 0 ? `Капитал растёт` : `Требуется оптимизация`;
+        data.net_worth >= 0 ? 'Капитал растёт' : 'Требуется оптимизация';
 
       setTimeout(() => document.querySelectorAll('[data-field]').forEach(el => el.classList.add('loaded')), 50);
     })();

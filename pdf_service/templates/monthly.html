@@ -6,382 +6,94 @@
   <title>Месячный финансовый отчёт — Wealth Control</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    @page {
-      size: A4;
-      margin: 0;
-    }
+    @page { size: A4; margin: 0; }
     :root {
-      /* Corporate Finance Palette */
-      --color-primary: #1e3a5f;
-      --color-primary-light: #2c5282;
-      --color-success: #059669;
-      --color-warning: #d97706;
-      --color-danger: #dc2626;
-      --color-neutral-50: #f8fafc;
-      --color-neutral-100: #f1f5f9;
-      --color-neutral-200: #e2e8f0;
-      --color-neutral-300: #cbd5e1;
-      --color-neutral-600: #475569;
-      --color-neutral-700: #334155;
-      --color-neutral-800: #1e293b;
-      --color-neutral-900: #0f172a;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-      --radius: 8px;
-      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-      --font-mono: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+      --color-primary: #1e3a5f; --color-primary-light: #2c5282;
+      --color-success: #059669; --color-warning: #d97706; --color-danger: #dc2626;
+      --color-neutral-50: #f8fafc; --color-neutral-100: #f1f5f9; --color-neutral-200: #e2e8f0;
+      --color-neutral-300: #cbd5e1; --color-neutral-600: #475569; --color-neutral-700: #334155;
+      --color-neutral-800: #1e293b; --color-neutral-900: #0f172a;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05); --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+      --radius: 8px; --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      --font-mono: "SF Mono", Monaco, "Roboto Mono", monospace;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 13px; }
-    body {
-      font-family: var(--font-sans);
-      background: #ffffff;
-      color: var(--color-neutral-800);
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-    
-    /* Page Layout */
-    .page {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 20mm 16mm;
-      margin: 0 auto;
-      background: #fff;
-      position: relative;
-      page-break-after: always;
-    }
+    body { font-family: var(--font-sans); background: #fff; color: var(--color-neutral-800); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    .page { width: 210mm; min-height: 297mm; padding: 20mm 16mm; margin: 0 auto; background: #fff; page-break-after: always; position: relative; }
     .page:last-child { page-break-after: auto; }
     
-    /* Header */
-    .report-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding-bottom: 16px;
-      border-bottom: 2px solid var(--color-primary);
-      margin-bottom: 24px;
-    }
-    .report-header .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .report-header .logo {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 700;
-      font-size: 18px;
-    }
-    .report-header .title h1 {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--color-primary);
-      letter-spacing: -0.02em;
-    }
-    .report-header .title .subtitle {
-      font-size: 12px;
-      color: var(--color-neutral-600);
-      margin-top: 2px;
-    }
-    .report-header .meta {
-      text-align: right;
-      font-size: 11px;
-      color: var(--color-neutral-600);
-      line-height: 1.6;
-    }
-    .report-header .meta strong {
-      color: var(--color-neutral-800);
-      font-weight: 600;
-    }
+    .report-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 2px solid var(--color-primary); margin-bottom: 24px; }
+    .report-header .brand { display: flex; align-items: center; gap: 12px; }
+    .report-header .logo { width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; }
+    .report-header .title h1 { font-size: 18px; font-weight: 700; color: var(--color-primary); letter-spacing: -0.02em; }
+    .report-header .title .subtitle { font-size: 12px; color: var(--color-neutral-600); margin-top: 2px; }
+    .report-header .meta { text-align: right; font-size: 11px; color: var(--color-neutral-600); line-height: 1.6; }
+    .report-header .meta strong { color: var(--color-neutral-800); font-weight: 600; }
     
-    /* Summary Cards */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 28px;
-    }
-    .summary-card {
-      background: var(--color-neutral-50);
-      border: 1px solid var(--color-neutral-200);
-      border-radius: var(--radius);
-      padding: 16px 14px;
-      text-align: center;
-      transition: box-shadow 0.2s;
-    }
-    .summary-card:hover { box-shadow: var(--shadow-md); }
-    .summary-card .label {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--color-neutral-600);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 8px;
-    }
-    .summary-card .value {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--color-neutral-900);
-      font-family: var(--font-mono);
-      letter-spacing: -0.02em;
-      margin-bottom: 4px;
-    }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+    .summary-card { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 16px 14px; text-align: center; }
+    .summary-card .label { font-size: 11px; font-weight: 500; color: var(--color-neutral-600); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .summary-card .value { font-size: 20px; font-weight: 700; color: var(--color-neutral-900); font-family: var(--font-mono); letter-spacing: -0.02em; margin-bottom: 4px; }
     .summary-card .value.positive { color: var(--color-success); }
     .summary-card .value.negative { color: var(--color-danger); }
-    .summary-card .sub {
-      font-size: 10px;
-      color: var(--color-neutral-500);
-    }
+    .summary-card .sub { font-size: 10px; color: var(--color-neutral-500); }
     
-    /* Section Titles */
     .section { margin: 28px 0; }
-    .section-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--color-primary);
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--color-neutral-200);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .section-title::before {
-      content: "";
-      width: 4px;
-      height: 16px;
-      background: var(--color-primary);
-      border-radius: 2px;
-    }
+    .section-title { font-size: 14px; font-weight: 700; color: var(--color-primary); padding-bottom: 10px; border-bottom: 1px solid var(--color-neutral-200); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ""; width: 4px; height: 16px; background: var(--color-primary); border-radius: 2px; }
     
-    /* Bar Chart Rows */
     .bar-list { display: flex; flex-direction: column; gap: 10px; }
-    .bar-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 12px;
-    }
-    .bar-row .label {
-      width: 150px;
-      font-weight: 500;
-      color: var(--color-neutral-700);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .bar-row .track {
-      flex: 1;
-      height: 10px;
-      background: var(--color-neutral-200);
-      border-radius: 5px;
-      overflow: hidden;
-    }
-    .bar-row .fill {
-      height: 100%;
-      background: var(--color-primary);
-      border-radius: 5px;
-      transition: width 0.4s ease;
-    }
+    .bar-row { display: flex; align-items: center; gap: 12px; font-size: 12px; }
+    .bar-row .label { width: 150px; font-weight: 500; color: var(--color-neutral-700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-row .track { flex: 1; height: 10px; background: var(--color-neutral-200); border-radius: 5px; overflow: hidden; }
+    .bar-row .fill { height: 100%; background: var(--color-primary); border-radius: 5px; }
     .bar-row .fill.warning { background: var(--color-warning); }
     .bar-row .fill.danger { background: var(--color-danger); }
-    .bar-row .value {
-      width: 85px;
-      text-align: right;
-      font-weight: 600;
-      font-family: var(--font-mono);
-      color: var(--color-neutral-800);
-    }
-    .bar-row .pct {
-      width: 42px;
-      text-align: right;
-      font-size: 11px;
-      color: var(--color-neutral-500);
-      font-family: var(--font-mono);
-    }
+    .bar-row .value { width: 85px; text-align: right; font-weight: 600; font-family: var(--font-mono); }
+    .bar-row .pct { width: 42px; text-align: right; font-size: 11px; color: var(--color-neutral-500); font-family: var(--font-mono); }
     
-    /* Tables */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-      margin: 12px 0;
-    }
-    .data-table thead {
-      background: var(--color-neutral-100);
-      border-bottom: 2px solid var(--color-neutral-300);
-    }
-    .data-table th {
-      font-weight: 600;
-      color: var(--color-neutral-700);
-      text-align: left;
-      padding: 10px 8px;
-      text-transform: uppercase;
-      font-size: 10px;
-      letter-spacing: 0.05em;
-    }
-    .data-table td {
-      padding: 9px 8px;
-      border-bottom: 1px solid var(--color-neutral-200);
-      color: var(--color-neutral-700);
-    }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 12px 0; }
+    .data-table thead { background: var(--color-neutral-100); border-bottom: 2px solid var(--color-neutral-300); }
+    .data-table th { font-weight: 600; color: var(--color-neutral-700); text-align: left; padding: 10px 8px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+    .data-table td { padding: 9px 8px; border-bottom: 1px solid var(--color-neutral-200); color: var(--color-neutral-700); }
     .data-table tbody tr:hover { background: var(--color-neutral-50); }
-    .data-table .amount {
-      font-family: var(--font-mono);
-      font-weight: 500;
-      text-align: right;
-      white-space: nowrap;
-    }
+    .data-table .amount { font-family: var(--font-mono); font-weight: 500; text-align: right; white-space: nowrap; }
     .data-table .amount.positive { color: var(--color-success); }
     .data-table .amount.negative { color: var(--color-danger); }
-    .data-table .pct-col {
-      text-align: right;
-      font-family: var(--font-mono);
-      color: var(--color-neutral-600);
-    }
+    .data-table .pct-col { text-align: right; font-family: var(--font-mono); color: var(--color-neutral-600); }
     
-    /* Chart Container */
-    .chart-wrapper {
-      background: var(--color-neutral-50);
-      border: 1px solid var(--color-neutral-200);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin: 16px 0;
-    }
-    .chart-container {
-      height: 220px;
-      position: relative;
-    }
+    .chart-wrapper { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
+    .chart-container { height: 220px; position: relative; }
     
-    /* Insights Box */
-    .insights {
-      background: linear-gradient(135deg, var(--color-neutral-50), #fff);
-      border: 1px solid var(--color-neutral-200);
-      border-left: 4px solid var(--color-primary);
-      border-radius: 0 var(--radius) var(--radius) 0;
-      padding: 16px 18px;
-      margin: 20px 0;
-    }
-    .insights ul {
-      margin-left: 18px;
-      margin-top: 8px;
-    }
-    .insights li {
-      margin: 6px 0;
-      font-size: 12px;
-      color: var(--color-neutral-700);
-      line-height: 1.5;
-    }
-    .insights li strong {
-      color: var(--color-neutral-900);
-      font-weight: 600;
-    }
+    .insights { background: linear-gradient(135deg, var(--color-neutral-50), #fff); border: 1px solid var(--color-neutral-200); border-left: 4px solid var(--color-primary); border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 18px; margin: 20px 0; }
+    .insights ul { margin-left: 18px; margin-top: 8px; }
+    .insights li { margin: 6px 0; font-size: 12px; color: var(--color-neutral-700); line-height: 1.5; }
+    .insights li strong { color: var(--color-neutral-900); font-weight: 600; }
     
-    /* Final Summary */
-    .final-summary {
-      text-align: center;
-      padding: 32px 24px;
-      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-      border-radius: var(--radius);
-      color: white;
-      margin: 24px 0;
-    }
-    .final-summary .emoji {
-      font-size: 42px;
-      margin-bottom: 12px;
-      line-height: 1;
-    }
-    .final-summary .headline {
-      font-size: 17px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      letter-spacing: -0.02em;
-    }
-    .final-summary .stats {
-      margin: 18px 0;
-      font-size: 13px;
-      line-height: 1.8;
-    }
-    .final-summary .stats div {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-    }
-    .final-summary .stats .label {
-      opacity: 0.9;
-    }
-    .final-summary .stats .value {
-      font-weight: 600;
-      font-family: var(--font-mono);
-    }
-    .final-summary .footer-note {
-      font-size: 11px;
-      opacity: 0.85;
-      margin-top: 16px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.3);
-    }
+    .final-summary { text-align: center; padding: 32px 24px; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); border-radius: var(--radius); color: white; margin: 24px 0; }
+    .final-summary .emoji { font-size: 42px; margin-bottom: 12px; }
+    .final-summary .headline { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .final-summary .stats { margin: 18px 0; font-size: 13px; line-height: 1.8; }
+    .final-summary .stats div { display: flex; justify-content: center; gap: 8px; }
+    .final-summary .stats .label { opacity: 0.9; }
+    .final-summary .stats .value { font-weight: 600; font-family: var(--font-mono); }
+    .final-summary .footer-note { font-size: 11px; opacity: 0.85; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.3); }
     
-    /* Page Footer */
-    .page-footer {
-      position: absolute;
-      bottom: 16mm;
-      left: 16mm;
-      right: 16mm;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 10px;
-      color: var(--color-neutral-500);
-      border-top: 1px solid var(--color-neutral-200);
-      padding-top: 10px;
-    }
-    .page-footer .brand {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 500;
-      color: var(--color-neutral-700);
-    }
-    .page-footer .brand .dot {
-      width: 6px;
-      height: 6px;
-      background: var(--color-primary);
-      border-radius: 50%;
-    }
-    .page-footer .page-num {
-      font-family: var(--font-mono);
-      color: var(--color-neutral-600);
-    }
+    .page-footer { position: absolute; bottom: 16mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--color-neutral-500); border-top: 1px solid var(--color-neutral-200); padding-top: 10px; }
+    .page-footer .brand { display: flex; align-items: center; gap: 6px; font-weight: 500; color: var(--color-neutral-700); }
+    .page-footer .brand .dot { width: 6px; height: 6px; background: var(--color-primary); border-radius: 50%; }
+    .page-footer .page-num { font-family: var(--font-mono); color: var(--color-neutral-600); }
     
-    /* Utility Classes */
     .text-success { color: var(--color-success); }
     .text-danger { color: var(--color-danger); }
-    .text-warning { color: var(--color-warning); }
     .text-muted { color: var(--color-neutral-500); }
     .font-mono { font-family: var(--font-mono); }
     .font-semibold { font-weight: 600; }
     .text-right { text-align: right; }
     .mt-4 { margin-top: 16px; }
-    .mb-4 { margin-bottom: 16px; }
     
-    /* Print Optimizations */
-    @media print {
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .page { box-shadow: none; margin: 0; }
-      .no-print { display: none !important; }
-    }
-    
-    /* Loading State */
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { box-shadow: none; margin: 0; } }
     [data-field] { opacity: 0; }
     [data-field].loaded { opacity: 1; transition: opacity 0.15s; }
   </style>
@@ -401,11 +113,9 @@
       <div class="meta">
         <div><strong data-field="period">—</strong></div>
         <div>Сформирован: <span data-field="generated_at">—</span></div>
-        <div class="mt-4 text-muted">ID пользователя: <span data-field="user_id">—</span></div>
       </div>
     </header>
 
-    <!-- KPI Cards -->
     <div class="summary-grid">
       <div class="summary-card">
         <div class="label">💚 Доходы</div>
@@ -429,13 +139,11 @@
       </div>
     </div>
 
-    <!-- Structure -->
     <div class="section">
       <div class="section-title">Структура расходов</div>
       <div class="bar-list" id="sections-list"></div>
     </div>
 
-    <!-- Top Categories -->
     <div class="section">
       <div class="section-title">Топ-5 категорий расходов</div>
       <div class="bar-list" id="top-cats-list"></div>
@@ -453,13 +161,7 @@
       <div class="section-title">Расходы по категориям</div>
       <table class="data-table">
         <thead>
-          <tr>
-            <th width="40">#</th>
-            <th>Категория</th>
-            <th>Раздел</th>
-            <th class="text-right">Сумма</th>
-            <th class="text-right">Доля</th>
-          </tr>
+          <tr><th width="40">#</th><th>Категория</th><th>Раздел</th><th class="text-right">Сумма</th><th class="text-right">Доля</th></tr>
         </thead>
         <tbody id="categories-body"></tbody>
       </table>
@@ -469,13 +171,7 @@
       <div class="section-title">Все операции за месяц (превью)</div>
       <table class="data-table">
         <thead>
-          <tr>
-            <th width="80">Дата</th>
-            <th>Категория</th>
-            <th>Место</th>
-            <th>Тип</th>
-            <th class="text-right">Сумма</th>
-          </tr>
+          <tr><th width="80">Дата</th><th>Категория</th><th>Место</th><th>Тип</th><th class="text-right">Сумма</th></tr>
         </thead>
         <tbody id="transactions-body"></tbody>
       </table>
@@ -492,9 +188,7 @@
     <div class="section">
       <div class="section-title">Динамика доходов и расходов</div>
       <div class="chart-wrapper">
-        <div class="chart-container">
-          <canvas id="trendChart"></canvas>
-        </div>
+        <div class="chart-container"><canvas id="trendChart"></canvas></div>
       </div>
     </div>
 
@@ -527,11 +221,8 @@
         <div><span class="label">Дельта:</span> <span class="value" data-field="delta_fmt">—</span> ₽</div>
         <div><span class="label">Активы:</span> <span class="value" data-field="total_assets_fmt">—</span> ₽</div>
       </div>
-      <div class="footer-note">
-        Отчёт сформирован автоматически • Wealth Control  • Конфиденциально
-      </div>
+      <div class="footer-note">Отчёт сформирован автоматически • Wealth Control • Конфиденциально</div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
       <div class="page-num">Страница 4 из 4</div>
@@ -543,7 +234,6 @@
     (function() {
       const data = window.__DATA__ || {};
       
-      // Helper: fill simple fields
       function fill(fields) {
         for (const [key, val] of Object.entries(fields)) {
           document.querySelectorAll(`[data-field="${key}"]`).forEach(el => {
@@ -559,23 +249,16 @@
         }
       }
 
-      // Fill basic fields
       fill({
-        period: data.period,
-        generated_at: data.generated_at,
-        user_id: data.user_id,
-        total_income_fmt: data.total_income_fmt,
-        total_expense_fmt: data.total_expense_fmt,
-        total_assets_fmt: data.total_assets_fmt,
-        delta_fmt: data.delta_fmt,
-        delta_label: data.delta_label,
-        prev_period: data.prev_period,
-        prev_income_fmt: data.prev_income_fmt,
-        prev_expense_fmt: data.prev_expense_fmt,
+        period: data.period, generated_at: data.generated_at,
+        total_income_fmt: data.total_income_fmt, total_expense_fmt: data.total_expense_fmt,
+        total_assets_fmt: data.total_assets_fmt, delta_fmt: data.delta_fmt,
+        delta_label: data.delta_label, prev_period: data.prev_period,
+        prev_income_fmt: data.prev_income_fmt, prev_expense_fmt: data.prev_expense_fmt,
         savings_rate: data.savings_rate,
       });
 
-      // Render sections bar list
+      // Sections bar list
       const sectionsList = document.getElementById('sections-list');
       if (data.sections?.length) {
         sectionsList.innerHTML = data.sections.map(sec => `
@@ -584,11 +267,10 @@
             <div class="track"><div class="fill" style="width: ${Math.min(100, sec.pct)}%"></div></div>
             <div class="value font-mono">${sec.expense_fmt} ₽</div>
             <div class="pct">${sec.pct}%</div>
-          </div>
-        `).join('');
+          </div>`).join('');
       }
 
-      // Render top categories
+      // Top categories
       const topCatsList = document.getElementById('top-cats-list');
       if (data.top_categories?.length) {
         const top5 = data.top_categories.slice(0, 5);
@@ -598,12 +280,11 @@
             <div class="track"><div class="fill ${cat.pct > 30 ? 'warning' : cat.pct > 50 ? 'danger' : ''}" style="width: ${Math.min(100, cat.pct)}%"></div></div>
             <div class="value font-mono">${cat.total_fmt} ₽</div>
             <div class="pct">${cat.pct}%</div>
-          </div>
-        `).join('');
+          </div>`).join('');
         document.getElementById('top-category-name').textContent = data.top_categories[0]?.name || '—';
       }
 
-      // Render categories table
+      // Categories table
       const catBody = document.getElementById('categories-body');
       if (data.top_categories?.length) {
         catBody.innerHTML = data.top_categories.map((cat, i) => `
@@ -613,11 +294,10 @@
             <td class="text-muted">—</td>
             <td class="amount">${cat.total_fmt} ₽</td>
             <td class="pct-col">${cat.pct}%</td>
-          </tr>
-        `).join('');
+          </tr>`).join('');
       }
 
-      // Render transactions table
+      // Transactions table
       const txBody = document.getElementById('transactions-body');
       if (data.transactions?.length) {
         txBody.innerHTML = data.transactions.slice(0, 15).map(tx => `
@@ -627,11 +307,10 @@
             <td class="text-muted">${tx.merchant || '—'}</td>
             <td>${tx.tx_type}</td>
             <td class="amount ${tx.tx_type === 'Расход' ? 'negative' : 'positive'}">${tx.amount_fmt} ${tx.currency}</td>
-          </tr>
-        `).join('');
+          </tr>`).join('');
       }
 
-      // Insights logic
+      // Insights
       if (data.delta !== undefined && data.prev_delta !== undefined) {
         const diff = data.delta - data.prev_delta;
         const el = document.getElementById('delta-change');
@@ -644,77 +323,37 @@
       else if (data.savings_rate > 30) rec.textContent = 'Отличная дисциплина! Рассмотреть инвестиции';
       else rec.textContent = 'Поддерживать текущий баланс, оптимизировать регулярные расходы';
 
-      // Final summary
+      // Final
       document.getElementById('final-emoji').textContent = data.delta >= 0 ? '🎯' : '📊';
       document.getElementById('final-headline').textContent = data.delta >= 0 
-        ? `Профицит за ${data.month_name || ''}` 
-        : `Дефицит за ${data.month_name || ''}`;
+        ? `Профицит за ${data.month_name || ''}` : `Дефицит за ${data.month_name || ''}`;
 
-      // Chart.js
+      // Chart.js - ВАЖНО: ключ "data:" перед конфигурацией!
       const ctx = document.getElementById('trendChart');
       if (ctx && data.trend?.length) {
         Chart.defaults.font.family = 'var(--font-sans)';
         Chart.defaults.font.size = 10;
-        Chart.defaults.scale.ticks.color = '#64748b';
-        Chart.defaults.plugins.legend.labels.color = '#334155';
-        
         new Chart(ctx, {
           type: 'line',
-           {
+          data: {  // ← КЛЮЧ "data:" ОБЯЗАТЕЛЕН!
             labels: data.trend.map(t => t.label),
             datasets: [
-              {
-                label: 'Доходы',
-                data: data.trend.map(t => t.income),
-                borderColor: '#059669',
-                backgroundColor: 'rgba(5, 150, 105, 0.1)',
-                tension: 0.35,
-                fill: true,
-                borderWidth: 2,
-                pointRadius: 2,
-                pointHoverRadius: 4
-              },
-              {
-                label: 'Расходы',
-                data: data.trend.map(t => t.expense),
-                borderColor: '#dc2626',
-                backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                tension: 0.35,
-                fill: true,
-                borderWidth: 2,
-                pointRadius: 2,
-                pointHoverRadius: 4
-              }
+              { label: 'Доходы', data: data.trend.map(t => t.income), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.1)', tension: 0.35, fill: true, borderWidth: 2 },
+              { label: 'Расходы', data: data.trend.map(t => t.expense), borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.1)', tension: 0.35, fill: true, borderWidth: 2 }
             ]
           },
           options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle' } }
-            },
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
             scales: {
-              y: {
-                beginAtZero: true,
-                grid: { color: 'rgba(226, 232, 240, 0.6)' },
-                ticks: { 
-                  callback: v => v.toLocaleString('ru-RU') + ' ₽',
-                  maxTicksLimit: 5
-                }
-              },
-              x: {
-                grid: { display: false },
-                ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
-              }
+              y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU') + ' ₽' } },
+              x: { grid: { display: false } }
             }
           }
         });
       }
 
-      // Show all loaded fields
-      setTimeout(() => {
-        document.querySelectorAll('[data-field]').forEach(el => el.classList.add('loaded'));
-      }, 50);
+      setTimeout(() => document.querySelectorAll('[data-field]').forEach(el => el.classList.add('loaded')), 50);
     })();
   </script>
 </body>

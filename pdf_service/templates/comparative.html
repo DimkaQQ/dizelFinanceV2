@@ -129,16 +129,11 @@
       <div class="section-title">Топ категорий по периодам</div>
       <table class="data-table">
         <thead>
-          <tr>
-            <th>Категория</th>
-            <th id="p1-header" class="text-right">—</th>
-            <th id="p2-header" class="text-right">—</th>
-          </tr>
+          <tr><th>Категория</th><th id="p1-header" class="text-right">—</th><th id="p2-header" class="text-right">—</th></tr>
         </thead>
         <tbody id="compare-cats-body"></tbody>
       </table>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 2 из 4</div>
@@ -150,12 +145,9 @@
     <div class="section">
       <div class="section-title">Визуальное сравнение</div>
       <div class="chart-wrapper">
-        <div class="chart-container">
-          <canvas id="compareChart"></canvas>
-        </div>
+        <div class="chart-container"><canvas id="compareChart"></canvas></div>
       </div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 3 из 4</div>
@@ -179,9 +171,7 @@
     <div class="final-summary">
       <div class="emoji" id="c-final-emoji">—</div>
       <div class="headline" id="c-final-headline">Сравнение завершено</div>
-      <div class="footer-note">
-        Отчёт сформирован автоматически • Wealth Control  • Конфиденциально
-      </div>
+      <div class="footer-note">Отчёт сформирован автоматически • Wealth Control • Конфиденциально</div>
     </div>
 
     <footer class="page-footer">
@@ -215,10 +205,7 @@
             <div class="row"><span>Доходы:</span><span class="val pos">${p.total_income_fmt} ₽</span></div>
             <div class="row"><span>Расходы:</span><span class="val neg">${p.total_expense_fmt} ₽</span></div>
             <div class="row"><span>Дельта:</span><span class="val ${p.delta >= 0 ? 'pos' : 'neg'}">${p.delta_fmt} ₽</span></div>
-          </div>
-        `).join('');
-        
-        // Set headers for comparison table
+          </div>`).join('');
         if (data.periods[0]) document.getElementById('p1-header').textContent = data.periods[0].label;
         if (data.periods[1]) document.getElementById('p2-header').textContent = data.periods[1].label;
       }
@@ -228,15 +215,12 @@
         const box = document.getElementById('comparison-box');
         const diffEl = document.getElementById('main-diff');
         const detailsEl = document.getElementById('diff-details');
-        
         const mainDiff = data.comparison.income_diff !== undefined ? data.comparison.income_diff : data.comparison.expense_diff;
         diffEl.textContent = `${mainDiff >= 0 ? '+' : ''}${mainDiff.toLocaleString('ru-RU')} ₽`;
         diffEl.className = 'diff ' + (mainDiff >= 0 ? 'pos' : 'neg');
-        
         detailsEl.textContent = `Доходы: ${data.comparison.income_pct}% • Расходы: ${data.comparison.expense_pct}%`;
         box.style.display = 'block';
         
-        // Insights
         document.getElementById('income-change').textContent = `${data.comparison.income_diff_fmt} ₽ (${data.comparison.income_pct}%)`;
         document.getElementById('income-change').className = data.comparison.income_diff >= 0 ? 'text-success' : 'text-danger';
         document.getElementById('expense-change').textContent = `${data.comparison.expense_diff_fmt} ₽ (${data.comparison.expense_pct}%)`;
@@ -248,36 +232,26 @@
       if (data.periods?.length >= 2) {
         const p1 = data.periods[0], p2 = data.periods[1];
         const allCats = [...new Set([...(p1.top_categories||[]).map(c=>c.name), ...(p2.top_categories||[]).map(c=>c.name)])].slice(0,10);
-        
         catBody.innerHTML = allCats.map(catName => {
           const c1 = (p1.top_categories||[]).find(c => c.name === catName);
           const c2 = (p2.top_categories||[]).find(c => c.name === catName);
-          return `
-            <tr>
-              <td class="font-semibold">${catName}</td>
-              <td class="amount text-right">${c1?.total_fmt || '—'} ₽</td>
-              <td class="amount text-right">${c2?.total_fmt || '—'} ₽</td>
-            </tr>
-          `;
+          return `<tr><td class="font-semibold">${catName}</td><td class="amount text-right">${c1?.total_fmt || '—'} ₽</td><td class="amount text-right">${c2?.total_fmt || '—'} ₽</td></tr>`;
         }).join('');
-        
-        if (p1.top_categories?.[0]) {
-          document.getElementById('top-cat-compare').textContent = p1.top_categories[0].name;
-        }
+        if (p1.top_categories?.[0]) document.getElementById('top-cat-compare').textContent = p1.top_categories[0].name;
       }
 
-      // Chart
+      // Chart - ВАЖНО: ключ "data:" перед конфигурацией!
       const ctx = document.getElementById('compareChart');
       if (ctx && data.periods?.length >= 2) {
         Chart.defaults.font.family = 'var(--font-sans)';
         Chart.defaults.font.size = 10;
         new Chart(ctx, {
           type: 'bar',
-           {
+          data: {  // ← КЛЮЧ "" ОБЯЗАТЕЛЕН!
             labels: ['Доходы', 'Расходы'],
             datasets: data.periods.slice(0,2).map((p, i) => ({
               label: p.label,
-               [p.total_income, p.total_expense],
+              data: [p.total_income, p.total_expense],  // ← КЛЮЧ "data:" ОБЯЗАТЕЛЕН!
               backgroundColor: i === 0 ? 'rgba(30,58,95,0.8)' : 'rgba(44,82,130,0.6)',
               borderRadius: 4
             }))
@@ -286,7 +260,7 @@
             responsive: true, maintainAspectRatio: false, indexAxis: 'y',
             plugins: { legend: { position: 'top' } },
             scales: {
-              x: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU')+' ₽' } },
+              x: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU') + ' ₽' } },
               y: { grid: { display: false } }
             }
           }
@@ -295,13 +269,9 @@
 
       // Recommendation
       const rec = document.getElementById('compare-rec');
-      if (data.comparison?.expense_pct > 10) {
-        rec.textContent = 'Проанализировать рост расходов и оптимизировать бюджет';
-      } else if (data.comparison?.income_pct > 15) {
-        rec.textContent = 'Отличный рост доходов! Рассмотреть увеличение нормы сбережений';
-      } else {
-        rec.textContent = 'Стабильная финансовая дисциплина, продолжать мониторинг';
-      }
+      if (data.comparison?.expense_pct > 10) rec.textContent = 'Проанализировать рост расходов и оптимизировать бюджет';
+      else if (data.comparison?.income_pct > 15) rec.textContent = 'Отличный рост доходов! Рассмотреть увеличение нормы сбережений';
+      else rec.textContent = 'Стабильная финансовая дисциплина, продолжать мониторинг';
 
       // Final
       document.getElementById('c-final-emoji').textContent = '📊';

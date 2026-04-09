@@ -159,19 +159,10 @@
     <div class="section">
       <div class="section-title">Помесячная детализация</div>
       <table class="data-table">
-        <thead>
-          <tr>
-            <th width="60">Мес</th>
-            <th class="text-right">Доходы</th>
-            <th class="text-right">Расходы</th>
-            <th class="text-right">Дельта</th>
-            <th class="text-right">Активы</th>
-          </tr>
-        </thead>
+        <thead><tr><th width="60">Мес</th><th class="text-right">Доходы</th><th class="text-right">Расходы</th><th class="text-right">Дельта</th><th class="text-right">Активы</th></tr></thead>
         <tbody id="monthly-body"></tbody>
       </table>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 2 из 8</div>
@@ -183,18 +174,10 @@
     <div class="section">
       <div class="section-title">Топ-10 категорий за год</div>
       <table class="data-table">
-        <thead>
-          <tr>
-            <th width="40">#</th>
-            <th>Категория</th>
-            <th class="text-right">Сумма</th>
-            <th class="text-right">Доля</th>
-          </tr>
-        </thead>
+        <thead><tr><th width="40">#</th><th>Категория</th><th class="text-right">Сумма</th><th class="text-right">Доля</th></tr></thead>
         <tbody id="year-cats-body"></tbody>
       </table>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 3 из 8</div>
@@ -206,12 +189,9 @@
     <div class="section">
       <div class="section-title">Многолетняя динамика</div>
       <div class="chart-wrapper">
-        <div class="chart-container">
-          <canvas id="yearlyTrend"></canvas>
-        </div>
+        <div class="chart-container"><canvas id="yearlyTrend"></canvas></div>
       </div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 4 из 8</div>
@@ -232,7 +212,6 @@
         </ul>
       </div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control</div>
       <div class="page-num">Страница 5 из 8</div>
@@ -251,11 +230,8 @@
         <div><span class="label">Активы:</span> <span class="value" data-field="total_assets_fmt">—</span> ₽</div>
         <div><span class="label">Сбережения:</span> <span class="value" data-field="savings_rate">—</span>%</div>
       </div>
-      <div class="footer-note">
-        Отчёт сформирован автоматически • Wealth Control • Конфиденциально
-      </div>
+      <div class="footer-note">Отчёт сформирован автоматически • Wealth Control • Конфиденциально</div>
     </div>
-
     <footer class="page-footer">
       <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
       <div class="page-num">Страница 6 из 8</div>
@@ -282,15 +258,11 @@
       }
 
       fill({
-        year: data.year,
-        generated_at: data.generated_at,
-        total_income_fmt: data.total_income_fmt,
-        total_expense_fmt: data.total_expense_fmt,
-        total_assets_fmt: data.total_assets_fmt,
-        delta_fmt: data.delta_fmt,
+        year: data.year, generated_at: data.generated_at,
+        total_income_fmt: data.total_income_fmt, total_expense_fmt: data.total_expense_fmt,
+        total_assets_fmt: data.total_assets_fmt, delta_fmt: data.delta_fmt,
         delta_label: data.delta >= 0 ? '📈 Итог' : '⚠️ Дефицит',
-        savings_rate: data.savings_rate,
-        next_year: data.year + 1,
+        savings_rate: data.savings_rate, next_year: data.year + 1,
       });
 
       // Quarters grid
@@ -302,8 +274,7 @@
             <div class="row"><span>Доходы:</span><span class="val pos">${q.income_fmt} ₽</span></div>
             <div class="row"><span>Расходы:</span><span class="val neg">${q.expense_fmt} ₽</span></div>
             <div class="row"><span>Дельта:</span><span class="val ${q.delta >= 0 ? 'pos' : 'neg'}">${q.delta_fmt} ₽</span></div>
-          </div>
-        `).join('');
+          </div>`).join('');
       }
 
       // Monthly table
@@ -316,8 +287,7 @@
             <td class="amount neg">${m.expense_fmt} ₽</td>
             <td class="amount ${m.delta >= 0 ? 'pos' : 'neg'}">${m.delta_fmt} ₽</td>
             <td class="amount">${m.assets_fmt} ₽</td>
-          </tr>
-        `).join('');
+          </tr>`).join('');
       }
 
       // Year categories
@@ -329,29 +299,28 @@
             <td class="font-semibold">${cat.name}</td>
             <td class="amount">${cat.total_fmt} ₽</td>
             <td class="pct-col">${cat.pct}%</td>
-          </tr>
-        `).join('');
+          </tr>`).join('');
       }
 
-      // Multi-year chart
+      // Multi-year chart - ВАЖНО: ключ "data:" перед конфигурацией!
       const ctx = document.getElementById('yearlyTrend');
       if (ctx && data.trend?.length) {
         Chart.defaults.font.family = 'var(--font-sans)';
         Chart.defaults.font.size = 10;
         new Chart(ctx, {
           type: 'line',
-           {
+          data: {  // ← КЛЮЧ "data:" ОБЯЗАТЕЛЕН!
             labels: data.trend.map(t => t.label),
             datasets: [
-              { label: 'Доходы',  data.trend.map(t => t.income), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.1)', tension: 0.35, fill: true, borderWidth: 2 },
-              { label: 'Расходы',  data.trend.map(t => t.expense), borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.1)', tension: 0.35, fill: true, borderWidth: 2 }
+              { label: 'Доходы', data: data.trend.map(t => t.income), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.1)', tension: 0.35, fill: true, borderWidth: 2 },
+              { label: 'Расходы', data: data.trend.map(t => t.expense), borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.1)', tension: 0.35, fill: true, borderWidth: 2 }
             ]
           },
           options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: 'top' } },
             scales: {
-              y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU')+' ₽' } },
+              y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU') + ' ₽' } },
               x: { grid: { display: false } }
             }
           }
