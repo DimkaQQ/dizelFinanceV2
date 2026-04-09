@@ -506,6 +506,7 @@ def _enrich(transactions: list, uid: int) -> list:
     existing    = db.get_existing_keys(uid)
     cat_results = guess_categories_batch(transactions)
     enriched    = []
+    
     for tx, (cat, sec) in zip(transactions, cat_results):
         cur   = tx.get("currency", "RUB")
         rate  = get_rate(cur)
@@ -513,6 +514,10 @@ def _enrich(transactions: list, uid: int) -> list:
         a_rub = round(a * rate, 2)
         date_part = str(tx.get("date", "")).split(",")[0].strip()
         is_dup = f"{date_part}|{round(a_rub,2)}" in existing
+        
+        # ❗ Логируем конвертацию
+        log.debug(f"💱 {a} {cur} × {rate} = {a_rub} RUB | {cat} | {sec}")
+        
         enriched.append({
             **tx,
             "category":     cat,
@@ -1558,16 +1563,30 @@ async def _handle_pdf(msg: Message):
         f   = await bot.get_file(msg.document.file_id)
         raw = await bot.download_file(f.file_path)
         txs = parse_pdf(raw.read())
+        
+        # ❗ Логируем что распознали
+        log.info(f"📄 PDF: распознано {len(txs)} транзакций")
+        for i, tx in enumerate(txs[:5]):  # первые 5 для примера
+            log.info(f"  [{i}] {tx.get('date')} | {tx.get('merchant')} | {tx.get('amount')} {tx.get('currency')}")
+        
         if not txs:
             await msg.answer("❌ Транзакции не найдены.", reply_markup=kb_main())
             return
+        
         await msg.answer(f"📊 Найдено <b>{len(txs)}</b> транзакций. Определяю категории...")
         enriched = _enrich(txs, msg.from_user.id)
+        
+        # ❗ Логируем что пойдёт в сохранение
+        log.info(f"📄 PDF: после enrich — {len(enriched)} транзакций")
+        for i, tx in enumerate(enriched[:3]):
+            log.info(f"  [{i}] date={tx.get('date')}, amt={tx.get('amount')}{tx.get('currency')}, rub={tx.get('amount_rub')}, cat={tx.get('category')}")
+        
         _store_session(msg.from_user.id, enriched)
         await _send_summary(msg, enriched, "PDF")
     except Exception as e:
+        log.error(f"_handle_pdf error: {e}", exc_info=True)
         await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
-
+        
 async def _handle_txt(msg: Message):
     await msg.answer("⏳ Читаю TXT файл через AI...")
     try:
@@ -1691,9 +1710,16 @@ async def handle_photo(msg: Message, state: FSMContext):
         f   = await bot.get_file(msg.photo[-1].file_id)
         raw = await bot.download_file(f.file_path)
         txs = parse_screenshot(raw.read())
+        
+        # ❗ Логируем что распознали
+        log.info(f"📸 Скриншот: распознано {len(txs)} транзакций")
+        for i, tx in enumerate(txs[:5]):
+            log.info(f"  [{i}] {tx.get('date')} | {tx.get('merchant')} | {tx.get('amount')} {tx.get('currency')}")
+        
         if not txs:
             await msg.answer("❌ Транзакций не найдено.", reply_markup=kb_main())
             return
+        
         if len(txs) == 1:
             await _send_single_tx(msg, txs[0])
         else:
@@ -1701,6 +1727,7 @@ async def handle_photo(msg: Message, state: FSMContext):
             _store_session(msg.from_user.id, enriched)
             await _send_summary(msg, enriched, "Скриншот")
     except Exception as e:
+        log.error(f"handle_photo error: {e}", exc_info=True)
         await msg.answer(f"❌ Ошибка: {e}", reply_markup=kb_main())
 
 # ══════════════════════════════════════════════════════════════════════════════

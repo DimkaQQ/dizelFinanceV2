@@ -18,6 +18,48 @@ from config import (
 
 log = logging.getLogger(__name__)
 
+from datetime import datetime, timedelta
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Нормализация дат
+# ══════════════════════════════════════════════════════════════════════════════
+
+def normalize_date(date_str: str) -> str:
+    """
+    Нормализует дату. Если нет/неверная — возвращает сегодняшнюю.
+    """
+    today = datetime.now()
+    
+    if not date_str:
+        return today.strftime("%d.%m.%Y")
+    
+    # Убираем время если есть
+    date_part = date_str.strip().split(",")[0].strip()
+    
+    # Проверяем на относительные даты
+    lower = date_part.lower()
+    if lower in ["сегодня", "today", "сейчас", "now", "", "none", "null"]:
+        return today.strftime("%d.%m.%Y")
+    if lower in ["вчера", "yesterday"]:
+        return (today - timedelta(days=1)).strftime("%d.%m.%Y")
+    
+    # Пробуем разные форматы
+    for fmt in ["%d.%m.%Y", "%d.%m", "%Y-%m-%d", "%d %B %Y", "%d.%m.%y"]:
+        try:
+            parsed = datetime.strptime(date_part, fmt)
+            # Если только день.месяц — добавляем текущий год
+            if fmt == "%d.%m" or "%d.%m.%y" in fmt:
+                parsed = parsed.replace(year=today.year)
+            # Валидация: не раньше 2020, не позже +30 дней (для будущих оплат)
+            if parsed.year < 2020 or parsed > today + timedelta(days=30):
+                return today.strftime("%d.%m.%Y")
+            return parsed.strftime("%d.%m.%Y")
+        except ValueError:
+            continue
+    
+    # Ни один формат не подошёл — возвращаем сегодня
+    return today.strftime("%d.%m.%Y")
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Базовый запрос к Claude
 # ══════════════════════════════════════════════════════════════════════════════
@@ -217,14 +259,14 @@ def guess_categories_batch(transactions: list[dict],
 
 _EXTRACT_PROMPT = """Это {source}. Извлеки ВСЕ транзакции.
 Для каждой верни:
-- date: ДД.ММ.ГГГГ
-- amount: число (положительное)
-- currency: RUB/USD/EUR/KZT/IDR/VND
-- merchant: название места
-- tx_type: "Расход" или "Доход"
-- category_hint: категория если видна, иначе ""
-Игнорируй: переводы между своими счетами, балансы.
-Ответ ТОЛЬКО JSON массивом. Если нет транзакций — [].
+- date: ДД.ММ.ГГГГ (если "Сегодня"/"Today"/даты нет — верни пустую строку "")
+- amount: число (положительное, без пробелов и валюты, например 21600.00)
+- currency: RUB/USD/EUR/KZT/IDR/VND (точно из этого списка)
+- merchant: название места (коротко, без адреса и деталей)
+- tx_type: "Расход" или "Доход" (Расход = списание, Доход = зачисление)
+- category_hint: категория если видна на скрине, иначе ""
+Игнорируй: переводы между своими счетами, балансы, "доступно", "лимит", комиссии.
+Ответ ТОЛЬКО чистым JSON массивом. Если нет транзакций — [].
 Пример: [{{"date":"01.01.2025","amount":1500,"currency":"RUB","merchant":"Пятёрочка","tx_type":"Расход","category_hint":"еда"}}]"""
 
 def parse_screenshot(image_bytes: bytes, mime_type: str = "image/jpeg") -> list[dict]:
@@ -232,8 +274,45 @@ def parse_screenshot(image_bytes: bytes, mime_type: str = "image/jpeg") -> list[
     try:
         result = ask_claude(prompt, image_bytes=image_bytes, mime_type=mime_type)
         data = extract_json(result)
-        if isinstance(data, list): return data
-        if isinstance(data, dict): return [data]
+        if isinstance(data, list): 
+            transactions = data
+        elif isinstance(data, dict): 
+            transactions = [data]
+        else: 
+            transactions = []
+        
+                # ❗ Нормализуем даты и валидируем поля
+        for tx in transactions:
+            # Нормализация даты
+            raw_date = tx.get("date", "")
+            tx["date"] = normalize_date(raw_date) + ", 12:00"
+            
+            # Гарантируем что amount — число
+            try:
+                amt = tx.get("amount")
+                if isinstance(amt, str):
+                    amt = amt.replace(" ", "").replace(",", ".").replace("Rp", "").strip()
+                tx["amount"] = float(amt) if amt else 0.0
+            except:
+                tx["amount"] = 0.0
+            
+            # Гарантируем валюту
+            if tx.get("currency") not in CURRENCIES:
+                tx["currency"] = "RUB"
+            
+            # Гарантируем tx_type
+            if tx.get("tx_type") not in ["Расход", "Доход", "Актив"]:
+                # Определяем по знаку суммы если есть
+                if tx.get("amount", 0) < 0:
+                    tx["tx_type"] = "Расход"
+                else:
+                    tx["tx_type"] = "Расход"  # дефолт
+            
+            # Гарантируем наличие merchant
+            if not tx.get("merchant"):
+                tx["merchant"] = "Неизвестно"
+        
+        return transactions
     except Exception as e:
         log.error(f"parse_screenshot: {e}")
     return []
@@ -250,11 +329,45 @@ def parse_pdf(pdf_bytes: bytes) -> list[dict]:
             try:
                 result = ask_claude(prompt, image_bytes=img, mime_type="image/png")
                 data = extract_json(result)
-                if isinstance(data, list): all_tx.extend(data)
-                elif isinstance(data, dict): all_tx.append(data)
+                if isinstance(data, list): 
+                    all_tx.extend(data)
+                elif isinstance(data, dict): 
+                    all_tx.append(data)
             except Exception as e:
                 log.error(f"parse_pdf page {i}: {e}")
         doc.close()
+        
+               # ❗ Нормализуем даты и валидируем поля
+        for tx in transactions:
+            # Нормализация даты
+            raw_date = tx.get("date", "")
+            tx["date"] = normalize_date(raw_date) + ", 12:00"
+            
+            # Гарантируем что amount — число
+            try:
+                amt = tx.get("amount")
+                if isinstance(amt, str):
+                    amt = amt.replace(" ", "").replace(",", ".").replace("Rp", "").strip()
+                tx["amount"] = float(amt) if amt else 0.0
+            except:
+                tx["amount"] = 0.0
+            
+            # Гарантируем валюту
+            if tx.get("currency") not in CURRENCIES:
+                tx["currency"] = "RUB"
+            
+            # Гарантируем tx_type
+            if tx.get("tx_type") not in ["Расход", "Доход", "Актив"]:
+                # Определяем по знаку суммы если есть
+                if tx.get("amount", 0) < 0:
+                    tx["tx_type"] = "Расход"
+                else:
+                    tx["tx_type"] = "Расход"  # дефолт
+            
+            # Гарантируем наличие merchant
+            if not tx.get("merchant"):
+                tx["merchant"] = "Неизвестно"
+        
         return all_tx
     except ImportError:
         log.error("fitz не установлен")
