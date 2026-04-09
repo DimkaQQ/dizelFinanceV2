@@ -21,9 +21,13 @@ CLAUDE_PROXY         = os.getenv("CLAUDE_PROXY", "https://gemini-proxy.dimash210
 # ── PostgreSQL ────────────────────────────────────────────────────────────────
 DATABASE_URL         = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/dizelfinance")
 
-# ── Flask ─────────────────────────────────────────────────────────────────────
+# ── Flask Bot (webhook) ───────────────────────────────────────────────────────
 FLASK_SECRET         = os.getenv("FLASK_SECRET", "super-secret-key")
-FLASK_PORT           = int(os.getenv("FLASK_PORT", 5000))
+FLASK_PORT           = int(os.getenv("FLASK_PORT", 5001))  # ← порт для бота
+
+# ── Flask Web App ─────────────────────────────────────────────────────────────
+WEB_SECRET           = os.getenv("WEB_SECRET", FLASK_SECRET)  # fallback на общий
+WEB_FLASK_PORT       = int(os.getenv("WEB_FLASK_PORT", 5002))  # ← порт для веба
 
 def _parse_users(raw: str) -> dict:
     users = {}

@@ -2077,4 +2077,19 @@ async def start_bot():
     await dp.start_polling(bot, skip_updates=True)
 
 if __name__ == "__main__":
+    # Запускаем Flask для webhook в отдельном потоке
+    from config import FLASK_PORT
+    threading.Thread(
+        target=lambda: flask_app.run(
+            host="0.0.0.0",
+            port=FLASK_PORT,  # ← должно быть 5001
+            debug=False,
+            use_reloader=False
+        ),
+        daemon=True
+    ).start()
+    
+    log.info(f"🔗 Webhook server running on port {FLASK_PORT}")
+    
+    # Запускаем бота
     asyncio.run(start_bot())
