@@ -1,205 +1,75 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Импорт истории из бюджетных CSV в DizelFinance.
-Поддерживает файлы с структурой: план/факт И план/факт/отклонение.
+Импорт нормализованного XLSX файла в базу данных DizelFinance.
+Читает budget_normalized.xlsx и записывает все транзакции.
 """
 import sys
 import os
-import csv
-import logging
-import re
-from datetime import datetime
-
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import database as db
-from config import ALL_CATEGORIES, INCOME_CATEGORIES, BIG_EXPENSE_CATEGORIES, ASSET_CATEGORIES, MONTH_NAMES
+import openpyxl
+from datetime import datetime
 
-log = logging.getLogger(__name__)
-USER_ID = 408204060  # Твой Telegram ID
+# Твой Telegram ID
+USER_ID = 612156666
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 🔹 МАППИНГ: названия из CSV → канонические категории из config.py
-# ══════════════════════════════════════════════════════════════════════════════
-CSV_TO_CONFIG = {
-    # Доходы
-    "зарплата": "Зарплата", "консалтинг": "Консалтинг", "прочее": "Прочее (доход)",
-    "займ": "Прочее (доход)", "терминал": "Прочее (доход)", "бомонд": "Прочее (доход)",
-    "подарки": "Подарки (доход)", "дивидеднды": "Дивиденды", "дивиденды": "Дивиденды",
+def import_xlsx(filepath: str, dry_run: bool = True):
+    """Импортирует транзакции из XLSX файла."""
+    print(f"📂 Обработка: {filepath}")
     
-    # Регулярные расходы
-    "ЕДА": "Продукты", "ПРОДУКТЫ": "Продукты", "продукты": "Продукты",
-    "КОММУНАЛКА": "Аренда", "АЗС": "Такси", "ТРАНСПОРТ": "Такси", "Такси": "Такси",
-    "ДЕТИ": "Ланочка", "Дети": "Ланочка", "ЛАНА (ЖЕНА)": "Ланочка", "Ланочка": "Ланочка",
-    "МЕДИЦИНА": "Медицинские услуги", "Здоровье": "Медицинские услуги",
-    "СОБАКА": "Джулиан", "Джулиан": "Джулиан",
-    "ШТРАФЫ,НАЛОГИ": "Прочее (рег)", "Анечка": "Екатерина", "Екатерина": "Екатерина", "Влад": "Влад",
-    "ГИГИЕНА,КРАСОТА": "Гигиена/Красота",
-    "РЕСТОРАН ,КАФЕ": "Рестораны/кафе/фастфуд", "РЕСТОРАН": "Рестораны/кафе/фастфуд", "Кофе": "Рестораны/кафе/фастфуд",
-    "Клубы, алкоголь": "Алкоголь", "АЛКАШКА": "Алкоголь",
-    "ОДЕЖДА,ОБУВЬ": "Одежда/обувь/аксессуары",
-    "ХОЗ.ТОВАРЫ": "Прочее (рег)", "БЫТ.ТОВАРЫ,ТЕХНИКА": "Прочее (рег)",
-    "БЫТ.ТЕХНИКА,ГАДЖЕТ": "Гаджеты/техника", "Гаджет подписки": "Подписки",
-    "РАЗВЛЕЧЕНИЯ": "Кино/театр/музеи", "Кино,театр,музеи": "Кино/театр/музеи", "Концерты": "Кино/театр/музеи",
-    "СПОРТ": "Спорт", "ОБРАЗОВАНИЕ": "Образование (рег)", "ОБРАЗОВАНИЕ РАЗВИТИЕ": "Образование (рег)",
-    "РЕЛАКС": "Релакс", "ПУТЕШЕСТВИЯ": "Путешествия (рег)", "Авиа/ржд": "Путешествия (рег)", "Отели": "Путешествия (рег)",
-    "РАСХОД НА БИЗНЕС": "Прочее (рег)", "ОФИС": "Прочее (рег)", "Услуги": "Прочее (рег)",
-    "Налоги штрафы комиссии": "Прочее (рег)", "БЛАГОТВОРИТЕЛЬНОСТЬ": "Прочее (рег)",
-    
-    # Активы
-    "ИНВЕСТИЦИИ": "Инвестиции в консалтинг", "ПОДУШКА": "Портфель Ланы",
-    "КОПИЛКА НА ПУТЕШЕ": "Портфель Ланы", "Пенсионный план": "Пенсионный план",
-    "Сбережения/обязательства": "Портфель Ланы", "Портфель Детей": "Портфель Екатерины",
-}
-
-ALLOWED_CATEGORIES = set(ALL_CATEGORIES.keys())
-MONTHS_RU = ["январь", "февраль", "март", "апрель", "май", "июнь", 
-             "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"]
-
-def normalize_category(raw_cat: str) -> str:
-    """Маппит название из CSV в категорию config.py."""
-    cleaned = raw_cat.strip().upper()
-    if cleaned in CSV_TO_CONFIG:
-        return CSV_TO_CONFIG[cleaned]
-    for key, val in CSV_TO_CONFIG.items():
-        if key in cleaned:
-            return val
-    if cleaned in ALLOWED_CATEGORIES:
-        return cleaned
-    return "Прочее (рег)"
-
-def clean_number(val: str) -> float:
-    """Очистка числа из CSV."""
-    if not val or val.strip() in ["—", "", "0"]:
-        return 0.0
-    try:
-        return float(val.replace(" ", "").replace("\xa0", "").replace(",", "."))
-    except:
-        return 0.0
-
-def parse_fact_columns(header_row: list) -> dict[int, int]:
-    """
-    Авто-определение индексов столбцов с ФАКТИЧЕСКИМИ значениями.
-    Возвращает: {номер_месяца: индекс_колонки_с_фактом}
-    """
-    month_map = {}
-    
-    for i, cell in enumerate(header_row):
-        if not cell:
-            continue
-        cell_lower = cell.strip().lower()
-        
-        # Ищем названия месяцев
-        for m_num, month_name in enumerate(MONTHS_RU, 1):
-            if month_name in cell_lower:
-                # Ищем "факт" в следующих 1-2 колонках
-                for offset in [1, 2]:
-                    if i + offset < len(header_row):
-                        next_cell = (header_row[i + offset] or "").strip().lower()
-                        if "факт" in next_cell:
-                            month_map[m_num] = i + offset
-                            break
-                break
-    return month_map
-
-def is_data_row(row: list) -> bool:
-    """Проверяет, является ли строка данными, а не заголовком."""
-    if not row or len(row) < 3:
-        return False
-    first = (row[0] or "").strip().upper()
-    
-    skip_keywords = [
-        "КАТЕГОРИЯ", "ИТОГО", "ДЕЛЬТА", "ОБЩАЯ ТАБЛИЦА", "БЮДЖЕТ", 
-        "ИСТОЧНИК ДОХОДОВ", "СТАТЬЯ РАСХОДОВ", "ВАЛЮТА", "РАСХОД", 
-        "ДОХОД", "ЖИЗНЬ", "ДВИЖЕНИЕ АКТИВ", "ПОДПИСКИ", "КРЕДИТ",
-        "СТРАХОВКА", "АЛЬФА", "СБЕР", "ПОРТФЕЛЬ", "ПЕНСИОННЫЙ",
-        "ПЛАН", "ФАКТ", "ОТКЛОНЕНИЕ", "НА СЕГОДНЯ", "ОСТАТОК"
-    ]
-    if any(kw in first for kw in skip_keywords):
-        return False
-    
-    # Проверяем, есть ли числовые значения в строке
-    has_number = any(re.match(r'[\d\s,]+', str(cell).strip()) for cell in row[2:] if cell)
-    return bool(first and has_number)
-
-def import_csv(filepath: str, year: int, dry_run: bool = True):
-    print(f"📂 Обработка: {filepath} ({year})")
     if not os.path.exists(filepath):
-        print("   ❌ Файл не найден!")
+        print(f"   ❌ Файл не найден: {filepath}")
         return 0, 0
-
-    imported, skipped = 0, 0
     
-    with open(filepath, "r", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        rows = list(reader)
-
-    # 1. Находим заголовок с месяцами
-    month_indices = {}
-    for i, row in enumerate(rows):
-        if any(month_name in str(c).lower() for c in (row or []) for month_name in MONTHS_RU):
-            month_indices = parse_fact_columns(row)
-            if month_indices:
-                print(f"   📅 Найдено месяцев: {len(month_indices)} -> {month_indices}")
-                break
-    
-    if not month_indices:
-        print("   ⚠️  Не найдены колонки с месяцами, пропускаем файл")
+    try:
+        wb = openpyxl.load_workbook(filepath)
+        ws = wb.active
+    except Exception as e:
+        print(f"   ❌ Ошибка открытия файла: {e}")
         return 0, 0
-
-    # 2. Обрабатываем строки с данными
-    for row in rows:
-        if not is_data_row(row):
+    
+    imported = 0
+    skipped = 0
+    errors = 0
+    
+    # Пропускаем заголовок (первая строка)
+    for row_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
+        if row_idx == 1:  # Заголовок
             continue
-
-        raw_category = (row[0] or "").strip()
-        category = normalize_category(raw_category)
         
-        # Определяем тип и раздел
-        tx_type = "Расход"
-        section = "Регулярные расходы"
-        if category in INCOME_CATEGORIES:
-            tx_type = "Доход"
-            section = "Доходы"
-        elif category in BIG_EXPENSE_CATEGORIES:
-            section = "Крупные траты"
-        elif category in ASSET_CATEGORIES:
-            tx_type = "Актив"
-            section = "Движение активов"
-
-        # 3. Проходим по найденным месяцам и извлекаем фактические значения
-        for month_num, fact_idx in month_indices.items():
-            if fact_idx >= len(row):
-                continue
-                
-            amount = clean_number(row[fact_idx])
+        if not row or all(cell is None for cell in row):
+            continue
+        
+        try:
+            # Ожидаемый формат: date, amount, currency, merchant, tx_type, category
+            date_str = str(row[0]).strip() if row[0] else ""
+            amount = float(row[1]) if row[1] else 0.0
+            currency = str(row[2]).strip() if row[2] else "RUB"
+            merchant = str(row[3]).strip() if row[3] else "Импорт"
+            tx_type = str(row[4]).strip() if row[4] else "Расход"
+            category = str(row[5]).strip() if row[5] else "Прочее (рег)"
+            
+            # Валидация
             if amount <= 0:
-                continue
-
-            date_str = f"15.{month_num:02d}.{year}"
-            
-            # Проверка дубликатов (только если не dry-run)
-            is_duplicate = False
-            if not dry_run:
-                try:
-                    conn = db.get_conn()
-                    cur = conn.cursor()
-                    cur.execute(
-                        """SELECT 1 FROM transactions 
-                           WHERE user_id=%s AND date=%s AND category=%s AND amount_rub=%s LIMIT 1""",
-                        (USER_ID, date_str, category, amount)
-                    )
-                    is_duplicate = cur.fetchone() is not None
-                    cur.close()
-                    conn.close()
-                except Exception as e:
-                    log.warning(f"DB check warning: {e}")
-            
-            if is_duplicate:
                 skipped += 1
                 continue
-
+            
+            if tx_type not in ["Расход", "Доход", "Актив"]:
+                tx_type = "Расход"
+            
+            # Определяем раздел
+            section = "Регулярные расходы"
+            if tx_type == "Доход":
+                section = "Доходы"
+            elif tx_type == "Актив":
+                section = "Движение активов"
+            
+            # Форматируем дату (если уже в правильном формате, оставляем как есть)
+            if not date_str:
+                date_str = datetime.now().strftime("%d.%m.%Y")
+            
             if dry_run:
                 print(f"   [+] {date_str} | {tx_type:6} | {category:30} | {amount:10,.0f} ₽")
             else:
@@ -208,45 +78,42 @@ def import_csv(filepath: str, year: int, dry_run: bool = True):
                     "section": section,
                     "category": category,
                     "amount": amount,
-                    "currency": "RUB",
+                    "currency": currency,
                     "rate": 1.0,
                     "amount_rub": amount,
                     "tx_type": tx_type,
-                    "merchant": f"Импорт бюджета {year}",
-                    "comment": f"Агрегированные данные за {MONTH_NAMES.get(month_num, '')} {year}",
-                    "source": "budget_import"
+                    "merchant": merchant,
+                    "comment": "Импорт из budget_normalized.xlsx",
+                    "source": "xlsx_import"
                 })
             
             imported += 1
-
+            
+        except Exception as e:
+            errors += 1
+            if errors <= 5:  # Показываем только первые 5 ошибок
+                print(f"   ⚠️  Ошибка в строке {row_idx}: {e}")
+            continue
+    
     if not dry_run:
-        print(f"   ✅ Записано: {imported} | Пропущено дублей: {skipped}")
+        print(f"   ✅ Записано: {imported} | Пропущено: {skipped} | Ошибок: {errors}")
+    
     return imported, skipped
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Импорт XLSX файла в базу данных")
+    parser.add_argument("--file", default="./budget_normalized.xlsx", help="Путь к XLSX файлу")
     parser.add_argument("--dry-run", action="store_true", help="Тест без записи в БД")
-    parser.add_argument("--files", nargs="+", help="Пути к CSV")
     args = parser.parse_args()
-
-    files = args.files or [
-        ("./Мой учет дох_расх.xlsx - Бюджет 2023.csv", 2023),
-        ("./Мой учет дох_расх.xlsx - Бюджет 24.csv", 2024),
-        ("./Мой_учет_дох_расх_xlsx_Бюджет_2025_1.csv", 2025),
-    ]
-
+    
     if args.dry_run:
         print("🔍 РЕЖИМ ПРОСМОТРА. Данные НЕ будут записаны.\n")
-        
-    total_imp, total_skip = 0, 0
-    for item in files:
-        path, year = item if isinstance(item, tuple) else (item, 2024)
-        imp, skip = import_csv(path, year, dry_run=args.dry_run)
-        total_imp += imp
-        total_skip += skip
-
-    print(f"\n🎯 ИТОГО: {total_imp} транзакций готово к импорту, {total_skip} дублей пропущено.")
+    
+    imported, skipped = import_xlsx(args.file, dry_run=args.dry_run)
+    
+    print(f"\n🎯 ИТОГО: {imported} транзакций {'готово к импорту' if args.dry_run else 'записано'}, {skipped} пропущено.")
+    
     if not args.dry_run:
         print("💡 Данные сохранены в БД. Проверь дашборд/аналитику!")
 
