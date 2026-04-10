@@ -167,7 +167,7 @@ def transactions():
 @app.route("/transactions/add", methods=["GET", "POST"])
 def add_transaction():
     if request.method == "POST":
-        # Проверяем, это быстрый ввод общего расхода?
+        # Быстрый ввод общего расхода
         if request.form.get("quick_expense"):
             return quick_monthly_expense_post()
         
@@ -195,12 +195,15 @@ def add_transaction():
         })
         flash("✅ Транзакция добавлена!")
         return redirect(url_for("transactions"))
+    
     n = now()
     return render_template(
         "add_transaction.html",
         sections=SECTIONS,
         currencies=CURRENCIES,
         today=n.strftime("%Y-%m-%d"),
+        months=MONTH_NAMES,  # ← ДОБАВЬ ЭТУ СТРОКУ!
+        now=n,               # ← И ЭТУ для быстрого ввода
     )
 
 def quick_monthly_expense_post():
