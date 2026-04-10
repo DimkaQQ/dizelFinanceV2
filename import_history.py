@@ -2,22 +2,17 @@
 # -*- coding: utf-8 -*-
 """
 Импорт истории из бюджетных CSV в DizelFinance.
-Жёстко соблюдает категории из config.py. Новые НЕ создаёт.
+Строго соблюдает категории из config.py. Новые НЕ создаёт.
+ИСПРАВЛЕНО: даты в формате YYYY-MM-DD для БД
 """
 import sys
 import os
 import csv
+from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import database as db
-from config import (
-    ALL_CATEGORIES, 
-    REGULAR_EXPENSE_CATEGORIES, 
-    INCOME_CATEGORIES, 
-    BIG_EXPENSE_CATEGORIES,
-    ASSET_CATEGORIES,
-    MONTH_NAMES
-)
+from config import ALL_CATEGORIES, INCOME_CATEGORIES, BIG_EXPENSE_CATEGORIES, ASSET_CATEGORIES, MONTH_NAMES
 
 # Твой Telegram ID
 USER_ID = 408204060
@@ -41,7 +36,7 @@ CSV_TO_CONFIG = {
     "ЕДА": "Продукты",
     "ПРОДУКТЫ": "Продукты",
     "продукты": "Продукты",
-    "КОММУНАЛКА": "Аренда",  # В твоём config.py отдельной "Коммуналка" нет, маппим на Аренда
+    "КОММУНАЛКА": "Аренда",
     "АЗС": "Такси",
     "ТРАНСПОРТ": "Такси",
     "Такси": "Такси",
@@ -85,7 +80,7 @@ CSV_TO_CONFIG = {
     "БЛАГОТВОРИТЕЛЬНОСТЬ": "Прочее (рег)",
     "ПОДАРКИ": "Подарки (доход)",
 
-    # Крупные траты (если попадётся крупная медицина или техника)
+    # Крупные траты
     "БЫТ.ТЕХНИКА,ГАДЖЕТ": "Гаджеты/техника",
     "Здоровье": "Здоровье",
 
@@ -98,27 +93,22 @@ CSV_TO_CONFIG = {
     "Портфель Детей": "Портфель Екатерины",
 }
 
-# Список всех ДОПУСТИМЫХ категорий из config.py
 ALLOWED_CATEGORIES = set(ALL_CATEGORIES.keys())
 
 def normalize_category(raw_cat: str) -> str:
     """Жёстко маппит название из CSV в категорию config.py."""
     cleaned = raw_cat.strip().upper()
     
-    # 1. Прямое совпадение
     if cleaned in CSV_TO_CONFIG:
         return CSV_TO_CONFIG[cleaned]
     
-    # 2. Частичное совпадение (если в CSV написано "Медицина (операция)" → найдёт "МЕДИЦИНА")
     for key, val in CSV_TO_CONFIG.items():
         if key in cleaned:
             return val
             
-    # 3. Если категория уже каноническая
     if cleaned in ALLOWED_CATEGORIES:
         return cleaned
         
-    # 4. Фоллбэк: всё, что не распознано → Прочее
     return "Прочее (рег)"
 
 def clean_number(val: str) -> float:
@@ -128,6 +118,11 @@ def clean_number(val: str) -> float:
         return float(val.replace(" ", "").replace("\xa0", "").replace(",", "."))
     except:
         return 0.0
+
+def format_date_for_db(year: int, month: int, day: int = 15) -> str:
+    """Возвращает дату в формате БД: ДД.ММ.ГГГГ (как хранится в твоей БД)."""
+    # Твоя БД хранит даты как "ДД.ММ.ГГГГ", поэтому возвращаем именно этот формат
+    return f"{day:02d}.{month:02d}.{year}"
 
 def import_csv(filepath: str, year: int, dry_run: bool = True):
     print(f"📂 Обработка: {filepath} ({year})")
@@ -146,13 +141,11 @@ def import_csv(filepath: str, year: int, dry_run: bool = True):
             continue
 
         raw_category = row[0].strip()
-        if not raw_category or raw_category.upper() in ["КАТЕГОРИЯ", "ИТОГО", "ДЕЛЬТА", "ОБЩАЯ ТАБЛИЦА", "БЮДЖЕТ"]:
+        if not raw_category or raw_category.upper() in ["КАТЕГОРИЯ", "ИТОГО", "ДЕЛЬТА", "ОБЩАЯ ТАБЛИЦА", "БЮДЖЕТ", "источник доходов"]:
             continue
 
-        # Маппим категорию
         category = normalize_category(raw_category)
         
-        # Определяем тип и раздел
         tx_type = "Расход"
         section = "Регулярные расходы"
         if category in INCOME_CATEGORIES:
@@ -164,7 +157,7 @@ def import_csv(filepath: str, year: int, dry_run: bool = True):
             tx_type = "Актив"
             section = "Движение активов"
 
-        # Проходим по месяцам (столбцы с фактом: 2, 4, 6... 24)
+        # Индексы столбцов с фактом: 2, 4, 6... 24
         fact_indices = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
         for idx in fact_indices:
             if idx >= len(row):
@@ -178,18 +171,24 @@ def import_csv(filepath: str, year: int, dry_run: bool = True):
             if not (1 <= month_num <= 12):
                 continue
 
-            date_str = f"15.{month_num:02d}.{year}"
+            # ✅ ИСПРАВЛЕНО: дата в формате как в твоей БД (ДД.ММ.ГГГГ)
+            date_str = format_date_for_db(year, month_num)
             
-            # Проверка дубликатов
+            # Проверка дубликатов — используем тот же формат даты
             conn = db.get_conn()
             cur = conn.cursor()
-            cur.execute(
-                "SELECT 1 FROM transactions WHERE user_id=%s AND date=%s AND category=%s AND amount_rub=%s",
-                (USER_ID, date_str, category, amount)
-            )
-            exists = cur.fetchone()
-            cur.close()
-            conn.close()
+            try:
+                cur.execute(
+                    "SELECT 1 FROM transactions WHERE user_id=%s AND date=%s AND category=%s AND amount_rub=%s",
+                    (USER_ID, date_str, category, amount)
+                )
+                exists = cur.fetchone()
+            except Exception as e:
+                log.error(f"DB check error: {e}")
+                exists = None
+            finally:
+                cur.close()
+                conn.close()
             
             if exists:
                 skipped += 1
