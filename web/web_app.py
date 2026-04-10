@@ -167,6 +167,10 @@ def transactions():
 @app.route("/transactions/add", methods=["GET", "POST"])
 def add_transaction():
     if request.method == "POST":
+        # Проверяем, это быстрый ввод общего расхода?
+        if request.form.get("quick_expense"):
+            return quick_monthly_expense_post()
+        
         u    = uid()
         cur  = request.form.get("currency", "RUB")
         amt  = float(request.form.get("amount", 0))
@@ -198,6 +202,35 @@ def add_transaction():
         currencies=CURRENCIES,
         today=n.strftime("%Y-%m-%d"),
     )
+
+def quick_monthly_expense_post():
+    """Обработка быстрого ввода общего расхода."""
+    u = uid()
+    year = int(request.form.get("year", now().year))
+    month = int(request.form.get("month", now().month))
+    amount = float(request.form.get("quick_amount", 0))
+    
+    if amount <= 0:
+        flash("❌ Введите сумму больше 0")
+        return redirect(url_for("add_transaction"))
+    
+    month_name = MONTH_NAMES.get(month, "")
+    db.save_transaction(u, {
+        "date": f"01.{month:02d}.{year}",
+        "section": "Регулярные расходы",
+        "category": "Прочее (рег)",
+        "amount": amount,
+        "currency": "RUB",
+        "rate": 1.0,
+        "amount_rub": amount,
+        "tx_type": "Расход",
+        "merchant": f"Общий расход за {month_name} {year}",
+        "comment": "Быстрый ввод (без детализации)",
+        "source": "web_quick",
+    })
+    
+    flash(f"✅ Записано {amount:,.0f} ₽ за {month_name} {year}")
+    return redirect(url_for("transactions"))
 
 @app.route("/transactions/<int:tx_id>/delete", methods=["POST"])
 def delete_transaction(tx_id: int):

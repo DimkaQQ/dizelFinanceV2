@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Добавить транзакцию — DizelFinance{% endblock %}
-{% block page_title %}Новая транзакция{% endblock %}
+{% block page_title %}➕ Добавить транзакцию{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -69,11 +69,110 @@
     transition: background 0.25s;
   }
   .step-dot.done { background: var(--accent); }
+
+  /* Быстрый ввод */
+  .quick-card {
+    background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.06));
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .quick-card .title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #ef4444;
+  }
+  .quick-form .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .quick-form input, .quick-form select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  .quick-form .amount-input {
+    grid-column: 1 / -1;
+    font-size: 1.2rem !important;
+    font-weight: 600;
+    padding: 14px !important;
+  }
+  .quick-form .btn {
+    width: 100%;
+    padding: 12px;
+    font-weight: 600;
+  }
+  .quick-note {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 8px;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div style="max-width:700px">
+
+  <!-- ⚡ БЫСТРЫЙ ВВОД ОБЩЕГО РАСХОДА ЗА МЕСЯЦ -->
+  <div class="quick-card">
+    <div class="title">
+      <span style="font-size:1.3rem">⚡</span>
+      <span>Общий расход за месяц</span>
+    </div>
+    <form method="POST" class="quick-form" id="quickForm">
+      <input type="hidden" name="quick_expense" value="1">
+      
+      <div class="row">
+        <div>
+          <label style="display:block; margin-bottom:6px; font-size:0.8rem; color:var(--muted)">Год</label>
+          <select name="year">
+            {% for y in range(now().year-2, now().year+1) %}
+              <option value="{{ y }}" {% if y == now().year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block; margin-bottom:6px; font-size:0.8rem; color:var(--muted)">Месяц</label>
+          <select name="month">
+            {% for num, name in months.items() %}
+              <option value="{{ num }}" {% if num == now().month %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <div class="row">
+        <input type="number" name="quick_amount" class="amount-input" 
+               step="0.01" min="0.01" required 
+               placeholder="💰 Введите общую сумму (₽)">
+      </div>
+      
+      <button type="submit" class="btn btn-danger">
+        💾 Записать общий расход
+      </button>
+      <div class="quick-note">
+        Запишется как «Прочее (рег)» без детализации по категориям
+      </div>
+    </form>
+  </div>
+
+  <div style="text-align:center; margin:24px 0; color:var(--muted); position:relative">
+    <span style="background:var(--bg); padding:0 12px; position:relative; z-index:1">─ или детальный ввод ─</span>
+    <div style="position:absolute; top:50%; left:0; right:0; height:1px; background:var(--border)"></div>
+  </div>
+
+  <!-- 📝 ДЕТАЛЬНЫЙ ВВОД (3 шага) -->
   <div class="step-indicator" id="stepDots">
     <div class="step-dot" id="dot1"></div>
     <div class="step-dot" id="dot2"></div>
@@ -176,6 +275,7 @@
 const SECTIONS = {{ sections | tojson }};
 let currentStep = 1;
 
+// Индикатор шагов
 function updateDots(step) {
   for (let i = 1; i <= 3; i++) {
     document.getElementById('dot' + i).classList.toggle('done', i <= step);
@@ -190,6 +290,7 @@ function goStep(n) {
   updateDots(n);
 }
 
+// Выбор раздела
 function selectSection(btn) {
   document.querySelectorAll('.section-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
@@ -212,6 +313,7 @@ function selectSection(btn) {
   goStep(2);
 }
 
+// Выбор категории
 function selectCategory(btn, cat, sec) {
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
@@ -219,6 +321,19 @@ function selectCategory(btn, cat, sec) {
   document.getElementById('selBadge').textContent = sec + ' → ' + cat;
   setTimeout(() => goStep(3), 250);
 }
+
+// Предотвращаем отправку быстрой формы при нажатии Enter в полях детальной
+document.addEventListener('DOMContentLoaded', function() {
+  const detailInputs = document.querySelectorAll('#txForm input, #txForm select');
+  detailInputs.forEach(input => {
+    input.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        // Не отправляем, пользователь должен нажать кнопку
+      }
+    });
+  });
+});
 
 updateDots(1);
 </script>
