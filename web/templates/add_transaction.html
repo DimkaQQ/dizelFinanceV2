@@ -137,8 +137,8 @@
         <div>
           <label style="display:block; margin-bottom:6px; font-size:0.8rem; color:var(--muted)">Год</label>
           <select name="year">
-            {% for y in range(now().year-2, now().year+1) %}
-              <option value="{{ y }}" {% if y == now().year %}selected{% endif %}>{{ y }}</option>
+            {% for y in range(now.year-2, now.year+1) %}
+              <option value="{{ y }}" {% if y == now.year %}selected{% endif %}>{{ y }}</option>
             {% endfor %}
           </select>
         </div>
@@ -146,7 +146,7 @@
           <label style="display:block; margin-bottom:6px; font-size:0.8rem; color:var(--muted)">Месяц</label>
           <select name="month">
             {% for num, name in months.items() %}
-              <option value="{{ num }}" {% if num == now().month %}selected{% endif %}>{{ name }}</option>
+              <option value="{{ num }}" {% if num == now.month %}selected{% endif %}>{{ name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -322,14 +322,13 @@ function selectCategory(btn, cat, sec) {
   setTimeout(() => goStep(3), 250);
 }
 
-// Предотвращаем отправку быстрой формы при нажатии Enter в полях детальной
+// Предотвращаем отправку быстрой формы при нажатии Enter в полях детальной формы
 document.addEventListener('DOMContentLoaded', function() {
   const detailInputs = document.querySelectorAll('#txForm input, #txForm select');
   detailInputs.forEach(input => {
     input.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         e.preventDefault();
-        // Не отправляем, пользователь должен нажать кнопку
       }
     });
   });
