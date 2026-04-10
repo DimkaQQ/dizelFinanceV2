@@ -207,70 +207,6 @@ def delete_transaction(tx_id: int):
 
 # ── Analytics ─────────────────────────────────────────────────────────────────
 
-# Ключевые показатели — структура и формулы (значения пустые)
-KEY_METRICS = [
-    {
-        "name": "Доходы (₽/год)",
-        "formula": "Сумма всех транзакций с tx_type='Доход' за год",
-        "unit": "₽",
-        "value": None  # ← пусто, считаем динамически или оставляем пустым
-    },
-    {
-        "name": "Расходы (₽/год)",
-        "formula": "Сумма всех транзакций с tx_type='Расход' за год",
-        "unit": "₽",
-        "value": None
-    },
-    {
-        "name": "Дельта / Cash Flow (₽)",
-        "formula": "Доходы − Расходы",
-        "unit": "₽",
-        "value": None
-    },
-    {
-        "name": "Savings Rate (%)",
-        "formula": "(Дельта / Доходы) × 100%",
-        "unit": "%",
-        "value": None
-    },
-    {
-        "name": "Среднемесячные расходы",
-        "formula": "Расходы за год ÷ 12",
-        "unit": "₽",
-        "value": None
-    },
-    {
-        "name": "Личная инфляция (%)",
-        "formula": "(Расходы_тек/Расходы_пред − 1) × 100%",
-        "unit": "%",
-        "value": None
-    },
-    {
-        "name": "Чистый капитал (₽)",
-        "formula": "Сумма активов − обязательства (ручной ввод или расчёт)",
-        "unit": "₽",
-        "value": None
-    },
-    {
-        "name": "Рост капитала (%)",
-        "formula": "(Капитал_тек/Капитал_пред − 1) × 100%",
-        "unit": "%",
-        "value": None
-    },
-    {
-        "name": "FI Ratio (%)",
-        "formula": "(Пассивный доход / Расходы) × 100%",
-        "unit": "%",
-        "value": None
-    },
-    {
-        "name": "Капитал на месяцы",
-        "formula": "Чистый капитал / Среднемесячные расходы",
-        "unit": "мес",
-        "value": None
-    },
-]
-
 @app.route("/analytics")
 def analytics():
     u     = uid()
@@ -286,7 +222,96 @@ def analytics():
         sec = row.get("section", "")
         by_section.setdefault(sec, []).append(row)
 
-    # ❗ Передаём метрики в шаблон
+    # 🔥 РАССЧИТЫВАЕМ КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ ИЗ БД
+    conn = db.get_conn()
+    cur = conn.cursor()
+    
+    # 1. Доходы за выбранный год
+    if month:
+        cur.execute("""
+            SELECT COALESCE(SUM(amount_rub), 0) 
+            FROM transactions 
+            WHERE user_id = %s AND tx_type = 'Доход' 
+            AND EXTRACT(YEAR FROM date) = %s 
+            AND EXTRACT(MONTH FROM date) = %s
+        """, (u, year, month))
+    else:
+        cur.execute("""
+            SELECT COALESCE(SUM(amount_rub), 0) 
+            FROM transactions 
+            WHERE user_id = %s AND tx_type = 'Доход' 
+            AND EXTRACT(YEAR FROM date) = %s
+        """, (u, year))
+    income = cur.fetchone()[0]
+    
+    # 2. Расходы за выбранный год/месяц
+    if month:
+        cur.execute("""
+            SELECT COALESCE(SUM(amount_rub), 0) 
+            FROM transactions 
+            WHERE user_id = %s AND tx_type = 'Расход' 
+            AND EXTRACT(YEAR FROM date) = %s 
+            AND EXTRACT(MONTH FROM date) = %s
+        """, (u, year, month))
+    else:
+        cur.execute("""
+            SELECT COALESCE(SUM(amount_rub), 0) 
+            FROM transactions 
+            WHERE user_id = %s AND tx_type = 'Расход' 
+            AND EXTRACT(YEAR FROM date) = %s
+        """, (u, year))
+    expense = cur.fetchone()[0]
+    
+    # 3. Дельта
+    delta = income - expense
+    
+    # 4. Savings Rate
+    savings_rate = (delta / income * 100) if income > 0 else 0
+    
+    # 5. Среднемесячные расходы
+    months_count = 1 if month else 12
+    avg_monthly = expense / months_count if expense > 0 else 0
+    
+    # 6. Чистый капитал (сумма всех активов на текущий момент)
+    cur.execute("""
+        SELECT COALESCE(SUM(amount_rub), 0) 
+        FROM transactions 
+        WHERE user_id = %s AND tx_type = 'Актив'
+    """, (u,))
+    net_worth = cur.fetchone()[0]
+    
+    # 7. Расходы за прошлый год (для инфляции)
+    cur.execute("""
+        SELECT COALESCE(SUM(amount_rub), 0) 
+        FROM transactions 
+        WHERE user_id = %s AND tx_type = 'Расход' 
+        AND EXTRACT(YEAR FROM date) = %s
+    """, (u, year - 1))
+    expense_prev_year = cur.fetchone()[0]
+    
+    # 8. Личная инфляция
+    inflation = ((expense / expense_prev_year - 1) * 100) if expense_prev_year > 0 else None
+    
+    # 9. Капитал на месяцы
+    capital_months = round(net_worth / avg_monthly, 1) if avg_monthly > 0 else None
+    
+    cur.close()
+    conn.close()
+    
+    # Формируем метрики с реальными значениями
+    key_metrics = [
+        {"name": "Доходы (₽/год)", "formula": "Сумма всех транзакций с tx_type='Доход' за год", "unit": "₽", "value": round(income, 2)},
+        {"name": "Расходы (₽/год)", "formula": "Сумма всех транзакций с tx_type='Расход' за год", "unit": "₽", "value": round(expense, 2)},
+        {"name": "Дельта / Cash Flow (₽)", "formula": "Доходы − Расходы", "unit": "₽", "value": round(delta, 2)},
+        {"name": "Savings Rate (%)", "formula": "(Дельта / Доходы) × 100%", "unit": "%", "value": round(savings_rate, 2)},
+        {"name": "Среднемесячные расходы", "formula": "Расходы за год ÷ 12", "unit": "₽", "value": round(avg_monthly, 2)},
+        {"name": "Личная инфляция (%)", "formula": "(Расходы_тек/Расходы_пред − 1) × 100%", "unit": "%", "value": round(inflation, 2) if inflation is not None else None},
+        {"name": "Чистый капитал (₽)", "formula": "Сумма активов − обязательства", "unit": "₽", "value": round(net_worth, 2)},
+        {"name": "Рост капитала (%)", "formula": "(Капитал_тек/Капитал_пред − 1) × 100%", "unit": "%", "value": None},  # Нужна история капитала
+        {"name": "FI Ratio (%)", "formula": "(Пассивный доход / Расходы) × 100%", "unit": "%", "value": None},  # Нужна маркировка пассивных доходов
+        {"name": "Капитал на месяцы", "formula": "Чистый капитал / Среднемесячные расходы", "unit": "мес", "value": capital_months},
+    ]
+
     return render_template(
         "analytics.html",
         year=year, month=month,
@@ -295,7 +320,7 @@ def analytics():
         months=MONTH_NAMES,
         years=years,
         trend=trend,
-        key_metrics=KEY_METRICS,  # ← НОВОЕ!
+        key_metrics=key_metrics,  # ← Теперь с реальными значениями!
     )
 
 # ── Upload file ────────────────────────────────────────────────────────────────
