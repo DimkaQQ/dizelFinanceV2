@@ -3,16 +3,19 @@
 """
 Импорт истории из бюджетных CSV в DizelFinance.
 Строго соблюдает категории из config.py. Новые НЕ создаёт.
-ИСПРАВЛЕНО: даты в формате YYYY-MM-DD для БД
 """
 import sys
 import os
 import csv
+import logging
 from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import database as db
 from config import ALL_CATEGORIES, INCOME_CATEGORIES, BIG_EXPENSE_CATEGORIES, ASSET_CATEGORIES, MONTH_NAMES
+
+# Настройка логгера
+log = logging.getLogger(__name__)
 
 # Твой Telegram ID
 USER_ID = 408204060
@@ -120,9 +123,29 @@ def clean_number(val: str) -> float:
         return 0.0
 
 def format_date_for_db(year: int, month: int, day: int = 15) -> str:
-    """Возвращает дату в формате БД: ДД.ММ.ГГГГ (как хранится в твоей БД)."""
-    # Твоя БД хранит даты как "ДД.ММ.ГГГГ", поэтому возвращаем именно этот формат
+    """Возвращает дату в формате как в твоей БД: ДД.ММ.ГГГГ"""
     return f"{day:02d}.{month:02d}.{year}"
+
+def check_duplicate(conn, user_id: int, date_str: str, category: str, amount: float) -> bool:
+    """Проверяет дубликат, безопасно обрабатывая формат даты."""
+    cur = conn.cursor()
+    try:
+        # Используем TO_DATE для безопасного сравнения
+        cur.execute(
+            """SELECT 1 FROM transactions 
+               WHERE user_id=%s 
+               AND TO_DATE(date, 'DD.MM.YYYY') = TO_DATE(%s, 'DD.MM.YYYY')
+               AND category=%s 
+               AND amount_rub=%s
+               LIMIT 1""",
+            (user_id, date_str, category, amount)
+        )
+        return cur.fetchone() is not None
+    except Exception:
+        # Если ошибка формата — считаем что не дубликат (чтобы не блокировать импорт)
+        return False
+    finally:
+        cur.close()
 
 def import_csv(filepath: str, year: int, dry_run: bool = True):
     print(f"📂 Обработка: {filepath} ({year})")
@@ -157,7 +180,6 @@ def import_csv(filepath: str, year: int, dry_run: bool = True):
             tx_type = "Актив"
             section = "Движение активов"
 
-        # Индексы столбцов с фактом: 2, 4, 6... 24
         fact_indices = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
         for idx in fact_indices:
             if idx >= len(row):
@@ -171,26 +193,20 @@ def import_csv(filepath: str, year: int, dry_run: bool = True):
             if not (1 <= month_num <= 12):
                 continue
 
-            # ✅ ИСПРАВЛЕНО: дата в формате как в твоей БД (ДД.ММ.ГГГГ)
             date_str = format_date_for_db(year, month_num)
             
-            # Проверка дубликатов — используем тот же формат даты
-            conn = db.get_conn()
-            cur = conn.cursor()
-            try:
-                cur.execute(
-                    "SELECT 1 FROM transactions WHERE user_id=%s AND date=%s AND category=%s AND amount_rub=%s",
-                    (USER_ID, date_str, category, amount)
-                )
-                exists = cur.fetchone()
-            except Exception as e:
-                log.error(f"DB check error: {e}")
-                exists = None
-            finally:
-                cur.close()
-                conn.close()
+            # Проверка дубликатов — ТОЛЬКО если не dry-run
+            is_duplicate = False
+            if not dry_run:
+                try:
+                    conn = db.get_conn()
+                    is_duplicate = check_duplicate(conn, USER_ID, date_str, category, amount)
+                    conn.close()
+                except Exception as e:
+                    log.warning(f"DB check warning: {e}")
+                    is_duplicate = False  # Не блокируем импорт при ошибке
             
-            if exists:
+            if is_duplicate:
                 skipped += 1
                 continue
 
