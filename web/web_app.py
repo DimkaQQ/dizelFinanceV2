@@ -336,8 +336,8 @@ def analytics():
     
     # Формируем метрики с реальными значениями
     key_metrics = [
-        {"name": "Доходы (₽/год)", "formula": "Сумма всех транзакций с tx_type='Доход' за год", "unit": "₽", "value": round(income, 2)},
-        {"name": "Расходы (₽/год)", "formula": "Сумма всех транзакций с tx_type='Расход' за год", "unit": "₽", "value": round(expense, 2)},
+        {"name": "Доходы (₽/год)", "formula": "Сумма всех транзакций с 'Доход' за год", "unit": "₽", "value": round(income, 2)},
+        {"name": "Расходы (₽/год)", "formula": "Сумма всех транзакций с 'Расход' за год", "unit": "₽", "value": round(expense, 2)},
         {"name": "Дельта / Cash Flow (₽)", "formula": "Доходы − Расходы", "unit": "₽", "value": round(delta, 2)},
         {"name": "Savings Rate (%)", "formula": "(Дельта / Доходы) × 100%", "unit": "%", "value": round(savings_rate, 2)},
         {"name": "Среднемесячные расходы", "formula": "Расходы за год ÷ 12", "unit": "₽", "value": round(avg_monthly, 2)},
