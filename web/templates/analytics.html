@@ -30,39 +30,57 @@
 
 <!-- 🔑 КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ -->
 <div class="card" style="margin-bottom:20px">
-  <div class="card-title" style="margin-bottom:12px">📊 Ключевые показатели</div>
-  <table class="table table-sm" style="font-size:0.85rem">
-    <thead>
-      <tr>
-        <th style="min-width:180px">Показатель</th>
-        <th style="min-width:250px">Как считается</th>
-        <th class="text-right" style="min-width:100px">Значение</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for m in key_metrics %}
-      <tr>
-        <td style="font-weight:500">{{ m.name }}</td>
-        <td class="text-muted" style="font-size:0.8rem">{{ m.formula }}</td>
-        <td class="text-right">
-          {% if m.value is not none %}
-            {% if m.unit == '₽' %}
-              {{ "{:,.0f}".format(m.value) }} ₽
-            {% elif m.unit == '%' %}
-              {{ m.value }}%
-            {% else %}
-              {{ m.value }} {{ m.unit }}
-            {% endif %}
-          {% else %}
-            <span class="text-muted">—</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <div class="text-muted" style="font-size:0.75rem; margin-top:8px">
-    💡 Значения рассчитываются автоматически из ваших транзакций. Пока данных нет — отображается «—».
+  <div class="card-title" style="margin-bottom:20px; display:flex; align-items:center; gap:10px">
+    <span style="font-size:1.5rem">📊</span>
+    <span>Ключевые показатели</span>
+  </div>
+  
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px">
+    {% for m in key_metrics %}
+    <div class="metric-card" style="
+      background:linear-gradient(135deg, {% if m.value is none or m.value == 0 %}rgba(100,100,100,0.1){% elif m.name in ['Доходы (₽/год)', 'Дельта / Cash Flow (₽)', 'Чистый капитал (₽)', 'Рост капитала (%)', 'Капитал на месяцы'] %}rgba(34,197,94,0.1){% elif m.name in ['Расходы (₽/год)', 'Среднемесячные расходы'] %}rgba(239,68,68,0.1){% else %}rgba(59,130,246,0.1){% endif %});
+      border:1px solid {% if m.value is none or m.value == 0 %}rgba(100,100,100,0.2){% elif m.name in ['Доходы (₽/год)', 'Дельта / Cash Flow (₽)', 'Чистый капитал (₽)', 'Рост капитала (%)', 'Капитал на месяцы'] %}rgba(34,197,94,0.3){% elif m.name in ['Расходы (₽/год)', 'Среднемесячные расходы'] %}rgba(239,68,68,0.3){% else %}rgba(59,130,246,0.3){% endif %};
+      border-radius:12px;
+      padding:20px;
+      transition:transform 0.2s, box-shadow 0.2s;
+    " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+      
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px">
+        <div style="font-size:0.85rem; color:var(--muted); line-height:1.4; flex:1">
+          {{ m.name }}
+        </div>
+        <div style="font-size:1.5rem; margin-left:10px">
+          {% if m.name in ['Доходы (₽/год)', 'Дельта / Cash Flow (₽)', 'Чистый капитал (₽)', 'Рост капитала (%)', 'Капитал на месяцы', 'FI Ratio (%)'] %}💰
+          {% elif m.name in ['Расходы (₽/год)', 'Среднемесячные расходы'] %}💸
+          {% elif 'инфляция' in m.name.lower() %}📈
+          {% elif 'Savings' in m.name %}🎯
+          {% else %}📊{% endif %}
+        </div>
+      </div>
+      
+      <div style="font-size:1.8rem; font-weight:700; margin-bottom:8px; color:{% if m.value is none %}var(--muted){% elif m.value < 0 %}#ef4444{% elif m.name in ['Доходы (₽/год)', 'Дельта / Cash Flow (₽)', 'Чистый капитал (₽)', 'Рост капитала (%)', 'Капитал на месяцы', 'FI Ratio (%)', 'Savings Rate (%)'] %}#22c55e{% else %}#ef4444{% endif %}">
+        {% if m.value is none %}
+          <span style="opacity:0.5">—</span>
+        {% elif m.unit == '₽' %}
+          {{ "{:,.0f}".format(m.value) }} <span style="font-size:1rem">₽</span>
+        {% elif m.unit == '%' %}
+          {{ "{:,.1f}".format(m.value) }}<span style="font-size:1rem">%</span>
+        {% elif m.unit == 'мес' %}
+          {{ "{:,.1f}".format(m.value) }} <span style="font-size:1rem">мес</span>
+        {% else %}
+          {{ m.value }}
+        {% endif %}
+      </div>
+      
+      <div style="font-size:0.75rem; color:var(--muted); line-height:1.4; border-top:1px solid rgba(100,100,100,0.2); padding-top:8px; margin-top:8px">
+        {{ m.formula }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  
+  <div style="margin-top:16px; padding:12px; background:rgba(59,130,246,0.1); border-left:4px solid #3b82f6; border-radius:8px; font-size:0.85rem; color:var(--muted)">
+    💡 <strong>Совет:</strong> Значения рассчитываются автоматически из ваших транзакций. Пока данных нет — отображается «—».
   </div>
 </div>
 
