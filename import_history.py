@@ -1,141 +1,187 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Импорт истории из бюджетных файлов в базу данных DizelFinance.
-Поддерживает:
-1. CSV файлы с бюджетами (2023, 2024, 2025)
-2. Простые XLSX файлы (budget_simple.xlsx)
+Импорт истории транзакций в DizelFinance из budget_import.xlsx
+Запуск:
+    python import_history.py            — dry-run (только просмотр)
+    python import_history.py --save     — реальная запись в БД
 """
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import database as db
 import openpyxl
-import csv
 from datetime import datetime
 
-# Твой Telegram ID
-USER_ID = 612156666
+# ─── Настройки ────────────────────────────────────────────────────────────────
+USER_ID   = 612156666
+XLSX_FILE = "./budget_import.xlsx"
 
-def import_simple_xlsx(filepath: str, dry_run: bool = True):
-    """Импортирует транзакции из простого XLSX файла (budget_simple.xlsx)."""
-    print(f"📂 Обработка простого XLSX: {filepath}")
-    
-    if not os.path.exists(filepath):
-        print(f"   ❌ Файл не найден: {filepath}")
-        return 0, 0
-    
-    try:
-        wb = openpyxl.load_workbook(filepath)
-        ws = wb.active
-    except Exception as e:
-        print(f"   ❌ Ошибка открытия файла: {e}")
-        return 0, 0
-    
-    imported = 0
-    skipped = 0
-    
-    # Пропускаем заголовок (первая строка)
-    for row_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
-        if row_idx == 1:  # Заголовок
-            continue
-        
-        if not row or all(cell is None for cell in row):
-            continue
-        
+# Категории которые идут в Крупные траты (остальные расходы → Регулярные расходы)
+КРУПНЫЕ_ТРАТЫ = {
+    'Путешествия (рег)',
+    'Гаджеты/техника',
+    'Екатерина',
+    'Ланочка',
+}
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def get_section(tx_type: str, category: str) -> str:
+    if tx_type == 'Доход':
+        return 'Доходы'
+    if tx_type == 'Актив':
+        return 'Движение активов'
+    if category in КРУПНЫЕ_ТРАТЫ:
+        return 'Крупные траты'
+    return 'Регулярные расходы'
+
+
+def parse_date(date_str: str):
+    for fmt in ('%d.%m.%Y', '%Y-%m-%d'):
         try:
-            # Ожидаемый формат: date, amount, currency, merchant, tx_type, category
-            date_str = str(row[0]).strip() if row[0] else ""
-            amount = float(row[1]) if row[1] else 0.0
-            currency = str(row[2]).strip() if row[2] else "RUB"
-            merchant = str(row[3]).strip() if row[3] else "Импорт"
-            tx_type = str(row[4]).strip() if row[4] else "Расход"
-            category = str(row[5]).strip() if row[5] else "Прочее (рег)"
-            
-            # Валидация
-            if amount <= 0:
-                skipped += 1
-                continue
-            
-            if tx_type not in ["Расход", "Доход", "Актив"]:
-                tx_type = "Расход"
-            
-            # Определяем раздел
-            section = "Регулярные расходы"
-            if tx_type == "Доход":
-                section = "Доходы"
-            elif tx_type == "Актив":
-                section = "Движение активов"
-            
-            if dry_run:
-                print(f"   [+] {date_str} | {tx_type:6} | {category:30} | {amount:10,.0f} ₽")
-            else:
-                db.save_transaction(USER_ID, {
-                    "date": date_str,
-                    "section": section,
-                    "category": category,
-                    "amount": amount,
-                    "currency": currency,
-                    "rate": 1.0,
-                    "amount_rub": amount,
-                    "tx_type": tx_type,
-                    "merchant": merchant,
-                    "comment": "Импорт из budget_simple.xlsx",
-                    "source": "xlsx_simple_import"
-                })
-            
-            imported += 1
-            
-        except Exception as e:
-            print(f"   ⚠️  Ошибка в строке {row_idx}: {e}")
-            skipped += 1
+            return datetime.strptime(date_str.strip(), fmt).date()
+        except ValueError:
             continue
-    
-    if not dry_run:
-        print(f"   ✅ Записано: {imported} | Пропущено: {skipped}")
-    
-    return imported, skipped
+    raise ValueError(f"Не могу распарсить дату: {date_str}")
+
+
+def load_transactions_from_xlsx(filepath: str) -> list[dict]:
+    """Читает все транзакции из xlsx файла."""
+    if not os.path.exists(filepath):
+        print(f"❌ Файл не найден: {filepath}")
+        sys.exit(1)
+
+    wb = openpyxl.load_workbook(filepath)
+    ws = wb['Транзакции']
+    rows = list(ws.iter_rows(values_only=True))
+
+    transactions = []
+    errors = []
+
+    for row_idx, row in enumerate(rows[1:], start=2):  # skip header
+        if not row or all(v is None for v in row):
+            continue
+        try:
+            date_str  = str(row[0]).strip()
+            amount    = float(row[1])
+            currency  = str(row[2]).strip() if row[2] else 'RUB'
+            merchant  = str(row[3]).strip() if row[3] else 'Импорт'
+            tx_type   = str(row[4]).strip() if row[4] else 'Расход'
+            category  = str(row[5]).strip() if row[5] else 'Прочее (рег)'
+
+            if amount <= 0:
+                errors.append(f"  Строка {row_idx}: сумма = {amount}, пропущено")
+                continue
+
+            if tx_type not in ('Доход', 'Расход', 'Актив'):
+                errors.append(f"  Строка {row_idx}: неизвестный tx_type '{tx_type}', ставлю Расход")
+                tx_type = 'Расход'
+
+            date = parse_date(date_str)
+            section = get_section(tx_type, category)
+
+            transactions.append({
+                'date':       date.strftime('%d.%m.%Y'),
+                'amount':     amount,
+                'currency':   currency,
+                'rate':       1.0,
+                'amount_rub': amount,
+                'merchant':   merchant,
+                'tx_type':    tx_type,
+                'section':    section,
+                'category':   category,
+                'comment':    'Импорт истории',
+                'source':     'xlsx_import',
+            })
+
+        except Exception as e:
+            errors.append(f"  Строка {row_idx}: {e}")
+
+    return transactions, errors
+
+
+def print_summary(transactions: list[dict]):
+    """Выводит красивую сводку по транзакциям."""
+    from collections import defaultdict
+
+    by_year_type = defaultdict(lambda: {'cnt': 0, 'sum': 0})
+    for tx in transactions:
+        year = tx['date'].split('.')[-1]
+        key = (year, tx['tx_type'])
+        by_year_type[key]['cnt'] += 1
+        by_year_type[key]['sum'] += tx['amount']
+
+    print("\n┌─────────────────────────────────────────────────────────┐")
+    print("│              СВОДКА ПО ТРАНЗАКЦИЯМ                     │")
+    print("├──────┬──────────┬────────────┬────────────────────────-┤")
+    print("│  Год │   Тип    │    Кол-во  │          Сумма          │")
+    print("├──────┼──────────┼────────────┼─────────────────────────┤")
+
+    for (year, tx_type) in sorted(by_year_type.keys()):
+        d = by_year_type[(year, tx_type)]
+        print(f"│ {year} │ {tx_type:<8} │ {d['cnt']:>10} │ {d['sum']:>21,.0f} ₽ │")
+
+    print("├──────┴──────────┴────────────┴─────────────────────────┤")
+    print(f"│  Всего транзакций: {len(transactions):<37}│")
+    print("└─────────────────────────────────────────────────────────┘\n")
+
+
+def dry_run(transactions: list[dict]):
+    """Показывает что будет импортировано без записи в БД."""
+    print("\n🔍 DRY-RUN — данные НЕ записываются в БД\n")
+    print(f"{'#':<5} {'Дата':<12} {'Тип':<8} {'Раздел':<22} {'Категория':<28} {'Сумма':>12}")
+    print("─" * 95)
+
+    for i, tx in enumerate(transactions, 1):
+        print(
+            f"{i:<5} {tx['date']:<12} {tx['tx_type']:<8} "
+            f"{tx['section']:<22} {tx['category']:<28} "
+            f"{tx['amount']:>10,.0f} ₽"
+        )
+
+    print_summary(transactions)
+
+
+def save_to_db(transactions: list[dict]):
+    """Записывает транзакции в БД пакетно."""
+    try:
+        import database as db
+    except ImportError:
+        print("❌ Не могу импортировать database.py — убедись что скрипт в папке проекта")
+        sys.exit(1)
+
+    print(f"\n💾 Записываю {len(transactions)} транзакций в БД...")
+
+    saved = db.save_transactions_batch(USER_ID, transactions)
+    print(f"✅ Записано: {saved} транзакций")
+    print("💡 Проверь дашборд и аналитику!")
+
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(description="Импорт бюджетных файлов в базу данных")
-    parser.add_argument("--dry-run", action="store_true", help="Тест без записи в БД")
-    args = parser.parse_args()
-    
-    if args.dry_run:
-        print("🔍 РЕЖИМ ПРОСМОТРА. Данные НЕ будут записаны.\n")
-    
-    total_imported = 0
-    total_skipped = 0
-    
-    # 1. Импортируем budget_simple.xlsx
-    simple_file = "./budget_simple.xlsx"
-    if os.path.exists(simple_file):
-        imp, skip = import_simple_xlsx(simple_file, dry_run=args.dry_run)
-        total_imported += imp
-        total_skipped += skip
-        print()
-    
-    # 2. Импортируем CSV файлы бюджетов (если нужно)
-    # Можешь раскомментировать если нужно импортировать и CSV тоже
-    """
-    csv_files = [
-        ("./Мой учет дох_расх.xlsx - Бюджет 2023.csv", 2023),
-        ("./Мой учет дох_расх.xlsx - Бюджет 24.csv", 2024),
-        ("./Мой_учет_дох_расх_xlsx_Бюджет_2025_1.csv", 2025),
-    ]
-    
-    for filepath, year in csv_files:
-        if os.path.exists(filepath):
-            # Здесь будет логика импорта CSV (как в предыдущей версии)
-            pass
-    """
-    
-    print(f"\n🎯 ИТОГО: {total_imported} транзакций {'готово к импорту' if args.dry_run else 'записано'}, {total_skipped} пропущено.")
-    
-    if not args.dry_run:
-        print("💡 Данные сохранены в БД. Проверь дашборд/аналитику!")
+    dry = '--save' not in sys.argv
 
-if __name__ == "__main__":
+    print(f"📂 Читаю файл: {XLSX_FILE}")
+    transactions, errors = load_transactions_from_xlsx(XLSX_FILE)
+
+    if errors:
+        print(f"\n⚠️  Ошибки при парсинге ({len(errors)} шт.):")
+        for e in errors:
+            print(e)
+
+    if not transactions:
+        print("❌ Нет транзакций для импорта")
+        sys.exit(1)
+
+    if dry:
+        dry_run(transactions)
+        print("─" * 60)
+        print("➡️  Запусти с флагом --save чтобы записать в БД:")
+        print("    python import_history.py --save")
+    else:
+        print_summary(transactions)
+        save_to_db(transactions)
+
+
+if __name__ == '__main__':
     main()
