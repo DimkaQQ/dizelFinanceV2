@@ -44,6 +44,7 @@
       background: var(--bg-card);
       position: relative;
       page-break-after: always;
+      page-break-inside: avoid;
     }
     .page:last-child { page-break-after: auto; }
     
@@ -157,7 +158,7 @@
       margin-top: 12px; position: relative;
     }
     
-    .section { margin: 20px 0; }
+    .section { margin: 20px 0; page-break-inside: avoid; }
     .section-title {
       font-size: 14px; font-weight: 700; color: var(--text-primary);
       padding-bottom: 10px; border-bottom: 2px solid var(--border-light);
@@ -199,48 +200,57 @@
     .data-table .change.neg { background: rgba(239,68,68,0.1); color: var(--danger); }
     
     .chart-box {
-      background: transparent; border: none;
-      border-radius: var(--radius-md); padding: 10px 0; margin: 20px 0 10px;
+      background: white; 
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md); 
+      padding: 20px; 
+      margin: 20px 0;
+      page-break-inside: avoid;
     }
     
     .css-bar-compare {
       display: flex;
       align-items: flex-end;
       justify-content: space-around;
-      height: 200px;
-      padding: 15px 10px 25px;
-      background: white;
+      height: 180px;
+      padding: 15px 20px 25px;
+      background: #f8fafc;
       border-radius: 8px;
-      border: 1px solid var(--border-light);
+      gap: 30px;
     }
     .css-bar-group {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       flex: 1;
-      max-width: 120px;
+      max-width: 140px;
     }
     .css-bar-compare .bar-wrapper {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       align-items: flex-end;
-      height: 160px;
+      height: 140px;
+      justify-content: center;
     }
     .css-bar-compare .bar {
-      width: 35px;
+      width: 40px;
       border-radius: 6px 6px 0 0;
-      transition: height 0.3s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    .css-bar-compare .bar.p1 { background: linear-gradient(to top, #0f172a, #1e293b); }
-    .css-bar-compare .bar.p2 { background: linear-gradient(to top, var(--accent-gold), #f59e0b); }
+    .css-bar-compare .bar.p1 { 
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+    }
+    .css-bar-compare .bar.p2 { 
+      background: linear-gradient(135deg, var(--accent-gold), #f59e0b);
+    }
     .css-bar-label {
-      font-size: 10px; font-weight: 600;
-      color: var(--text-secondary); text-align: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--text-primary); text-align: center;
     }
     .css-bar-value {
       font-size: 9px; font-family: var(--font-mono);
-      color: var(--text-muted);
+      color: var(--text-muted); text-align: center;
     }
     
     .insights {
@@ -248,6 +258,7 @@
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
       padding: 16px 18px; margin: 16px 0;
+      page-break-inside: avoid;
     }
     .insights ul { margin-left: 16px; margin-top: 8px; }
     .insights li { margin: 6px 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
@@ -261,6 +272,7 @@
       background: var(--bg-accent); border-radius: var(--radius-lg);
       padding: 28px 24px; color: white; text-align: center; margin: 20px 0;
       position: relative; overflow: hidden;
+      page-break-inside: avoid;
     }
     .final-card::before {
       content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
@@ -332,7 +344,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 2 из 4</div>
+      <div class="page-num">Страница 2 из 3</div>
     </footer>
   </div>
 
@@ -361,37 +373,12 @@
       <div class="css-bar-compare" id="compare-chart"></div>
     </div>
 
-    <footer class="page-footer">
-      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 3 из 4</div>
-    </footer>
-  </div>
-
-  <!-- Страница 4: Выводы -->
-  <div class="page">
-    <header class="page-header">
-      <div>
-        <div class="title">Анализ и выводы</div>
-        <div class="subtitle">Рекомендации</div>
-      </div>
-    </header>
-
     <div class="insights">
       <strong>📌 Ключевые изменения:</strong>
       <ul>
         <li>Доходы: <span class="highlight" id="income-change">—</span></li>
         <li>Расходы: <span class="highlight" id="expense-change">—</span></li>
         <li>Дельта: <span class="highlight" id="delta-change">—</span></li>
-        <li>Норма сбережений: <span class="highlight" id="savings-compare">—</span></li>
-      </ul>
-    </div>
-
-    <div class="insights" style="border-left-color: var(--success)">
-      <strong>🎯 Рекомендации:</strong>
-      <ul>
-        <li id="recommendation-1">—</li>
-        <li id="recommendation-2">—</li>
-        <li id="recommendation-3">—</li>
       </ul>
     </div>
 
@@ -406,7 +393,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
-      <div class="page-num">Страница 4 из 4</div>
+      <div class="page-num">Страница 3 из 3</div>
     </footer>
   </div>
 
@@ -494,12 +481,6 @@
       setText('expense-change', `${expenseSign}${fmt(expenseDiff)} ₽ (${expensePct}%)`);
       setText('delta-change', `${deltaSign}${fmt(deltaChange)} ₽`);
       
-      const savingsRate1 = p1.total_income > 0 ? (((p1.total_income - p1.total_expense) / p1.total_income) * 100).toFixed(1) : 0;
-      const savingsRate2 = p2.total_income > 0 ? (((p2.total_income - p2.total_expense) / p2.total_income) * 100).toFixed(1) : 0;
-      const savingsChange = parseFloat(savingsRate2) - parseFloat(savingsRate1);
-      const savingsSign = savingsChange >= 0 ? '+' : '';
-      setText('savings-compare', `${savingsRate1}% → ${savingsRate2}% (${savingsSign}${savingsChange.toFixed(1)}%)`);
-      
       // Categories comparison table
       const catBody = document.getElementById('compare-cats-body');
       const allCats = [...new Set([
@@ -531,19 +512,24 @@
         }).join('');
       }
       
-      // CSS Bar Compare Chart
+      // CSS Bar Compare Chart - FIXED COLORS & SPACING
       const chartEl = document.getElementById('compare-chart');
       if (chartEl && periods.length >= 2) {
         const maxValue = Math.max(
-          p1.total_income || 0, p1.total_expense || 0,
-          p2.total_income || 0, p2.total_expense || 0
+          p1.total_income || 1, p1.total_expense || 1,
+          p2.total_income || 1, p2.total_expense || 1
         );
+        
+        const p1IncomeHeight = (p1.total_income / maxValue) * 120;
+        const p2IncomeHeight = (p2.total_income / maxValue) * 120;
+        const p1ExpenseHeight = (p1.total_expense / maxValue) * 120;
+        const p2ExpenseHeight = (p2.total_expense / maxValue) * 120;
         
         chartEl.innerHTML = `
           <div class="css-bar-group">
             <div class="bar-wrapper">
-              <div class="bar p1" style="height:${maxValue > 0 ? (p1.total_income / maxValue * 160) : 0}px"></div>
-              <div class="bar p2" style="height:${maxValue > 0 ? (p2.total_income / maxValue * 160) : 0}px"></div>
+              <div class="bar p1" style="height:${p1IncomeHeight}px" title="${p1.label}: ${fmt(p1.total_income)} ₽"></div>
+              <div class="bar p2" style="height:${p2IncomeHeight}px" title="${p2.label}: ${fmt(p2.total_income)} ₽"></div>
             </div>
             <div class="css-bar-label">Доходы</div>
             <div class="css-bar-value">${fmt(p1.total_income/1000)}k</div>
@@ -551,8 +537,8 @@
           </div>
           <div class="css-bar-group">
             <div class="bar-wrapper">
-              <div class="bar p1" style="height:${maxValue > 0 ? (p1.total_expense / maxValue * 160) : 0}px"></div>
-              <div class="bar p2" style="height:${maxValue > 0 ? (p2.total_expense / maxValue * 160) : 0}px"></div>
+              <div class="bar p1" style="height:${p1ExpenseHeight}px" title="${p1.label}: ${fmt(p1.total_expense)} ₽"></div>
+              <div class="bar p2" style="height:${p2ExpenseHeight}px" title="${p2.label}: ${fmt(p2.total_expense)} ₽"></div>
             </div>
             <div class="css-bar-label">Расходы</div>
             <div class="css-bar-value">${fmt(p1.total_expense/1000)}k</div>
@@ -560,23 +546,6 @@
           </div>
         `;
       }
-      
-      // Recommendations
-      const recs = [];
-      if (expensePct > 10) recs.push('Проанализировать рост расходов и оптимизировать бюджет');
-      else if (expensePct < -5) recs.push('Отличная экономия! Рассмотреть увеличение инвестиций');
-      
-      if (incomePct > 15) recs.push('Рост доходов позволяет увеличить норму сбережений до 25-30%');
-      else if (incomePct < 0) recs.push('Сфокусироваться на увеличении доходов');
-      
-      if (savingsChange > 3) recs.push('Поддерживать текущую финансовую дисциплину');
-      else if (savingsChange < -3) recs.push('Вернуться к целевой норме сбережений 15-20%');
-      
-      if (recs.length === 0) recs.push('Стабильная финансовая дисциплина', 'Продолжать мониторинг и оптимизацию');
-      
-      setText('recommendation-1', recs[0] || '—');
-      setText('recommendation-2', recs[1] || '—');
-      setText('recommendation-3', recs[2] || '—');
       
       // Final
       setText('final-emoji', deltaChange >= 0 ? '🎯' : '📊');

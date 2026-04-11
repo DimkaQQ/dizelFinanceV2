@@ -44,6 +44,7 @@
       background: var(--bg-card);
       position: relative;
       page-break-after: always;
+      page-break-inside: avoid;
     }
     .page:last-child { page-break-after: auto; }
     
@@ -119,7 +120,10 @@
     .metric-card .delta.pos { color: var(--success); }
     .metric-card .delta.neg { color: var(--danger); }
     
-    .section { margin: 20px 0; }
+    .section { 
+      margin: 20px 0; 
+      page-break-inside: avoid;
+    }
     .section-title {
       font-size: 14px; font-weight: 700; color: var(--text-primary);
       padding-bottom: 10px; border-bottom: 2px solid var(--border-light);
@@ -188,17 +192,21 @@
     .data-table .amount.neg { color: var(--danger); }
     
     .chart-box {
-      background: transparent; border: none;
-      border-radius: var(--radius-md); padding: 10px 0; margin: 30px 0 10px;
+      background: white; 
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md); 
+      padding: 15px; 
+      margin: 20px 0;
+      page-break-inside: avoid;
     }
     
     .css-bar-chart {
       display: flex;
       align-items: flex-end;
       justify-content: space-around;
-      height: 160px;
-      padding: 10px 5px 20px;
-      background: white;
+      height: 140px;
+      padding: 10px 5px 15px;
+      background: #f8fafc;
       border-radius: 8px;
     }
     .css-bar-wrapper {
@@ -207,7 +215,7 @@
       align-items: center;
       gap: 4px;
       flex: 1;
-      max-width: 60px;
+      max-width: 55px;
     }
     .css-bar {
       width: 100%;
@@ -238,6 +246,7 @@
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
       padding: 16px 18px; margin: 16px 0;
+      page-break-inside: avoid;
     }
     .insights ul { margin-left: 16px; margin-top: 8px; }
     .insights li { margin: 6px 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
@@ -247,6 +256,7 @@
     .final-card {
       background: var(--bg-accent); border-radius: var(--radius-lg);
       padding: 28px 24px; color: white; text-align: center; margin: 20px 0;
+      page-break-inside: avoid;
     }
     .final-card .emoji { font-size: 42px; margin-bottom: 14px; }
     .final-card .headline { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
@@ -485,13 +495,13 @@
         }).join('');
       }
       
-      // Quarterly Bar Chart (CSS)
+      // Quarterly Bar Chart (CSS) - FIXED
       const barChart = document.getElementById('quarter-bar-chart');
       if (barChart && data.monthly_data && data.monthly_data.length > 0) {
         const maxVal = Math.max(...data.monthly_data.map(m => Math.max(m.income || 0, m.expense || 0)));
         barChart.innerHTML = data.monthly_data.map(m => {
-          const incomeHeight = maxVal > 0 ? Math.max(4, (m.income / maxVal * 120)) : 4;
-          const expenseHeight = maxVal > 0 ? Math.max(4, (m.expense / maxVal * 120)) : 4;
+          const incomeHeight = maxVal > 0 ? Math.max(4, (m.income / maxVal * 100)) : 4;
+          const expenseHeight = maxVal > 0 ? Math.max(4, (m.expense / maxVal * 100)) : 4;
           const shortName = (m.month_name || '').substr(0, 3);
           return `
             <div class="css-bar-wrapper">

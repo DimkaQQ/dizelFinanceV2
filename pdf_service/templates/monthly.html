@@ -44,6 +44,7 @@
       background: var(--bg-card);
       position: relative;
       page-break-after: always;
+      page-break-inside: avoid;
     }
     .page:last-child { page-break-after: auto; }
     
@@ -119,7 +120,7 @@
     .metric-card .delta.pos { color: var(--success); }
     .metric-card .delta.neg { color: var(--danger); }
     
-    .section { margin: 20px 0; }
+    .section { margin: 20px 0; page-break-inside: avoid; }
     .section-title {
       font-size: 14px; font-weight: 700; color: var(--text-primary);
       padding-bottom: 10px; border-bottom: 2px solid var(--border-light);
@@ -192,57 +193,11 @@
     .data-table .amount.pos { color: var(--success); }
     .data-table .amount.neg { color: var(--danger); }
     
-    .chart-box {
-      background: transparent; border: none;
-      border-radius: var(--radius-md); padding: 10px 0; margin: 30px 0 10px;
-    }
-    
-    .css-bar-chart {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-around;
-      height: 160px;
-      padding: 10px 5px 20px;
-      background: white;
-      border-radius: 8px;
-    }
-    .css-bar-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      flex: 1;
-      max-width: 35px;
-    }
-    .css-bar {
-      width: 100%;
-      background: linear-gradient(to top, var(--success), #34d399);
-      border-radius: 4px 4px 0 0;
-      min-height: 2px;
-    }
-    .css-bar.expense {
-      background: linear-gradient(to top, var(--danger), #f87171);
-    }
-    .css-bar-label {
-      font-size: 8px;
-      color: var(--text-muted);
-      text-align: center;
-      white-space: nowrap;
-      margin-top: 4px;
-    }
-    .css-bar-value {
-      font-size: 7px;
-      font-weight: 600;
-      font-family: var(--font-mono);
-      color: var(--text-secondary);
-      line-height: 1;
-    }
-    
     .insights {
       background: linear-gradient(135deg, #f8fafc, #fff);
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
-      padding: 16px 18px; margin: 16px 0;
+      padding: 16px 18px; margin: 16px 0; page-break-inside: avoid;
     }
     .insights ul { margin-left: 16px; margin-top: 8px; }
     .insights li { margin: 6px 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
@@ -252,6 +207,7 @@
     .final-card {
       background: var(--bg-accent); border-radius: var(--radius-lg);
       padding: 28px 24px; color: white; text-align: center; margin: 20px 0;
+      page-break-inside: avoid;
     }
     .final-card .emoji { font-size: 42px; margin-bottom: 14px; }
     .final-card .headline { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
@@ -340,12 +296,16 @@
 
     <div class="section">
       <div class="section-title"><span class="num">1</span> Недельная динамика</div>
-      <div class="weeks-grid" id="weeks-grid"></div>
+      <div class="weeks-grid" id="weeks-grid">
+        <!-- Заполняется JavaScript -->
+      </div>
     </div>
 
     <div class="section">
       <div class="section-title"><span class="num">2</span> Топ-5 категорий расходов</div>
-      <div class="bar-list" id="top-categories"></div>
+      <div class="bar-list" id="top-categories">
+        <!-- Заполняется JavaScript -->
+      </div>
     </div>
 
     <footer class="page-footer">
@@ -462,68 +422,81 @@
       
       setText('delta-label', delta >= 0 ? '📈 Профицит' : '⚠️ Дефицит');
       
-      // Weeks grid
+      // Weeks grid - FIX: создаём заглушки если данных нет
       const wGrid = document.getElementById('weeks-grid');
-      if (data.weeks && data.weeks.length > 0) {
-        wGrid.innerHTML = data.weeks.map(w => {
-          const wDelta = (w.income || 0) - (w.expense || 0);
-          return `
-            <div class="week-card">
-              <div class="w-label">${w.label || 'Неделя'}</div>
-              <div class="row"><span>Доход:</span><span class="val pos">${fmt(w.income)} ₽</span></div>
-              <div class="row"><span>Расход:</span><span class="val neg">${fmt(w.expense)} ₽</span></div>
-              <div class="row"><span>Δ:</span><span class="val ${wDelta >= 0 ? 'pos' : 'neg'}">${fmt(wDelta)} ₽</span></div>
-            </div>`;
-        }).join('');
+      if (wGrid) {
+        if (data.weeks && data.weeks.length > 0) {
+          wGrid.innerHTML = data.weeks.map(w => {
+            const wDelta = (w.income || 0) - (w.expense || 0);
+            return `
+              <div class="week-card">
+                <div class="w-label">${w.label || 'Неделя'}</div>
+                <div class="row"><span>Доход:</span><span class="val pos">${fmt(w.income)} ₽</span></div>
+                <div class="row"><span>Расход:</span><span class="val neg">${fmt(w.expense)} ₽</span></div>
+                <div class="row"><span>Δ:</span><span class="val ${wDelta >= 0 ? 'pos' : 'neg'}">${fmt(wDelta)} ₽</span></div>
+              </div>`;
+          }).join('');
+        } else {
+          // Показываем заглушки если недель нет
+          wGrid.innerHTML = `
+            <div class="week-card"><div class="w-label">Неделя 1</div><div style="font-size:9px;color:var(--text-muted);padding:8px 0;">Нет данных</div></div>
+            <div class="week-card"><div class="w-label">Неделя 2</div><div style="font-size:9px;color:var(--text-muted);padding:8px 0;">Нет данных</div></div>
+            <div class="week-card"><div class="w-label">Неделя 3</div><div style="font-size:9px;color:var(--text-muted);padding:8px 0;">Нет данных</div></div>
+            <div class="week-card"><div class="w-label">Неделя 4</div><div style="font-size:9px;color:var(--text-muted);padding:8px 0;">Нет данных</div></div>
+          `;
+        }
       }
       
       // Top categories
       const topCats = document.getElementById('top-categories');
-      if (data.top_categories && data.top_categories.length > 0) {
-        const total = totalExpense || 1;
-        topCats.innerHTML = data.top_categories.slice(0,5).map(cat => {
-          const pct = Math.min(100, ((cat.total || 0) / total * 100).toFixed(1));
-          return `
-            <div class="bar-item">
-              <div class="name">${cat.name || '—'}</div>
-              <div class="track"><div class="fill" style="width:${pct}%"></div></div>
-              <div class="amount">${fmt(cat.total)} ₽</div>
-              <div class="pct">${pct}%</div>
-            </div>`;
-        }).join('');
+      if (topCats) {
+        if (data.top_categories && data.top_categories.length > 0) {
+          const total = totalExpense || 1;
+          topCats.innerHTML = data.top_categories.slice(0,5).map(cat => {
+            const pct = Math.min(100, ((cat.total || 0) / total * 100).toFixed(1));
+            return `
+              <div class="bar-item">
+                <div class="name">${cat.name || '—'}</div>
+                <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+                <div class="amount">${fmt(cat.total)} ₽</div>
+                <div class="pct">${pct}%</div>
+              </div>`;
+          }).join('');
+        } else {
+          topCats.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:11px;">Нет данных по категориям</div>';
+        }
       }
       
       // Transactions table
       const txBody = document.getElementById('transactions-body');
-      if (data.transactions && data.transactions.length > 0) {
-        txBody.innerHTML = data.transactions.map(tx => {
-          const income = tx.tx_type === 'Доход' ? fmt(tx.amount) : '—';
-          const expense = tx.tx_type === 'Расход' ? fmt(tx.amount) : '—';
-          return `
-            <tr>
-              <td>${tx.date || '—'}</td>
-              <td>${tx.category || '—'}</td>
-              <td class="amount pos">${income} ₽</td>
-              <td class="amount neg">${expense} ₽</td>
-              <td>${tx.tx_type === 'Доход' ? '💰' : '💸'}</td>
-            </tr>`;
-        }).join('');
+      if (txBody) {
+        if (data.transactions && data.transactions.length > 0) {
+          txBody.innerHTML = data.transactions.map(tx => {
+            const income = tx.tx_type === 'Доход' ? fmt(tx.amount) : '—';
+            const expense = tx.tx_type === 'Расход' ? fmt(tx.amount) : '—';
+            return `
+              <tr>
+                <td>${tx.date || '—'}</td>
+                <td>${tx.category || '—'}</td>
+                <td class="amount pos">${income} ₽</td>
+                <td class="amount neg">${expense} ₽</td>
+                <td>${tx.tx_type === 'Доход' ? '💰' : '💸'}</td>
+              </tr>`;
+          }).join('');
+        } else {
+          txBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Нет транзакций за этот период</td></tr>';
+        }
       }
       
       // Insights
-      const avgCheck = data.transactions && data.transactions.length > 0 
-        ? totalExpense / data.transactions.filter(t => t.tx_type === 'Расход').length 
-        : 0;
+      const expenses = data.transactions ? data.transactions.filter(t => t.tx_type === 'Расход') : [];
+      const avgCheck = expenses.length > 0 ? totalExpense / expenses.length : 0;
       setText('avg-check', `${fmt(avgCheck)} ₽`);
       
-      const maxExpense = data.transactions 
-        ? Math.max(...data.transactions.filter(t => t.tx_type === 'Расход').map(t => t.amount || 0))
-        : 0;
-      const maxCat = data.transactions 
-        ? data.transactions.find(t => t.amount === maxExpense && t.tx_type === 'Расход')?.category 
-        : '—';
+      const maxExpense = expenses.length > 0 ? Math.max(...expenses.map(t => t.amount || 0)) : 0;
+      const maxCat = expenses.find(t => t.amount === maxExpense)?.category || '—';
       setText('max-expense', `${fmt(maxExpense)} ₽`);
-      setText('max-category', maxCat || '—');
+      setText('max-category', maxCat);
       
       const activeDays = data.transactions ? new Set(data.transactions.map(t => t.date)).size : 0;
       const totalDays = new Date(year, data.month, 0).getDate();
