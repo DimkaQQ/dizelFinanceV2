@@ -152,19 +152,49 @@
     .bar-item .amount { font-weight: 700; font-family: var(--font-mono); font-size: 11px; text-align: right; }
     .bar-item .pct { font-size: 10px; color: var(--text-muted); text-align: right; font-family: var(--font-mono); }
     
-    .data-table { width: 100%; border-collapse: collapse; font-size: 10px; margin: 6px 0; }
-    .data-table thead { background: #f1f5f9; border-bottom: 2px solid var(--border-light); }
-    .data-table th { font-weight: 700; color: var(--text-secondary); text-align: left; padding: 10px 8px; text-transform: uppercase; font-size: 9px; letter-spacing: 0.04em; }
-    .data-table td { padding: 9px 8px; border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
+    .data-table { 
+      width: 100%; 
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 10px; 
+      margin: 6px 0; 
+    }
+    .data-table thead { 
+      background: #f1f5f9; 
+      border-bottom: 2px solid var(--border-light); 
+    }
+    .data-table th { 
+      font-weight: 700; 
+      color: var(--text-secondary); 
+      text-align: right; 
+      padding: 10px 8px; 
+      text-transform: uppercase; 
+      font-size: 9px; 
+      letter-spacing: 0.04em;
+      border-bottom: 2px solid var(--border-light);
+    }
+    .data-table th:first-child {
+      text-align: left;
+    }
+    .data-table td { 
+      padding: 9px 8px; 
+      border-bottom: 1px solid var(--border-light); 
+      color: var(--text-primary);
+      text-align: right;
+    }
+    .data-table td:first-child {
+      text-align: left;
+      font-weight: 600;
+    }
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover { background: #f8fafc; }
-    .data-table .amount { font-family: var(--font-mono); font-weight: 600; text-align: right; white-space: nowrap; }
+    .data-table .amount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
     .data-table .amount.pos { color: var(--success); }
     .data-table .amount.neg { color: var(--danger); }
     
     .chart-box {
       background: #f8fafc; border: 1px solid var(--border-light);
-      border-radius: var(--radius-md); padding: 16px; margin: 14px 0;
+      border-radius: var(--radius-md); padding: 16px; margin: 20px 0 10px;
     }
     
     /* Monthly Bar Chart - FIXED SIZE */
@@ -172,8 +202,8 @@
       display: flex;
       align-items: flex-end;
       justify-content: space-around;
-      height: 160px;
-      padding: 10px 5px 20px;
+      height: 180px;
+      padding: 15px 5px 25px;
       background: white;
       border-radius: 8px;
     }
@@ -395,7 +425,7 @@
 
   <!-- Страница 3: Помесячная таблица + бар-чарт -->
   <div class="page">
-    <header class="page-header">
+    <header class="page-header" style="margin-bottom:16px;">
       <div>
         <div class="title">Помесячная детализация</div>
         <div class="subtitle">Транзакции по месяцам</div>
@@ -405,17 +435,17 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th width="60">Мес</th>
-          <th class="text-right">Доходы</th>
-          <th class="text-right">Расходы</th>
-          <th class="text-right">Дельта</th>
-          <th class="text-right">Активы</th>
+          <th style="width:18%; text-align:left;">Мес</th>
+          <th style="width:20.5%;">Доходы</th>
+          <th style="width:20.5%;">Расходы</th>
+          <th style="width:20.5%;">Дельта</th>
+          <th style="width:20.5%;">Активы</th>
         </tr>
       </thead>
       <tbody id="monthly-body"></tbody>
     </table>
 
-    <div class="chart-box mt-2">
+    <div class="chart-box">
       <div class="css-bar-chart" id="monthly-bar-chart"></div>
     </div>
 
@@ -610,24 +640,25 @@
       if (data.monthly_data && data.monthly_data.length > 0) {
         mBody.innerHTML = data.monthly_data.map(m => {
           const mDelta = (m.income || 0) - (m.expense || 0);
+          const deltaSign = mDelta >= 0 ? '+' : '';
           return `
             <tr>
-              <td class="font-bold">${m.month_name || '—'}</td>
+              <td>${m.month_name || '—'}</td>
               <td class="amount pos">${fmt(m.income)} ₽</td>
               <td class="amount neg">${fmt(m.expense)} ₽</td>
-              <td class="amount ${mDelta >= 0 ? 'pos' : 'neg'}">${fmt(mDelta)} ₽</td>
+              <td class="amount ${mDelta >= 0 ? 'pos' : 'neg'}">${deltaSign}${fmt(mDelta)} ₽</td>
               <td class="amount">${fmt(m.assets)} ₽</td>
             </tr>`;
         }).join('');
       }
       
-      // Monthly Bar Chart - FIXED SIZING
+      // Monthly Bar Chart - OPTIMIZED POSITION
       const barChart = document.getElementById('monthly-bar-chart');
       if (barChart && data.monthly_data && data.monthly_data.length > 0) {
         const maxVal = Math.max(...data.monthly_data.map(m => Math.max(m.income || 0, m.expense || 0)));
         barChart.innerHTML = data.monthly_data.map(m => {
-          const incomeHeight = maxVal > 0 ? Math.max(4, (m.income / maxVal * 120)) : 4;
-          const expenseHeight = maxVal > 0 ? Math.max(4, (m.expense / maxVal * 120)) : 4;
+          const incomeHeight = maxVal > 0 ? Math.max(4, (m.income / maxVal * 130)) : 4;
+          const expenseHeight = maxVal > 0 ? Math.max(4, (m.expense / maxVal * 130)) : 4;
           const shortName = (m.month_name || '').substr(0, 3);
           return `
             <div class="css-bar-wrapper">
@@ -656,7 +687,7 @@
         }).join('');
       }
       
-      // Category Pie Chart - FIXED SIZING
+      // Category Pie Chart
       const pieContainer = document.getElementById('category-pie');
       if (pieContainer && data.top_categories && data.top_categories.length > 0) {
         const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
@@ -685,7 +716,7 @@
         `;
       }
       
-      // Trend Line Chart - FULL WIDTH SVG
+      // Trend Line Chart
       const trendChart = document.getElementById('trend-line-chart');
       if (trendChart && data.trend && data.trend.length > 0) {
         const svgWidth = 700;
