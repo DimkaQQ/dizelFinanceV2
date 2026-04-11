@@ -44,6 +44,7 @@
       background: var(--bg-card);
       position: relative;
       page-break-after: always;
+      page-break-inside: avoid;
     }
     .page:last-child { page-break-after: auto; }
     
@@ -160,7 +161,7 @@
     .metric-card .value.neg { color: var(--danger); }
     .metric-card .sub { font-size: 9px; color: var(--text-muted); }
     
-    .section { margin: 20px 0; }
+    .section { margin: 20px 0; page-break-inside: avoid; }
     .section-title {
       font-size: 14px; font-weight: 700; color: var(--text-primary);
       padding-bottom: 10px; border-bottom: 2px solid var(--border-light);
@@ -198,6 +199,7 @@
     .chart-box {
       background: transparent; border: none;
       border-radius: var(--radius-md); padding: 10px 0; margin: 20px 0 10px;
+      page-break-inside: avoid;
     }
     
     .css-line-chart {
@@ -218,6 +220,7 @@
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
       padding: 16px 18px; margin: 16px 0;
+      page-break-inside: avoid;
     }
     .insights ul { margin-left: 16px; margin-top: 8px; }
     .insights li { margin: 6px 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
@@ -229,6 +232,7 @@
       padding: 28px 24px; color: white; text-align: center; margin: 20px 0;
       position: relative;
       overflow: hidden;
+      page-break-inside: avoid;
     }
     .final-card::before {
       content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
@@ -325,11 +329,11 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 2 из 3</div>
+      <div class="page-num">Страница 2 из 4</div>
     </footer>
   </div>
 
-  <!-- Страница 3: Категории активов -->
+  <!-- Страница 3: Категории активов и график -->
   <div class="page">
     <header class="page-header">
       <div>
@@ -346,6 +350,21 @@
     <div class="chart-box">
       <div class="css-line-chart" id="networth-chart"></div>
     </div>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
+      <div class="page-num">Страница 3 из 4</div>
+    </footer>
+  </div>
+
+  <!-- Страница 4: Анализ и итог -->
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <div class="title">Анализ капитала</div>
+        <div class="subtitle">Итоги и рекомендации</div>
+      </div>
+    </header>
 
     <div class="insights">
       <strong>📌 Анализ капитала:</strong>
@@ -374,7 +393,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
-      <div class="page-num">Страница 3 из 3</div>
+      <div class="page-num">Страница 4 из 4</div>
     </footer>
   </div>
 

@@ -175,23 +175,19 @@
       font-size: 9px; 
       letter-spacing: 0.04em;
     }
-    .data-table th:first-child {
-      text-align: left;
-    }
+    .data-table th:first-child { text-align: left; }
     .data-table td { 
       padding: 9px 8px; 
       border-bottom: 1px solid var(--border-light); 
       color: var(--text-primary);
       text-align: right;
     }
-    .data-table td:first-child {
-      text-align: left;
-      font-weight: 600;
-    }
+    .data-table td:first-child { text-align: left; font-weight: 600; }
     .data-table tr:last-child td { border-bottom: none; }
     .data-table .amount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
     .data-table .amount.pos { color: var(--success); }
     .data-table .amount.neg { color: var(--danger); }
+    .data-table .type { text-align: center; font-size: 16px; }
     
     .insights {
       background: linear-gradient(135deg, #f8fafc, #fff);
@@ -310,11 +306,11 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 2 из 3</div>
+      <div class="page-num">Страница 2 из 4</div>
     </footer>
   </div>
 
-  <!-- Страница 3: Детализация и инсайты -->
+  <!-- Страница 3: Детализация транзакций -->
   <div class="page">
     <header class="page-header" style="margin-bottom:16px;">
       <div>
@@ -326,15 +322,30 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width:15%; text-align:left;">Дата</th>
-          <th style="width:25%; text-align:left;">Категория</th>
-          <th style="width:25%;">Доходы</th>
-          <th style="width:25%;">Расходы</th>
-          <th style="width:10%;">Тип</th>
+          <th style="width:18%; text-align:left;">Дата</th>
+          <th style="width:32%; text-align:left;">Категория</th>
+          <th style="width:25%;">Сумма</th>
+          <th style="width:15%;">Тип</th>
+          <th style="width:10%;"> </th>
         </tr>
       </thead>
       <tbody id="transactions-body"></tbody>
     </table>
+
+    <footer class="page-footer">
+      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
+      <div class="page-num">Страница 3 из 4</div>
+    </footer>
+  </div>
+
+  <!-- Страница 4: Инсайты и итог -->
+  <div class="page">
+    <header class="page-header" style="margin-bottom:16px;">
+      <div>
+        <div class="title">Анализ и выводы</div>
+        <div class="subtitle">Рекомендации</div>
+      </div>
+    </header>
 
     <div class="insights">
       <strong>📌 Ключевые наблюдения:</strong>
@@ -361,7 +372,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
-      <div class="page-num">Страница 3 из 3</div>
+      <div class="page-num">Страница 4 из 4</div>
     </footer>
   </div>
 
@@ -422,7 +433,7 @@
       
       setText('delta-label', delta >= 0 ? '📈 Профицит' : '⚠️ Дефицит');
       
-      // Weeks grid - FIX: создаём заглушки если данных нет
+      // Weeks grid - FIX: проверяем есть ли данные по неделям
       const wGrid = document.getElementById('weeks-grid');
       if (wGrid) {
         if (data.weeks && data.weeks.length > 0) {
@@ -467,20 +478,23 @@
         }
       }
       
-      // Transactions table
+      // Transactions table - упрощённая версия
       const txBody = document.getElementById('transactions-body');
       if (txBody) {
         if (data.transactions && data.transactions.length > 0) {
           txBody.innerHTML = data.transactions.map(tx => {
-            const income = tx.tx_type === 'Доход' ? fmt(tx.amount) : '—';
-            const expense = tx.tx_type === 'Расход' ? fmt(tx.amount) : '—';
+            const amount = tx.amount || 0;
+            const txType = tx.tx_type || 'Расход';
+            const icon = txType === 'Доход' ? '💰' : '💸';
+            const amountClass = txType === 'Доход' ? 'pos' : 'neg';
+            
             return `
               <tr>
                 <td>${tx.date || '—'}</td>
                 <td>${tx.category || '—'}</td>
-                <td class="amount pos">${income} ₽</td>
-                <td class="amount neg">${expense} ₽</td>
-                <td>${tx.tx_type === 'Доход' ? '💰' : '💸'}</td>
+                <td class="amount ${amountClass}">${fmt(amount)} ₽</td>
+                <td class="type">${icon}</td>
+                <td style="font-size:9px;color:var(--text-muted);">${txType}</td>
               </tr>`;
           }).join('');
         } else {

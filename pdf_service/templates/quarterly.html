@@ -163,7 +163,7 @@
       border-collapse: separate;
       border-spacing: 0;
       font-size: 10px; 
-      margin: 6px 0; 
+      margin: 6px 0 25px; /* Увеличил отступ снизу */
     }
     .data-table thead { 
       background: #f1f5f9; 
@@ -195,8 +195,8 @@
       background: white; 
       border: 1px solid var(--border-light);
       border-radius: var(--radius-md); 
-      padding: 15px; 
-      margin: 20px 0;
+      padding: 20px; /* Увеличил padding */
+      margin: 30px 0 15px; /* Увеличил отступы */
       page-break-inside: avoid;
     }
     
@@ -204,8 +204,8 @@
       display: flex;
       align-items: flex-end;
       justify-content: space-around;
-      height: 140px;
-      padding: 10px 5px 15px;
+      height: 120px; /* Уменьшил высоту */
+      padding: 15px 5px 20px; /* Увеличил padding снизу для labels */
       background: #f8fafc;
       border-radius: 8px;
     }
@@ -213,7 +213,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 6px; /* Увеличил gap */
       flex: 1;
       max-width: 55px;
     }
@@ -231,7 +231,7 @@
       color: var(--text-muted);
       text-align: center;
       white-space: nowrap;
-      margin-top: 4px;
+      margin-top: 6px;
     }
     .css-bar-value {
       font-size: 8px;
@@ -245,7 +245,7 @@
       background: linear-gradient(135deg, #f8fafc, #fff);
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
-      padding: 16px 18px; margin: 16px 0;
+      padding: 16px 18px; margin: 25px 0; /* Увеличил отступы */
       page-break-inside: avoid;
     }
     .insights ul { margin-left: 16px; margin-top: 8px; }
@@ -255,7 +255,7 @@
     
     .final-card {
       background: var(--bg-accent); border-radius: var(--radius-lg);
-      padding: 28px 24px; color: white; text-align: center; margin: 20px 0;
+      padding: 28px 24px; color: white; text-align: center; margin: 30px 0; /* Увеличил отступы */
       page-break-inside: avoid;
     }
     .final-card .emoji { font-size: 42px; margin-bottom: 14px; }
@@ -500,8 +500,8 @@
       if (barChart && data.monthly_data && data.monthly_data.length > 0) {
         const maxVal = Math.max(...data.monthly_data.map(m => Math.max(m.income || 0, m.expense || 0)));
         barChart.innerHTML = data.monthly_data.map(m => {
-          const incomeHeight = maxVal > 0 ? Math.max(4, (m.income / maxVal * 100)) : 4;
-          const expenseHeight = maxVal > 0 ? Math.max(4, (m.expense / maxVal * 100)) : 4;
+          const incomeHeight = maxVal > 0 ? Math.max(4, (m.income / maxVal * 80)) : 4; /* Уменьшил множитель */
+          const expenseHeight = maxVal > 0 ? Math.max(4, (m.expense / maxVal * 80)) : 4;
           const shortName = (m.month_name || '').substr(0, 3);
           return `
             <div class="css-bar-wrapper">

@@ -11,8 +11,8 @@
       --bg-card: #ffffff;
       --bg-accent: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
       --text-primary: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
       --accent-gold: #d4af37;
       --accent-gold-light: #f5e6a3;
       --success: #10b981;
@@ -172,7 +172,7 @@
     
     .data-table {
       width: 100%; border-collapse: separate; border-spacing: 0;
-      font-size: 10px; margin: 6px 0;
+      font-size: 10px; margin: 6px 0 35px; /* Увеличил отступ снизу */
     }
     .data-table thead { background: #f1f5f9; border-bottom: 2px solid var(--border-light); }
     .data-table th {
@@ -203,8 +203,8 @@
       background: white; 
       border: 1px solid var(--border-light);
       border-radius: var(--radius-md); 
-      padding: 20px; 
-      margin: 20px 0;
+      padding: 30px 20px; /* Увеличил padding сверху */
+      margin: 40px 0 20px; /* Увеличил отступы */
       page-break-inside: avoid;
     }
     
@@ -212,8 +212,8 @@
       display: flex;
       align-items: flex-end;
       justify-content: space-around;
-      height: 180px;
-      padding: 15px 20px 25px;
+      height: 160px; /* Уменьшил высоту */
+      padding: 20px 20px 30px; /* Увеличил padding для spacing */
       background: #f8fafc;
       border-radius: 8px;
       gap: 30px;
@@ -222,7 +222,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 12px; /* Увеличил gap */
       flex: 1;
       max-width: 140px;
     }
@@ -230,7 +230,7 @@
       display: flex;
       gap: 12px;
       align-items: flex-end;
-      height: 140px;
+      height: 120px; /* Уменьшил высоту */
       justify-content: center;
     }
     .css-bar-compare .bar {
@@ -257,20 +257,20 @@
       background: linear-gradient(135deg, #f8fafc, #fff);
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
-      padding: 16px 18px; margin: 16px 0;
+      padding: 20px 18px; margin: 30px 0; /* Увеличил отступы */
       page-break-inside: avoid;
     }
-    .insights ul { margin-left: 16px; margin-top: 8px; }
-    .insights li { margin: 6px 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
-    .insights li strong { color: var(--text-primary); font-weight: 600; }
+    .insights ul { margin-left: 16px; margin-top: 12px; }
+    .insights li { margin: 8px 0; font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+    .insights li strong { color: var(--text-primary); font-weight: 700; }
     .insights li .highlight {
-      background: var(--accent-gold-light); padding: 2px 5px;
+      background: var(--accent-gold-light); padding: 3px 6px;
       border-radius: 4px; font-weight: 600; color: var(--text-primary);
     }
     
     .final-card {
       background: var(--bg-accent); border-radius: var(--radius-lg);
-      padding: 28px 24px; color: white; text-align: center; margin: 20px 0;
+      padding: 32px 24px; color: white; text-align: center; margin: 30px 0; /* Увеличил отступы */
       position: relative; overflow: hidden;
       page-break-inside: avoid;
     }
@@ -282,7 +282,7 @@
     .final-card .emoji { font-size: 48px; margin-bottom: 16px; position: relative; }
     .final-card .headline { font-size: 18px; font-weight: 700; margin-bottom: 12px; position: relative; }
     .final-card .note {
-      font-size: 10px; opacity: 0.75; margin-top: 16px;
+      font-size: 10px; opacity: 0.75; margin-top: 20px;
       padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2);
       position: relative;
     }
@@ -344,7 +344,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 2 из 3</div>
+      <div class="page-num">Страница 2 из 4</div>
     </footer>
   </div>
 
@@ -373,6 +373,21 @@
       <div class="css-bar-compare" id="compare-chart"></div>
     </div>
 
+    <footer class="page-footer">
+      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
+      <div class="page-num">Страница 3 из 4</div>
+    </footer>
+  </div>
+
+  <!-- Страница 4: Инсайты и итог -->
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <div class="title">Анализ и выводы</div>
+        <div class="subtitle">Рекомендации</div>
+      </div>
+    </header>
+
     <div class="insights">
       <strong>📌 Ключевые изменения:</strong>
       <ul>
@@ -393,7 +408,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
-      <div class="page-num">Страница 3 из 3</div>
+      <div class="page-num">Страница 4 из 4</div>
     </footer>
   </div>
 
@@ -520,10 +535,10 @@
           p2.total_income || 1, p2.total_expense || 1
         );
         
-        const p1IncomeHeight = (p1.total_income / maxValue) * 120;
-        const p2IncomeHeight = (p2.total_income / maxValue) * 120;
-        const p1ExpenseHeight = (p1.total_expense / maxValue) * 120;
-        const p2ExpenseHeight = (p2.total_expense / maxValue) * 120;
+        const p1IncomeHeight = (p1.total_income / maxValue) * 100;
+        const p2IncomeHeight = (p2.total_income / maxValue) * 100;
+        const p1ExpenseHeight = (p1.total_expense / maxValue) * 100;
+        const p2ExpenseHeight = (p2.total_expense / maxValue) * 100;
         
         chartEl.innerHTML = `
           <div class="css-bar-group">
