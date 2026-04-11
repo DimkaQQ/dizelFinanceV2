@@ -3,6 +3,108 @@
 {% block page_title %}Транзакции{% endblock %}
 
 {% block content %}
+<style>
+  /* Улучшенная таблица */
+  .transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .transactions-table th {
+    padding: 12px 18px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--card-bg, #1a1b23);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .transactions-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+  .transactions-table tbody tr {
+    transition: background 0.15s ease;
+  }
+  .transactions-table tbody tr:hover {
+    background: rgba(255,255,255,0.02);
+  }
+  .transactions-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  /* Больше места для сумм */
+  .amount-cell {
+    text-align: right;
+    white-space: nowrap;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    padding-right: 24px !important;
+  }
+  .amount-currency {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 400;
+  }
+
+  /* Красивые квадратные кнопки пагинации */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 24px;
+    padding: 16px 0;
+  }
+  .pagination .page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--card-bg, #1a1b23);
+    border: 1px solid var(--border, rgba(255,255,255,0.08));
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .pagination .page-btn:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.15);
+    transform: translateY(-1px);
+  }
+  .pagination .page-btn.active {
+    background: var(--accent, #34d399);
+    color: #0a0a0a;
+    font-weight: 700;
+    border-color: var(--accent, #34d399);
+    box-shadow: 0 2px 12px rgba(52, 211, 153, 0.3);
+  }
+  .pagination .page-dots {
+    color: var(--muted);
+    padding: 0 6px;
+    user-select: none;
+  }
+  .pagination .page-btn.nav-btn {
+    background: transparent;
+    border-color: transparent;
+    font-size: 1.1rem;
+  }
+  .pagination .page-btn.nav-btn:hover {
+    background: rgba(255,255,255,0.06);
+  }
+</style>
+
 <!-- Фильтры -->
 <div class="card" style="margin-bottom:20px">
   <form method="GET" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap">
@@ -51,7 +153,7 @@
 <!-- Таблица -->
 <div class="card" style="padding:0; overflow:hidden">
   <div class="table-wrap">
-    <table>
+    <table class="transactions-table">
       <thead>
         <tr>
           <th>Дата</th>
@@ -59,24 +161,24 @@
           <th>Раздел</th>
           <th>Место</th>
           <th style="text-align:right">Сумма</th>
-          <th style="text-align:right">₽</th>
-          <th>Тип</th>
-          <th></th>
+          <th style="text-align:right; width:80px">₽ экв.</th>
+          <th style="width:90px">Тип</th>
+          <th style="width:50px"></th>
         </tr>
       </thead>
       <tbody>
         {% for r in records %}
         <tr>
-          <td style="color:var(--muted); white-space:nowrap">{{ r.date_str }}</td>
+          <td style="color:var(--muted); white-space:nowrap; font-size:0.88rem">{{ r.date_str }}</td>
           <td style="font-weight:500">{{ r.category }}</td>
           <td style="color:var(--muted); font-size:0.82rem">{{ r.section }}</td>
           <td style="color:var(--muted); font-size:0.85rem; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
             {{ r.merchant or '—' }}
           </td>
-          <td style="text-align:right; white-space:nowrap; font-weight:500">
-            {{ "{:,.0f}".format(r.amount | float) }} {{ r.sym }}
+          <td class="amount-cell">
+            {{ "{:,.0f}".format(r.amount | float) }} <span class="amount-currency">{{ r.sym }}</span>
           </td>
-          <td style="text-align:right; white-space:nowrap; color:var(--muted); font-size:0.85rem">
+          <td class="amount-cell" style="font-size:0.85rem; font-weight:400; color:var(--muted)">
             {% if r.currency != 'RUB' %}
               {{ "{:,.0f}".format(r.amount_rub | float) }} ₽
             {% else %}—{% endif %}
@@ -93,7 +195,7 @@
           <td>
             <form method="POST" action="{{ url_for('delete_transaction', tx_id=r.id) }}"
                   onsubmit="return confirm('Удалить транзакцию?')">
-              <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+              <button type="submit" class="btn btn-danger btn-sm" style="opacity:0.5; transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">🗑</button>
             </form>
           </td>
         </tr>
@@ -114,7 +216,7 @@
 {% if pages > 1 %}
 <div class="pagination">
   {% if page > 1 %}
-    <a class="page-btn" href="?page={{ page-1 }}&year={{ year or '' }}&month={{ month or '' }}&section={{ section or '' }}">←</a>
+    <a class="page-btn nav-btn" href="?page={{ page-1 }}&year={{ year or '' }}&month={{ month or '' }}&section={{ section or '' }}">‹</a>
   {% endif %}
   {% for p in range(1, pages+1) %}
     {% if p == page or (p >= page-2 and p <= page+2) or p == 1 or p == pages %}
@@ -123,11 +225,11 @@
         {{ p }}
       </a>
     {% elif p == page-3 or p == page+3 %}
-      <span style="color:var(--muted); padding:0 4px">…</span>
+      <span class="page-dots">…</span>
     {% endif %}
   {% endfor %}
   {% if page < pages %}
-    <a class="page-btn" href="?page={{ page+1 }}&year={{ year or '' }}&month={{ month or '' }}&section={{ section or '' }}">→</a>
+    <a class="page-btn nav-btn" href="?page={{ page+1 }}&year={{ year or '' }}&month={{ month or '' }}&section={{ section or '' }}">›</a>
   {% endif %}
 </div>
 {% endif %}
