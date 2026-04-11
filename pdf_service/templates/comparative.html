@@ -211,8 +211,8 @@
       background: white; 
       border: 1px solid var(--border-light);
       border-radius: var(--radius-md); 
-      padding: 40px 20px; /* ← УВЕЛИЧИЛ padding сверху с 30px до 40px */
-      margin: 50px 0 20px; /* ← УВЕЛИЧИЛ отступы: сверху с 40px до 50px */
+      padding: 20px 20px 30px;
+      margin: 20px 0;
       page-break-inside: avoid;
     }
     
@@ -492,6 +492,7 @@
         const sign = deltaChange >= 0 ? '+' : '';
         mainDiffEl.textContent = `${sign}${fmt(deltaChange)} ₽`;
         mainDiffEl.className = `main-diff ${deltaChange >= 0 ? 'pos' : 'neg'}`;
+        detailsEl.style.color = deltaChange >= 0 ? '#34d399' : '#f87171';
         detailsEl.textContent = `Доходы: ${incomePct}% • Расходы: ${expensePct}% • Дельта: ${deltaChange >= 0 ? 'улучшилась' : 'ухудшилась'}`;
       }
       
@@ -551,21 +552,29 @@
         chartEl.innerHTML = `
           <div class="css-bar-group">
             <div class="bar-wrapper">
-              <div class="bar p1" style="height:${p1IncomeHeight}px" title="${p1.label}: ${fmt(p1.total_income)} ₽"></div>
-              <div class="bar p2" style="height:${p2IncomeHeight}px" title="${p2.label}: ${fmt(p2.total_income)} ₽"></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="bar p1" style="height:${p1IncomeHeight}px"></div>
+                <div class="css-bar-value">${p1.label}: ${fmt(p1.total_income/1000)}k</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="bar p2" style="height:${p2IncomeHeight}px"></div>
+                <div class="css-bar-value">${p2.label}: ${fmt(p2.total_income/1000)}k</div>
+              </div>
             </div>
             <div class="css-bar-label">Доходы</div>
-            <div class="css-bar-value">${fmt(p1.total_income/1000)}k</div>
-            <div class="css-bar-value">${fmt(p2.total_income/1000)}k</div>
           </div>
           <div class="css-bar-group">
             <div class="bar-wrapper">
-              <div class="bar p1" style="height:${p1ExpenseHeight}px" title="${p1.label}: ${fmt(p1.total_expense)} ₽"></div>
-              <div class="bar p2" style="height:${p2ExpenseHeight}px" title="${p2.label}: ${fmt(p2.total_expense)} ₽"></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="bar p1" style="height:${p1ExpenseHeight}px"></div>
+                <div class="css-bar-value">${p1.label}: ${fmt(p1.total_expense/1000)}k</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="bar p2" style="height:${p2ExpenseHeight}px"></div>
+                <div class="css-bar-value">${p2.label}: ${fmt(p2.total_expense/1000)}k</div>
+              </div>
             </div>
             <div class="css-bar-label">Расходы</div>
-            <div class="css-bar-value">${fmt(p1.total_expense/1000)}k</div>
-            <div class="css-bar-value">${fmt(p2.total_expense/1000)}k</div>
           </div>
         `;
       }
