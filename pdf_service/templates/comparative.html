@@ -4,178 +4,408 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Сравнительный анализ — Wealth Control</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     @page { size: A4; margin: 0; }
     :root {
-      --color-primary: #1e3a5f; --color-primary-light: #2c5282;
-      --color-success: #059669; --color-warning: #d97706; --color-danger: #dc2626;
-      --color-neutral-50: #f8fafc; --color-neutral-100: #f1f5f9; --color-neutral-200: #e2e8f0;
-      --color-neutral-300: #cbd5e1; --color-neutral-600: #475569; --color-neutral-700: #334155;
-      --color-neutral-800: #1e293b; --color-neutral-900: #0f172a;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05); --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
-      --radius: 8px; --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      --font-mono: "SF Mono", Monaco, "Roboto Mono", monospace;
+      --bg-page: #fafafa;
+      --bg-card: #ffffff;
+      --bg-accent: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-gold: #d4af37;
+      --accent-gold-light: #f5e6a3;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --primary: #3b82f6;
+      --border-light: rgba(15,23,42,0.08);
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", Monaco, Consolas, monospace;
     }
+    
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { font-size: 13px; }
-    body { font-family: var(--font-sans); background: #fff; color: var(--color-neutral-800); line-height: 1.5; -webkit-font-smoothing: antialiased; }
-    .page { width: 210mm; min-height: 297mm; padding: 20mm 16mm; margin: 0 auto; background: #fff; page-break-after: always; position: relative; }
+    html { font-size: 13px; -webkit-font-smoothing: antialiased; }
+    body { 
+      font-family: var(--font-main); 
+      background: var(--bg-page); 
+      color: var(--text-primary); 
+      line-height: 1.6;
+    }
+    
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 15mm 18mm;
+      margin: 0 auto;
+      background: var(--bg-card);
+      position: relative;
+      page-break-after: always;
+    }
     .page:last-child { page-break-after: auto; }
     
-    .report-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 2px solid var(--color-primary); margin-bottom: 24px; }
-    .report-header .brand { display: flex; align-items: center; gap: 12px; }
-    .report-header .logo { width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; }
-    .report-header .title h1 { font-size: 18px; font-weight: 700; color: var(--color-primary); letter-spacing: -0.02em; }
-    .report-header .title .subtitle { font-size: 12px; color: var(--color-neutral-600); margin-top: 2px; }
-    .report-header .meta { text-align: right; font-size: 11px; color: var(--color-neutral-600); line-height: 1.6; }
-    .report-header .meta strong { color: var(--color-neutral-800); font-weight: 600; }
+    .cover {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 40mm 24mm;
+      background: var(--bg-accent);
+      color: white;
+    }
+    .cover .logo {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, var(--accent-gold), #b89e2e);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(212,175,55,0.4);
+    }
+    .cover h1 {
+      font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px;
+    }
+    .cover .subtitle {
+      font-size: 14px; opacity: 0.9; margin-bottom: 32px;
+    }
+    .cover .period {
+      font-size: 16px; font-weight: 600; color: var(--accent-gold-light);
+      padding: 10px 24px; background: rgba(255,255,255,0.1); border-radius: 50px;
+    }
+    .cover .meta {
+      position: absolute; bottom: 22mm; left: 18mm; right: 18mm;
+      display: flex; justify-content: space-between; font-size: 11px; opacity: 0.7;
+    }
     
-    .periods-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
-    .period-card { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 18px 16px; text-align: center; }
-    .period-card .label { font-size: 13px; font-weight: 700; color: var(--color-primary); margin-bottom: 14px; }
-    .period-card .row { display: flex; justify-content: space-between; font-size: 11px; margin: 7px 0; color: var(--color-neutral-700); }
-    .period-card .row .val { font-weight: 600; font-family: var(--font-mono); }
-    .period-card .row .val.pos { color: var(--color-success); }
-    .period-card .row .val.neg { color: var(--color-danger); }
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 18px; border-bottom: 1px solid var(--border-light);
+      margin-bottom: 20px;
+    }
+    .page-header .title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+    .page-header .subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
     
-    .comparison-box { background: linear-gradient(135deg, var(--color-neutral-50), #fff); border: 1px solid var(--color-neutral-200); border-left: 4px solid var(--color-primary); border-radius: 0 var(--radius) var(--radius) 0; padding: 18px 20px; margin: 24px 0; }
-    .comparison-box .title { font-size: 12px; color: var(--color-neutral-600); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .comparison-box .diff { font-size: 26px; font-weight: 700; margin: 6px 0; font-family: var(--font-mono); }
-    .comparison-box .diff.pos { color: var(--color-success); }
-    .comparison-box .diff.neg { color: var(--color-danger); }
-    .comparison-box .details { font-size: 11px; color: var(--color-neutral-600); margin-top: 8px; }
+    .periods-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 28px;
+    }
+    .period-card {
+      background: linear-gradient(135deg, #fff, #f8fafc);
+      border: 2px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 20px 18px;
+      text-align: center;
+      position: relative;
+    }
+    .period-card.active {
+      border-color: var(--accent-gold);
+      box-shadow: 0 4px 12px rgba(212,175,55,0.2);
+    }
+    .period-card .label {
+      font-size: 14px; font-weight: 700; color: var(--text-primary);
+      margin-bottom: 16px; padding: 6px 12px;
+      background: var(--bg-accent); color: white;
+      border-radius: 8px; display: inline-block;
+    }
+    .period-card .metric {
+      margin: 10px 0;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid var(--border-light);
+    }
+    .period-card .metric:last-child { border-bottom: none; }
+    .period-card .metric-label {
+      font-size: 11px; color: var(--text-secondary);
+    }
+    .period-card .metric-value {
+      font-size: 16px; font-weight: 700; font-family: var(--font-mono);
+    }
+    .period-card .metric-value.pos { color: var(--success); }
+    .period-card .metric-value.neg { color: var(--danger); }
+    .period-card .metric-value.gold { color: var(--accent-gold); }
     
-    .section { margin: 28px 0; }
-    .section-title { font-size: 14px; font-weight: 700; color: var(--color-primary); padding-bottom: 10px; border-bottom: 1px solid var(--color-neutral-200); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .section-title::before { content: ""; width: 4px; height: 16px; background: var(--color-primary); border-radius: 2px; }
+    .comparison-hero {
+      background: linear-gradient(135deg, var(--bg-accent), #1e293b);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      margin: 24px 0;
+      color: white;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .comparison-hero::before {
+      content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle, rgba(212,175,55,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .comparison-hero .title {
+      font-size: 12px; color: var(--accent-gold-light);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 12px; position: relative;
+    }
+    .comparison-hero .main-diff {
+      font-size: 32px; font-weight: 800; font-family: var(--font-mono);
+      margin: 12px 0; position: relative;
+    }
+    .comparison-hero .main-diff.pos { color: #34d399; }
+    .comparison-hero .main-diff.neg { color: #f87171; }
+    .comparison-hero .details {
+      font-size: 12px; color: rgba(255,255,255,0.85);
+      margin-top: 12px; position: relative;
+    }
     
-    .data-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 12px 0; }
-    .data-table thead { background: var(--color-neutral-100); border-bottom: 2px solid var(--color-neutral-300); }
-    .data-table th { font-weight: 600; color: var(--color-neutral-700); text-align: left; padding: 10px 8px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
-    .data-table td { padding: 9px 8px; border-bottom: 1px solid var(--color-neutral-200); color: var(--color-neutral-700); }
-    .data-table .amount { font-family: var(--font-mono); font-weight: 500; text-align: right; white-space: nowrap; }
+    .section { margin: 20px 0; }
+    .section-title {
+      font-size: 14px; font-weight: 700; color: var(--text-primary);
+      padding-bottom: 10px; border-bottom: 2px solid var(--border-light);
+      margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-title .num {
+      width: 22px; height: 22px; background: var(--bg-accent); color: white;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+    }
     
-    .chart-wrapper { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
-    .chart-container { height: 220px; position: relative; }
+    .data-table {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      font-size: 10px; margin: 6px 0;
+    }
+    .data-table thead { background: #f1f5f9; border-bottom: 2px solid var(--border-light); }
+    .data-table th {
+      font-weight: 700; color: var(--text-secondary);
+      text-align: right; padding: 10px 8px;
+      text-transform: uppercase; font-size: 9px; letter-spacing: 0.04em;
+    }
+    .data-table th:first-child { text-align: left; }
+    .data-table td {
+      padding: 9px 8px; border-bottom: 1px solid var(--border-light);
+      color: var(--text-primary); text-align: right;
+    }
+    .data-table td:first-child { text-align: left; font-weight: 600; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover { background: #f8fafc; }
+    .data-table .amount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
+    .data-table .amount.pos { color: var(--success); }
+    .data-table .amount.neg { color: var(--danger); }
+    .data-table .change {
+      font-size: 9px; font-weight: 600;
+      padding: 2px 6px; border-radius: 4px;
+      display: inline-block;
+    }
+    .data-table .change.pos { background: rgba(16,185,129,0.1); color: var(--success); }
+    .data-table .change.neg { background: rgba(239,68,68,0.1); color: var(--danger); }
     
-    .insights { background: var(--color-neutral-50); border: 1px solid var(--color-neutral-200); border-radius: var(--radius); padding: 16px 18px; margin: 20px 0; }
-    .insights ul { margin-left: 18px; margin-top: 8px; }
-    .insights li { margin: 6px 0; font-size: 12px; color: var(--color-neutral-700); line-height: 1.5; }
-    .insights li strong { color: var(--color-neutral-900); font-weight: 600; }
+    .chart-box {
+      background: transparent; border: none;
+      border-radius: var(--radius-md); padding: 10px 0; margin: 20px 0 10px;
+    }
     
-    .final-summary { text-align: center; padding: 32px 24px; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); border-radius: var(--radius); color: white; margin: 24px 0; }
-    .final-summary .emoji { font-size: 42px; margin-bottom: 12px; }
-    .final-summary .headline { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-    .final-summary .stats { margin: 18px 0; font-size: 13px; line-height: 1.8; }
-    .final-summary .stats div { display: flex; justify-content: center; gap: 8px; }
-    .final-summary .stats .label { opacity: 0.9; }
-    .final-summary .stats .value { font-weight: 600; font-family: var(--font-mono); }
-    .final-summary .footer-note { font-size: 11px; opacity: 0.85; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.3); }
+    .css-bar-compare {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      height: 200px;
+      padding: 15px 10px 25px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid var(--border-light);
+    }
+    .css-bar-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      max-width: 120px;
+    }
+    .css-bar-compare .bar-wrapper {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      height: 160px;
+    }
+    .css-bar-compare .bar {
+      width: 35px;
+      border-radius: 6px 6px 0 0;
+      transition: height 0.3s;
+    }
+    .css-bar-compare .bar.p1 { background: linear-gradient(to top, #0f172a, #1e293b); }
+    .css-bar-compare .bar.p2 { background: linear-gradient(to top, var(--accent-gold), #f59e0b); }
+    .css-bar-label {
+      font-size: 10px; font-weight: 600;
+      color: var(--text-secondary); text-align: center;
+    }
+    .css-bar-value {
+      font-size: 9px; font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
     
-    .page-footer { position: absolute; bottom: 16mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--color-neutral-500); border-top: 1px solid var(--color-neutral-200); padding-top: 10px; }
-    .page-footer .brand { display: flex; align-items: center; gap: 6px; font-weight: 500; color: var(--color-neutral-700); }
-    .page-footer .brand .dot { width: 6px; height: 6px; background: var(--color-primary); border-radius: 50%; }
-    .page-footer .page-num { font-family: var(--font-mono); color: var(--color-neutral-600); }
+    .insights {
+      background: linear-gradient(135deg, #f8fafc, #fff);
+      border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      padding: 16px 18px; margin: 16px 0;
+    }
+    .insights ul { margin-left: 16px; margin-top: 8px; }
+    .insights li { margin: 6px 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+    .insights li strong { color: var(--text-primary); font-weight: 600; }
+    .insights li .highlight {
+      background: var(--accent-gold-light); padding: 2px 5px;
+      border-radius: 4px; font-weight: 600; color: var(--text-primary);
+    }
     
-    .text-success { color: var(--color-success); }
-    .text-danger { color: var(--color-danger); }
-    .text-muted { color: var(--color-neutral-500); }
-    .font-mono { font-family: var(--font-mono); }
-    .font-semibold { font-weight: 600; }
+    .final-card {
+      background: var(--bg-accent); border-radius: var(--radius-lg);
+      padding: 28px 24px; color: white; text-align: center; margin: 20px 0;
+      position: relative; overflow: hidden;
+    }
+    .final-card::before {
+      content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle, rgba(212,175,55,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .final-card .emoji { font-size: 48px; margin-bottom: 16px; position: relative; }
+    .final-card .headline { font-size: 18px; font-weight: 700; margin-bottom: 12px; position: relative; }
+    .final-card .note {
+      font-size: 10px; opacity: 0.75; margin-top: 16px;
+      padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2);
+      position: relative;
+    }
+    
+    .page-footer {
+      position: absolute; bottom: 15mm; left: 18mm; right: 18mm;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 9px; color: var(--text-muted);
+      border-top: 1px solid var(--border-light); padding-top: 10px;
+    }
+    .page-footer .brand { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-secondary); }
+    .page-footer .brand .logo { width: 16px; height: 16px; background: var(--bg-accent); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 700; }
+    .page-footer .page-num { font-family: var(--font-mono); color: var(--text-muted); }
+    
     .text-right { text-align: right; }
-    .mt-4 { margin-top: 16px; }
+    .font-mono { font-family: var(--font-mono); }
+    .font-bold { font-weight: 700; }
+    .text-success { color: var(--success); }
+    .text-danger { color: var(--danger); }
+    .mt-2 { margin-top: 6px; }
     
-    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { box-shadow: none; margin: 0; } }
-    [data-field] { opacity: 0; }
-    [data-field].loaded { opacity: 1; transition: opacity 0.15s; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }
+      .page { box-shadow: none; margin: 0; }
+      .cover { -webkit-print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Страница 1: Сравнение периодов -->
+  <!-- Страница 1: Обложка -->
+  <div class="page cover">
+    <div class="logo">WC</div>
+    <h1>Сравнительный анализ</h1>
+    <div class="subtitle">Wealth Control • Сравнение периодов</div>
+    <div class="period" id="compare-periods">—</div>
+    <div class="meta">
+      <div>Сформирован: <span id="generated-at">—</span></div>
+      <div>Конфиденциально</div>
+    </div>
+  </div>
+
+  <!-- Страница 2: Основные показатели -->
   <div class="page">
-    <header class="report-header">
-      <div class="brand">
-        <div class="logo">WC</div>
-        <div class="title">
-          <h1>Сравнительный анализ</h1>
-          <div class="subtitle">Wealth Control Personal Finance OS</div>
-        </div>
-      </div>
-      <div class="meta">
-        <div><strong>Сравнение периодов</strong></div>
-        <div>Сформирован: <span data-field="generated_at">—</span></div>
+    <header class="page-header">
+      <div>
+        <div class="title">Сравнение периодов</div>
+        <div class="subtitle">Ключевые метрики</div>
       </div>
     </header>
 
     <div class="periods-grid" id="periods-container"></div>
 
-    <div class="comparison-box" id="comparison-box" style="display:none;">
+    <div class="comparison-hero" id="comparison-hero">
       <div class="title">Изменение между периодами</div>
-      <div class="diff" id="main-diff">—</div>
+      <div class="main-diff" id="main-diff">—</div>
       <div class="details" id="diff-details">—</div>
     </div>
 
     <footer class="page-footer">
-      <div class="brand"><span class="dot"></span> Wealth Control</div>
-      <div class="page-num">Страница 1 из 4</div>
-    </footer>
-  </div>
-
-  <!-- Страница 2: Детализация по категориям -->
-  <div class="page">
-    <div class="section">
-      <div class="section-title">Топ категорий по периодам</div>
-      <table class="data-table">
-        <thead>
-          <tr><th>Категория</th><th id="p1-header" class="text-right">—</th><th id="p2-header" class="text-right">—</th></tr>
-        </thead>
-        <tbody id="compare-cats-body"></tbody>
-      </table>
-    </div>
-    <footer class="page-footer">
-      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
       <div class="page-num">Страница 2 из 4</div>
     </footer>
   </div>
 
-  <!-- Страница 3: График -->
+  <!-- Страница 3: Детализация и график -->
   <div class="page">
-    <div class="section">
-      <div class="section-title">Визуальное сравнение</div>
-      <div class="chart-wrapper">
-        <div class="chart-container"><canvas id="compareChart"></canvas></div>
+    <header class="page-header" style="margin-bottom:16px;">
+      <div>
+        <div class="title">Сравнение по категориям</div>
+        <div class="subtitle">Топ расходов</div>
       </div>
+    </header>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:35%; text-align:left;">Категория</th>
+          <th style="width:22%;" id="p1-header">—</th>
+          <th style="width:22%;" id="p2-header">—</th>
+          <th style="width:21%;">Изменение</th>
+        </tr>
+      </thead>
+      <tbody id="compare-cats-body"></tbody>
+    </table>
+
+    <div class="chart-box">
+      <div class="css-bar-compare" id="compare-chart"></div>
     </div>
+
     <footer class="page-footer">
-      <div class="brand"><span class="dot"></span> Wealth Control</div>
+      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
       <div class="page-num">Страница 3 из 4</div>
     </footer>
   </div>
 
   <!-- Страница 4: Выводы -->
   <div class="page">
-    <div class="section">
-      <div class="section-title">Анализ и выводы</div>
-      <div class="insights">
-        <ul>
-          <li>Изменение доходов: <strong id="income-change">—</strong></li>
-          <li>Изменение расходов: <strong id="expense-change">—</strong></li>
-          <li>Наиболее затратная категория: <strong id="top-cat-compare">—</strong></li>
-          <li>Рекомендация: <strong id="compare-rec">—</strong></li>
-        </ul>
+    <header class="page-header">
+      <div>
+        <div class="title">Анализ и выводы</div>
+        <div class="subtitle">Рекомендации</div>
+      </div>
+    </header>
+
+    <div class="insights">
+      <strong>📌 Ключевые изменения:</strong>
+      <ul>
+        <li>Доходы: <span class="highlight" id="income-change">—</span></li>
+        <li>Расходы: <span class="highlight" id="expense-change">—</span></li>
+        <li>Дельта: <span class="highlight" id="delta-change">—</span></li>
+        <li>Норма сбережений: <span class="highlight" id="savings-compare">—</span></li>
+      </ul>
+    </div>
+
+    <div class="insights" style="border-left-color: var(--success)">
+      <strong>🎯 Рекомендации:</strong>
+      <ul>
+        <li id="recommendation-1">—</li>
+        <li id="recommendation-2">—</li>
+        <li id="recommendation-3">—</li>
+      </ul>
+    </div>
+
+    <div class="final-card">
+      <div class="emoji" id="final-emoji">📊</div>
+      <div class="headline" id="final-headline">Сравнение завершено</div>
+      <div class="note">
+        Отчёт сформирован автоматически • Wealth Control • <span id="final-date">—</span><br>
+        Данные конфиденциальны и не подлежат разглашению
       </div>
     </div>
 
-    <div class="final-summary">
-      <div class="emoji" id="c-final-emoji">—</div>
-      <div class="headline" id="c-final-headline">Сравнение завершено</div>
-      <div class="footer-note">Отчёт сформирован автоматически • Wealth Control • Конфиденциально</div>
-    </div>
-
     <footer class="page-footer">
-      <div class="brand"><span class="dot"></span> Wealth Control Personal Finance OS</div>
+      <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
       <div class="page-num">Страница 4 из 4</div>
     </footer>
   </div>
@@ -184,101 +414,177 @@
     (function() {
       const data = window.__DATA__ || {};
       
-      function fill(fields) {
-        for (const [key, val] of Object.entries(fields)) {
-          document.querySelectorAll(`[data-field="${key}"]`).forEach(el => {
-            if (val !== undefined && val !== null) {
-              el.textContent = typeof val === 'number' ? val.toLocaleString('ru-RU') : val;
-            }
-            el.classList.add('loaded');
-          });
-        }
+      function fmt(num) {
+        if (num === null || num === undefined || isNaN(num)) return '—';
+        return Math.round(num).toLocaleString('ru-RU');
       }
-      fill({ generated_at: data.generated_at });
+      
+      function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
 
+      const periods = data.periods || [];
+      const p1 = periods[0] || {};
+      const p2 = periods[1] || {};
+      
+      setText('compare-periods', `${p1.label || 'Период 1'} vs ${p2.label || 'Период 2'}`);
+      setText('generated-at', data.generated_at || new Date().toLocaleString('ru-RU'));
+      setText('final-date', data.generated_at || new Date().toLocaleString('ru-RU'));
+      setText('p1-header', p1.label || '—');
+      setText('p2-header', p2.label || '—');
+      
       // Render periods
       const periodsContainer = document.getElementById('periods-container');
-      if (data.periods?.length) {
-        periodsContainer.innerHTML = data.periods.map((p, i) => `
-          <div class="period-card">
-            <div class="label">${p.label}</div>
-            <div class="row"><span>Доходы:</span><span class="val pos">${p.total_income_fmt} ₽</span></div>
-            <div class="row"><span>Расходы:</span><span class="val neg">${p.total_expense_fmt} ₽</span></div>
-            <div class="row"><span>Дельта:</span><span class="val ${p.delta >= 0 ? 'pos' : 'neg'}">${p.delta_fmt} ₽</span></div>
-          </div>`).join('');
-        if (data.periods[0]) document.getElementById('p1-header').textContent = data.periods[0].label;
-        if (data.periods[1]) document.getElementById('p2-header').textContent = data.periods[1].label;
-      }
-
-      // Comparison box
-      if (data.comparison) {
-        const box = document.getElementById('comparison-box');
-        const diffEl = document.getElementById('main-diff');
-        const detailsEl = document.getElementById('diff-details');
-        const mainDiff = data.comparison.income_diff !== undefined ? data.comparison.income_diff : data.comparison.expense_diff;
-        diffEl.textContent = `${mainDiff >= 0 ? '+' : ''}${mainDiff.toLocaleString('ru-RU')} ₽`;
-        diffEl.className = 'diff ' + (mainDiff >= 0 ? 'pos' : 'neg');
-        detailsEl.textContent = `Доходы: ${data.comparison.income_pct}% • Расходы: ${data.comparison.expense_pct}%`;
-        box.style.display = 'block';
-        
-        document.getElementById('income-change').textContent = `${data.comparison.income_diff_fmt} ₽ (${data.comparison.income_pct}%)`;
-        document.getElementById('income-change').className = data.comparison.income_diff >= 0 ? 'text-success' : 'text-danger';
-        document.getElementById('expense-change').textContent = `${data.comparison.expense_diff_fmt} ₽ (${data.comparison.expense_pct}%)`;
-        document.getElementById('expense-change').className = data.comparison.expense_diff >= 0 ? 'text-danger' : 'text-success';
-      }
-
-      // Compare categories table
-      const catBody = document.getElementById('compare-cats-body');
-      if (data.periods?.length >= 2) {
-        const p1 = data.periods[0], p2 = data.periods[1];
-        const allCats = [...new Set([...(p1.top_categories||[]).map(c=>c.name), ...(p2.top_categories||[]).map(c=>c.name)])].slice(0,10);
-        catBody.innerHTML = allCats.map(catName => {
-          const c1 = (p1.top_categories||[]).find(c => c.name === catName);
-          const c2 = (p2.top_categories||[]).find(c => c.name === catName);
-          return `<tr><td class="font-semibold">${catName}</td><td class="amount text-right">${c1?.total_fmt || '—'} ₽</td><td class="amount text-right">${c2?.total_fmt || '—'} ₽</td></tr>`;
+      if (periods.length > 0) {
+        periodsContainer.innerHTML = periods.map((p, i) => {
+          const delta = (p.total_income || 0) - (p.total_expense || 0);
+          const savingsRate = p.total_income > 0 ? ((delta / p.total_income) * 100).toFixed(1) : 0;
+          return `
+            <div class="period-card ${i === 0 ? 'active' : ''}">
+              <div class="label">${p.label || 'Период ' + (i+1)}</div>
+              <div class="metric">
+                <span class="metric-label">💰 Доходы</span>
+                <span class="metric-value pos">${fmt(p.total_income)} ₽</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">💸 Расходы</span>
+                <span class="metric-value neg">${fmt(p.total_expense)} ₽</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">📊 Дельта</span>
+                <span class="metric-value ${delta >= 0 ? 'pos' : 'neg'}">${fmt(delta)} ₽</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">📈 Норма</span>
+                <span class="metric-value gold">${savingsRate}%</span>
+              </div>
+            </div>`;
         }).join('');
-        if (p1.top_categories?.[0]) document.getElementById('top-cat-compare').textContent = p1.top_categories[0].name;
       }
-
-      // Chart - ВАЖНО: ключ "data:" перед конфигурацией!
-      const ctx = document.getElementById('compareChart');
-      if (ctx && data.periods?.length >= 2) {
-        Chart.defaults.font.family = 'var(--font-sans)';
-        Chart.defaults.font.size = 10;
-        new Chart(ctx, {
-          type: 'bar',
-          data: {  // ← КЛЮЧ "" ОБЯЗАТЕЛЕН!
-            labels: ['Доходы', 'Расходы'],
-            datasets: data.periods.slice(0,2).map((p, i) => ({
-              label: p.label,
-              data: [p.total_income, p.total_expense],  // ← КЛЮЧ "data:" ОБЯЗАТЕЛЕН!
-              backgroundColor: i === 0 ? 'rgba(30,58,95,0.8)' : 'rgba(44,82,130,0.6)',
-              borderRadius: 4
-            }))
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-            plugins: { legend: { position: 'top' } },
-            scales: {
-              x: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { callback: v => v.toLocaleString('ru-RU') + ' ₽' } },
-              y: { grid: { display: false } }
-            }
-          }
-        });
+      
+      // Comparison calculations
+      const incomeDiff = (p2.total_income || 0) - (p1.total_income || 0);
+      const expenseDiff = (p2.total_expense || 0) - (p1.total_expense || 0);
+      const delta1 = (p1.total_income || 0) - (p1.total_expense || 0);
+      const delta2 = (p2.total_income || 0) - (p2.total_expense || 0);
+      const deltaChange = delta2 - delta1;
+      
+      const incomePct = p1.total_income > 0 ? ((incomeDiff / p1.total_income) * 100).toFixed(1) : 0;
+      const expensePct = p1.total_expense > 0 ? ((expenseDiff / p1.total_expense) * 100).toFixed(1) : 0;
+      
+      // Hero comparison
+      const heroEl = document.getElementById('comparison-hero');
+      const mainDiffEl = document.getElementById('main-diff');
+      const detailsEl = document.getElementById('diff-details');
+      
+      if (heroEl && mainDiffEl && detailsEl) {
+        const sign = deltaChange >= 0 ? '+' : '';
+        mainDiffEl.textContent = `${sign}${fmt(deltaChange)} ₽`;
+        mainDiffEl.className = `main-diff ${deltaChange >= 0 ? 'pos' : 'neg'}`;
+        detailsEl.textContent = `Доходы: ${incomePct}% • Расходы: ${expensePct}% • Дельта: ${deltaChange >= 0 ? 'улучшилась' : 'ухудшилась'}`;
       }
-
-      // Recommendation
-      const rec = document.getElementById('compare-rec');
-      if (data.comparison?.expense_pct > 10) rec.textContent = 'Проанализировать рост расходов и оптимизировать бюджет';
-      else if (data.comparison?.income_pct > 15) rec.textContent = 'Отличный рост доходов! Рассмотреть увеличение нормы сбережений';
-      else rec.textContent = 'Стабильная финансовая дисциплина, продолжать мониторинг';
-
+      
+      // Insights
+      const incomeSign = incomeDiff >= 0 ? '+' : '';
+      const expenseSign = expenseDiff >= 0 ? '+' : '';
+      const deltaSign = deltaChange >= 0 ? '+' : '';
+      
+      setText('income-change', `${incomeSign}${fmt(incomeDiff)} ₽ (${incomePct}%)`);
+      setText('expense-change', `${expenseSign}${fmt(expenseDiff)} ₽ (${expensePct}%)`);
+      setText('delta-change', `${deltaSign}${fmt(deltaChange)} ₽`);
+      
+      const savingsRate1 = p1.total_income > 0 ? (((p1.total_income - p1.total_expense) / p1.total_income) * 100).toFixed(1) : 0;
+      const savingsRate2 = p2.total_income > 0 ? (((p2.total_income - p2.total_expense) / p2.total_income) * 100).toFixed(1) : 0;
+      const savingsChange = parseFloat(savingsRate2) - parseFloat(savingsRate1);
+      const savingsSign = savingsChange >= 0 ? '+' : '';
+      setText('savings-compare', `${savingsRate1}% → ${savingsRate2}% (${savingsSign}${savingsChange.toFixed(1)}%)`);
+      
+      // Categories comparison table
+      const catBody = document.getElementById('compare-cats-body');
+      const allCats = [...new Set([
+        ...(p1.top_categories || []).map(c => c.name),
+        ...(p2.top_categories || []).map(c => c.name)
+      ])].slice(0, 8);
+      
+      if (catBody && allCats.length > 0) {
+        catBody.innerHTML = allCats.map(catName => {
+          const c1 = (p1.top_categories || []).find(c => c.name === catName);
+          const c2 = (p2.top_categories || []).find(c => c.name === catName);
+          const val1 = c1?.total || 0;
+          const val2 = c2?.total || 0;
+          const diff = val2 - val1;
+          const pct = val1 > 0 ? ((diff / val1) * 100).toFixed(1) : 0;
+          const diffSign = diff >= 0 ? '+' : '';
+          
+          return `
+            <tr>
+              <td>${catName || '—'}</td>
+              <td class="amount">${fmt(val1)} ₽</td>
+              <td class="amount">${fmt(val2)} ₽</td>
+              <td>
+                <span class="change ${diff >= 0 ? 'neg' : 'pos'}">
+                  ${diffSign}${fmt(diff)} ₽ (${pct}%)
+                </span>
+              </td>
+            </tr>`;
+        }).join('');
+      }
+      
+      // CSS Bar Compare Chart
+      const chartEl = document.getElementById('compare-chart');
+      if (chartEl && periods.length >= 2) {
+        const maxValue = Math.max(
+          p1.total_income || 0, p1.total_expense || 0,
+          p2.total_income || 0, p2.total_expense || 0
+        );
+        
+        chartEl.innerHTML = `
+          <div class="css-bar-group">
+            <div class="bar-wrapper">
+              <div class="bar p1" style="height:${maxValue > 0 ? (p1.total_income / maxValue * 160) : 0}px"></div>
+              <div class="bar p2" style="height:${maxValue > 0 ? (p2.total_income / maxValue * 160) : 0}px"></div>
+            </div>
+            <div class="css-bar-label">Доходы</div>
+            <div class="css-bar-value">${fmt(p1.total_income/1000)}k</div>
+            <div class="css-bar-value">${fmt(p2.total_income/1000)}k</div>
+          </div>
+          <div class="css-bar-group">
+            <div class="bar-wrapper">
+              <div class="bar p1" style="height:${maxValue > 0 ? (p1.total_expense / maxValue * 160) : 0}px"></div>
+              <div class="bar p2" style="height:${maxValue > 0 ? (p2.total_expense / maxValue * 160) : 0}px"></div>
+            </div>
+            <div class="css-bar-label">Расходы</div>
+            <div class="css-bar-value">${fmt(p1.total_expense/1000)}k</div>
+            <div class="css-bar-value">${fmt(p2.total_expense/1000)}k</div>
+          </div>
+        `;
+      }
+      
+      // Recommendations
+      const recs = [];
+      if (expensePct > 10) recs.push('Проанализировать рост расходов и оптимизировать бюджет');
+      else if (expensePct < -5) recs.push('Отличная экономия! Рассмотреть увеличение инвестиций');
+      
+      if (incomePct > 15) recs.push('Рост доходов позволяет увеличить норму сбережений до 25-30%');
+      else if (incomePct < 0) recs.push('Сфокусироваться на увеличении доходов');
+      
+      if (savingsChange > 3) recs.push('Поддерживать текущую финансовую дисциплину');
+      else if (savingsChange < -3) recs.push('Вернуться к целевой норме сбережений 15-20%');
+      
+      if (recs.length === 0) recs.push('Стабильная финансовая дисциплина', 'Продолжать мониторинг и оптимизацию');
+      
+      setText('recommendation-1', recs[0] || '—');
+      setText('recommendation-2', recs[1] || '—');
+      setText('recommendation-3', recs[2] || '—');
+      
       // Final
-      document.getElementById('c-final-emoji').textContent = '📊';
-      document.getElementById('c-final-headline').textContent = 
-        data.periods?.length >= 2 ? `${data.periods[0].label} vs ${data.periods[1].label}` : 'Сравнение периодов';
-
-      setTimeout(() => document.querySelectorAll('[data-field]').forEach(el => el.classList.add('loaded')), 50);
+      setText('final-emoji', deltaChange >= 0 ? '🎯' : '📊');
+      setText('final-headline', deltaChange >= 0 
+        ? `${p2.label || 'Текущий'} лучше ${p1.label || 'Предыдущего'}`
+        : `Требуется оптимизация бюджета`
+      );
+      
     })();
   </script>
 </body>
