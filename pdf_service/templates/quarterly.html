@@ -26,16 +26,16 @@
       --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       --font-mono: "SF Mono", "JetBrains Mono", Monaco, Consolas, monospace;
     }
-    
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 13px; -webkit-font-smoothing: antialiased; }
-    body { 
-      font-family: var(--font-main); 
-      background: var(--bg-page); 
-      color: var(--text-primary); 
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-page);
+      color: var(--text-primary);
       line-height: 1.6;
     }
-    
+
     .page {
       width: 210mm;
       min-height: 297mm;
@@ -47,16 +47,13 @@
       page-break-inside: avoid;
     }
     .page:last-child { page-break-after: auto; }
-    
+
+    /* ── ОБЛОЖКА ── */
     .cover {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      padding: 40mm 24mm;
-      background: var(--bg-accent);
-      color: white;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      text-align: center; padding: 40mm 24mm;
+      background: var(--bg-accent); color: white;
     }
     .cover .logo {
       width: 72px; height: 72px;
@@ -67,12 +64,8 @@
       margin-bottom: 24px;
       box-shadow: 0 8px 24px rgba(212,175,55,0.4);
     }
-    .cover h1 {
-      font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px;
-    }
-    .cover .subtitle {
-      font-size: 14px; opacity: 0.9; margin-bottom: 32px;
-    }
+    .cover h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+    .cover .subtitle { font-size: 14px; opacity: 0.9; margin-bottom: 32px; }
     .cover .period {
       font-size: 18px; font-weight: 600; color: var(--accent-gold-light);
       padding: 10px 24px; background: rgba(255,255,255,0.1); border-radius: 50px;
@@ -81,7 +74,8 @@
       position: absolute; bottom: 22mm; left: 18mm; right: 18mm;
       display: flex; justify-content: space-between; font-size: 11px; opacity: 0.7;
     }
-    
+
+    /* ── ШАПКА СТРАНИЦЫ ── */
     .page-header {
       display: flex; justify-content: space-between; align-items: center;
       padding-bottom: 18px; border-bottom: 1px solid var(--border-light);
@@ -93,37 +87,29 @@
       font-size: 11px; padding: 4px 12px; background: var(--bg-accent); color: white;
       border-radius: 50px; font-weight: 500;
     }
-    
-    .metrics-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;
-    }
+
+    /* ── МЕТРИКИ ── */
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
     .metric-card {
       background: linear-gradient(135deg, #fff, #f8fafc);
       border: 1px solid var(--border-light);
       border-left: 4px solid var(--primary);
-      border-radius: var(--radius-md);
-      padding: 16px 14px;
+      border-radius: var(--radius-md); padding: 16px 14px;
     }
-    .metric-card.income { border-left-color: var(--success); }
+    .metric-card.income  { border-left-color: var(--success); }
     .metric-card.expense { border-left-color: var(--danger); }
     .metric-card.savings { border-left-color: var(--accent-gold); }
-    .metric-card.assets { border-left-color: var(--primary); }
-    
-    .metric-card .icon { font-size: 18px; margin-bottom: 6px; }
+    .metric-card.assets  { border-left-color: var(--primary); }
+    .metric-card .icon  { font-size: 18px; margin-bottom: 6px; }
     .metric-card .label { font-size: 9px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
     .metric-card .value { font-size: 18px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.02em; margin-bottom: 4px; }
-    .metric-card .value.pos { color: var(--success); }
-    .metric-card .value.neg { color: var(--danger); }
+    .metric-card .value.pos  { color: var(--success); }
+    .metric-card .value.neg  { color: var(--danger); }
     .metric-card .value.gold { color: var(--accent-gold); }
     .metric-card .sub { font-size: 9px; color: var(--text-muted); }
-    .metric-card .delta { font-size: 10px; margin-top: 4px; font-weight: 600; }
-    .metric-card .delta.pos { color: var(--success); }
-    .metric-card .delta.neg { color: var(--danger); }
-    
-    .section { 
-      margin: 20px 0; 
-      page-break-inside: avoid;
-    }
+
+    /* ── СЕКЦИИ ── */
+    .section { margin: 20px 0; page-break-inside: avoid; }
     .section-title {
       font-size: 14px; font-weight: 700; color: var(--text-primary);
       padding-bottom: 10px; border-bottom: 2px solid var(--border-light);
@@ -134,138 +120,182 @@
       border-radius: 6px; display: flex; align-items: center; justify-content: center;
       font-size: 10px; font-weight: 700;
     }
-    
+
+    /* ── МЕСЯЦЫ ── */
     .months-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .month-card {
       background: #f8fafc; border: 1px solid var(--border-light);
       border-radius: var(--radius-md); padding: 16px 14px; text-align: center;
     }
     .month-card .m-label {
-      font-weight: 700; color: var(--text-primary); margin-bottom: 10px; font-size: 12px;
-      padding: 4px 10px; background: var(--bg-accent); color: white; border-radius: 6px; display: inline-block;
+      font-weight: 700; margin-bottom: 10px; font-size: 12px;
+      padding: 4px 10px; background: var(--bg-accent); color: white;
+      border-radius: 6px; display: inline-block;
     }
     .month-card .row { display: flex; justify-content: space-between; font-size: 10px; margin: 5px 0; color: var(--text-secondary); }
     .month-card .row .val { font-weight: 600; font-family: var(--font-mono); font-size: 11px; }
     .month-card .row .val.pos { color: var(--success); }
     .month-card .row .val.neg { color: var(--danger); }
-    
+
+    /* ── БАР-СПИСОК (топ категорий) ── */
     .bar-list { display: flex; flex-direction: column; gap: 10px; }
     .bar-item { display: grid; grid-template-columns: 1fr 120px 60px 40px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
     .bar-item:last-child { border-bottom: none; }
     .bar-item .name { font-weight: 500; color: var(--text-primary); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bar-item .track { height: 6px; background: var(--border-light); border-radius: 3px; overflow: hidden; }
-    .bar-item .fill { height: 100%; background: linear-gradient(90deg, var(--primary), #60a5fa); border-radius: 3px; }
+    .bar-item .fill { height: 100%; background: linear-gradient(90deg, var(--danger), #f87171); border-radius: 3px; }
     .bar-item .amount { font-weight: 700; font-family: var(--font-mono); font-size: 11px; text-align: right; }
     .bar-item .pct { font-size: 10px; color: var(--text-muted); text-align: right; font-family: var(--font-mono); }
-    
-    .data-table { 
-      width: 100%; 
-      border-collapse: separate;
-      border-spacing: 0;
-      font-size: 10px; 
-      margin: 6px 0 25px; /* Увеличил отступ снизу */
+
+    /* ── ТАБЛИЦА ТРАНЗАКЦИЙ ── */
+    .data-table {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      font-size: 10px; margin: 6px 0 20px;
     }
-    .data-table thead { 
-      background: #f1f5f9; 
-      border-bottom: 2px solid var(--border-light); 
+    .data-table thead { background: #f1f5f9; }
+    .data-table th {
+      font-weight: 700; color: var(--text-secondary);
+      padding: 10px 8px; text-transform: uppercase;
+      font-size: 9px; letter-spacing: 0.04em;
+      text-align: left;
     }
-    .data-table th { 
-      font-weight: 700; 
-      color: var(--text-secondary); 
-      text-align: right; 
-      padding: 10px 8px; 
-      text-transform: uppercase; 
-      font-size: 9px; 
-      letter-spacing: 0.04em;
+    .data-table th.right { text-align: right; }
+    .data-table th.center { text-align: center; }
+    .data-table td {
+      padding: 8px 8px; border-bottom: 1px solid var(--border-light);
+      color: var(--text-primary); vertical-align: middle;
     }
-    .data-table th:first-child { text-align: left; }
-    .data-table td { 
-      padding: 9px 8px; 
-      border-bottom: 1px solid var(--border-light); 
-      color: var(--text-primary);
-      text-align: right;
-    }
-    .data-table td:first-child { text-align: left; font-weight: 600; }
     .data-table tr:last-child td { border-bottom: none; }
-    .data-table .amount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
-    .data-table .amount.pos { color: var(--success); }
-    .data-table .amount.neg { color: var(--danger); }
-    
+    .data-table tr:nth-child(even) { background: #fafafa; }
+
+    .tx-amount {
+      font-family: var(--font-mono); font-weight: 700;
+      font-size: 11px; text-align: right; white-space: nowrap;
+    }
+    .tx-amount.pos { color: var(--success); }
+    .tx-amount.neg { color: var(--danger); }
+
+    .tx-type-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 20px;
+      font-size: 9px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .tx-type-badge.income {
+      background: rgba(16,185,129,0.12); color: #059669;
+    }
+    .tx-type-badge.expense {
+      background: rgba(239,68,68,0.1); color: #dc2626;
+    }
+
+    /* ── ГРАФИК ── */
     .chart-box {
-      background: white; 
-      border: 1px solid var(--border-light);
-      border-radius: var(--radius-md); 
-      padding: 20px; /* Увеличил padding */
-      margin: 30px 0 15px; /* Увеличил отступы */
+      background: white; border: 1px solid var(--border-light);
+      border-radius: var(--radius-md); padding: 16px 16px 8px;
+      margin: 20px 0 0;
       page-break-inside: avoid;
     }
-    
+    .chart-title {
+      font-size: 11px; font-weight: 700; color: var(--text-secondary);
+      margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .chart-legend {
+      display: flex; gap: 16px; margin-bottom: 10px;
+    }
+    .chart-legend .leg {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 9px; color: var(--text-muted); font-weight: 600;
+    }
+    .chart-legend .leg-dot {
+      width: 10px; height: 10px; border-radius: 2px;
+    }
+    .chart-legend .leg-dot.inc { background: var(--success); }
+    .chart-legend .leg-dot.exp { background: var(--danger); }
+
     .css-bar-chart {
-      display: flex;
-      align-items: flex-end;
+      display: flex; align-items: flex-end;
       justify-content: space-around;
-      height: 120px; /* Уменьшил высоту */
-      padding: 15px 5px 20px; /* Увеличил padding снизу для labels */
+      height: 130px;
+      padding: 0 8px 0;
       background: #f8fafc;
       border-radius: 8px;
+      gap: 8px;
     }
-    .css-bar-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px; /* Увеличил gap */
-      flex: 1;
-      max-width: 55px;
+    .css-bar-group {
+      display: flex; flex-direction: column; align-items: center;
+      flex: 1; gap: 0;
+    }
+    .css-bar-bars {
+      display: flex; align-items: flex-end; gap: 4px;
+      height: 100px;
+    }
+    .css-bar-col {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .css-bar-val {
+      font-size: 8px; font-weight: 600; font-family: var(--font-mono);
+      color: var(--text-secondary); line-height: 1; white-space: nowrap;
     }
     .css-bar {
-      width: 100%;
-      background: linear-gradient(to top, var(--success), #34d399);
-      border-radius: 4px 4px 0 0;
-      min-height: 2px;
+      width: 20px; border-radius: 3px 3px 0 0; min-height: 3px;
     }
-    .css-bar.expense {
-      background: linear-gradient(to top, var(--danger), #f87171);
-    }
+    .css-bar.inc { background: linear-gradient(to top, #059669, #34d399); }
+    .css-bar.exp { background: linear-gradient(to top, #dc2626, #f87171); }
     .css-bar-label {
-      font-size: 9px;
-      color: var(--text-muted);
-      text-align: center;
-      white-space: nowrap;
-      margin-top: 6px;
+      font-size: 9px; color: var(--text-muted);
+      text-align: center; margin-top: 6px; font-weight: 600;
     }
-    .css-bar-value {
-      font-size: 8px;
-      font-weight: 600;
-      font-family: var(--font-mono);
-      color: var(--text-secondary);
-      line-height: 1;
-    }
-    
+
+    /* ── ИНСАЙТЫ ── */
     .insights {
       background: linear-gradient(135deg, #f8fafc, #fff);
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
-      padding: 16px 18px; margin: 25px 0; /* Увеличил отступы */
+      padding: 20px 22px; margin: 0 0 28px;
       page-break-inside: avoid;
     }
-    .insights ul { margin-left: 16px; margin-top: 8px; }
-    .insights li { margin: 6px 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+    .insights .ins-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
+    .insights ul { margin-left: 18px; }
+    .insights li { margin: 8px 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
     .insights li strong { color: var(--text-primary); font-weight: 600; }
-    .insights li .highlight { background: var(--accent-gold-light); padding: 2px 5px; border-radius: 4px; font-weight: 600; color: var(--text-primary); }
-    
+    .insights li .highlight {
+      background: var(--accent-gold-light); padding: 2px 6px;
+      border-radius: 4px; font-weight: 600; color: var(--text-primary);
+    }
+
+    /* ── ФИНАЛЬНАЯ КАРТОЧКА ── */
     .final-card {
       background: var(--bg-accent); border-radius: var(--radius-lg);
-      padding: 28px 24px; color: white; text-align: center; margin: 30px 0; /* Увеличил отступы */
+      padding: 32px 24px; color: white; text-align: center;
+      position: relative; overflow: hidden;
       page-break-inside: avoid;
     }
-    .final-card .emoji { font-size: 42px; margin-bottom: 14px; }
-    .final-card .headline { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
-    .final-card .stats { margin: 16px 0; font-size: 12px; line-height: 1.8; }
-    .final-card .stats .row { display: flex; justify-content: center; gap: 5px; }
-    .final-card .stats .label { opacity: 0.85; }
-    .final-card .stats .value { font-weight: 700; font-family: var(--font-mono); color: var(--accent-gold-light); }
-    .final-card .note { font-size: 10px; opacity: 0.75; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2); }
-    
+    .final-card::before {
+      content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle, rgba(212,175,55,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .final-card .emoji { font-size: 48px; margin-bottom: 14px; position: relative; }
+    .final-card .headline { font-size: 20px; font-weight: 700; margin-bottom: 20px; position: relative; }
+    .final-card .stats { margin: 0 0 20px; position: relative; }
+    .final-card .stat-row {
+      display: flex; justify-content: center; align-items: center;
+      gap: 8px; font-size: 13px; margin: 10px 0;
+    }
+    .final-card .stat-label { opacity: 0.8; }
+    .final-card .stat-value {
+      font-weight: 800; font-family: var(--font-mono);
+      font-size: 15px; color: var(--accent-gold-light);
+    }
+    .final-card .divider {
+      width: 60px; height: 1px; background: rgba(255,255,255,0.2);
+      margin: 18px auto;
+    }
+    .final-card .note {
+      font-size: 10px; opacity: 0.65; position: relative;
+    }
+
+    /* ── ФУТЕР ── */
     .page-footer {
       position: absolute; bottom: 15mm; left: 18mm; right: 18mm;
       display: flex; justify-content: space-between; align-items: center;
@@ -273,26 +303,22 @@
       border-top: 1px solid var(--border-light); padding-top: 10px;
     }
     .page-footer .brand { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-secondary); }
-    .page-footer .brand .logo { width: 16px; height: 16px; background: var(--bg-accent); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 700; }
+    .page-footer .brand .logo {
+      width: 16px; height: 16px; background: var(--bg-accent); border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 9px; font-weight: 700;
+    }
     .page-footer .page-num { font-family: var(--font-mono); color: var(--text-muted); }
-    
-    .text-right { text-align: right; }
-    .font-mono { font-family: var(--font-mono); }
-    .font-bold { font-weight: 700; }
-    .text-success { color: var(--success); }
-    .text-danger { color: var(--danger); }
-    .mt-2 { margin-top: 6px; }
-    
+
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }
       .page { box-shadow: none; margin: 0; }
-      .cover { -webkit-print-color-adjust: exact; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Страница 1: Обложка -->
+  <!-- ══════════════ Страница 1: Обложка ══════════════ -->
   <div class="page cover">
     <div class="logo">WC</div>
     <h1>Квартальный финансовый отчёт</h1>
@@ -304,7 +330,7 @@
     </div>
   </div>
 
-  <!-- Страница 2: Ключевые показатели -->
+  <!-- ══════════════ Страница 2: Ключевые показатели ══════════════ -->
   <div class="page">
     <header class="page-header">
       <div>
@@ -353,11 +379,11 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 2 из 3</div>
+      <div class="page-num">Страница 2 из 4</div>
     </footer>
   </div>
 
-  <!-- Страница 3: Детализация и инсайты -->
+  <!-- ══════════════ Страница 3: Таблица + График ══════════════ -->
   <div class="page">
     <header class="page-header" style="margin-bottom:16px;">
       <div>
@@ -369,22 +395,41 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width:18%; text-align:left;">Дата</th>
-          <th style="width:28%; text-align:left;">Категория</th>
-          <th style="width:22%;">Доходы</th>
-          <th style="width:22%;">Расходы</th>
-          <th style="width:10%;">Тип</th>
+          <th style="width:18%;">Дата</th>
+          <th style="width:42%;">Категория</th>
+          <th class="right" style="width:26%;">Сумма</th>
+          <th class="center" style="width:14%;">Тип</th>
         </tr>
       </thead>
       <tbody id="transactions-body"></tbody>
     </table>
 
     <div class="chart-box">
+      <div class="chart-title">Доходы и расходы по месяцам</div>
+      <div class="chart-legend">
+        <div class="leg"><div class="leg-dot inc"></div> Доходы</div>
+        <div class="leg"><div class="leg-dot exp"></div> Расходы</div>
+      </div>
       <div class="css-bar-chart" id="quarter-bar-chart"></div>
     </div>
 
+    <footer class="page-footer">
+      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
+      <div class="page-num">Страница 3 из 4</div>
+    </footer>
+  </div>
+
+  <!-- ══════════════ Страница 4: Инсайты + Итог ══════════════ -->
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <div class="title">Анализ и итоги</div>
+        <div class="subtitle">Ключевые наблюдения и выводы</div>
+      </div>
+    </header>
+
     <div class="insights">
-      <strong>📌 Ключевые наблюдения:</strong>
+      <div class="ins-title">📌 Ключевые наблюдения:</div>
       <ul>
         <li>Средний чек: <span class="highlight" id="avg-check">— ₽</span></li>
         <li>Крупнейшая трата: <span class="highlight" id="max-expense">— ₽</span> (<span id="max-category">—</span>)</li>
@@ -397,10 +442,23 @@
       <div class="emoji" id="final-emoji">—</div>
       <div class="headline" id="final-headline">—</div>
       <div class="stats">
-        <div class="row"><span class="label">Доходы:</span><span class="value" id="final-income">—</span> ₽</div>
-        <div class="row"><span class="label">Расходы:</span><span class="value" id="final-expense">—</span> ₽</div>
-        <div class="row"><span class="label">Дельта:</span><span class="value" id="final-delta">—</span> ₽</div>
+        <div class="stat-row">
+          <span class="stat-label">💰 Доходы:</span>
+          <span class="stat-value" id="final-income">—</span>
+          <span style="opacity:0.7">₽</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">💸 Расходы:</span>
+          <span class="stat-value" id="final-expense">—</span>
+          <span style="opacity:0.7">₽</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">📊 Дельта:</span>
+          <span class="stat-value" id="final-delta">—</span>
+          <span style="opacity:0.7">₽</span>
+        </div>
       </div>
+      <div class="divider"></div>
       <div class="note">
         Отчёт сформирован автоматически • Wealth Control • <span id="final-date">—</span>
       </div>
@@ -408,46 +466,42 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
-      <div class="page-num">Страница 3 из 3</div>
+      <div class="page-num">Страница 4 из 4</div>
     </footer>
   </div>
 
   <script>
     (function() {
       const data = window.__DATA__ || {};
-      
+
       function fmt(num) {
         if (num === null || num === undefined || isNaN(num)) return '—';
         return Math.round(num).toLocaleString('ru-RU');
       }
-      
       function setText(id, value) {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
       }
 
       const quarterLabel = data.quarter_label || '';
-      const year = data.year || new Date().getFullYear();
-      const totalIncome = data.total_income || 0;
+      const totalIncome  = data.total_income  || 0;
       const totalExpense = data.total_expense || 0;
-      const delta = totalIncome - totalExpense;
-      const savingsRate = totalIncome > 0 ? ((delta / totalIncome) * 100).toFixed(1) : 0;
-      const totalAssets = data.total_assets || 0;
-      
-      setText('period-label', quarterLabel);
+      const delta        = totalIncome - totalExpense;
+      const savingsRate  = totalIncome > 0 ? ((delta / totalIncome) * 100).toFixed(1) : 0;
+      const totalAssets  = data.total_assets  || 0;
+
+      setText('period-label',  quarterLabel);
       setText('quarter-badge', quarterLabel);
-      setText('generated-at', data.generated_at || new Date().toLocaleString('ru-RU'));
-      setText('final-date', data.generated_at || new Date().toLocaleString('ru-RU'));
-      
-      setText('total-income', `${fmt(totalIncome)} ₽`);
+      setText('generated-at',  data.generated_at || new Date().toLocaleString('ru-RU'));
+      setText('final-date',    data.generated_at || new Date().toLocaleString('ru-RU'));
+      setText('total-income',  `${fmt(totalIncome)} ₽`);
       setText('total-expense', `${fmt(totalExpense)} ₽`);
-      setText('delta', `${fmt(delta)} ₽`);
-      setText('savings-rate', savingsRate);
-      setText('total-assets', `${fmt(totalAssets)} ₽`);
-      
-      setText('delta-label', delta >= 0 ? '📈 Профицит' : '⚠️ Дефицит');
-      
-      // Months grid
+      setText('delta',         `${fmt(delta)} ₽`);
+      setText('savings-rate',  savingsRate);
+      setText('total-assets',  `${fmt(totalAssets)} ₽`);
+      setText('delta-label',   delta >= 0 ? '📈 Профицит' : '⚠️ Дефицит');
+
+      // ── Months grid
       const mGrid = document.getElementById('months-grid');
       if (data.monthly_data && data.monthly_data.length > 0) {
         mGrid.innerHTML = data.monthly_data.map(m => {
@@ -461,12 +515,12 @@
             </div>`;
         }).join('');
       }
-      
-      // Top categories
+
+      // ── Top categories
       const topCats = document.getElementById('top-categories');
       if (data.top_categories && data.top_categories.length > 0) {
         const total = totalExpense || 1;
-        topCats.innerHTML = data.top_categories.slice(0,5).map(cat => {
+        topCats.innerHTML = data.top_categories.slice(0, 5).map(cat => {
           const pct = Math.min(100, ((cat.total || 0) / total * 100).toFixed(1));
           return `
             <div class="bar-item">
@@ -477,71 +531,82 @@
             </div>`;
         }).join('');
       }
-      
-      // Transactions table
+
+      // ── Transactions table — только ДАТА / КАТЕГОРИЯ / СУММА / ТИП
       const txBody = document.getElementById('transactions-body');
       if (data.transactions && data.transactions.length > 0) {
-        txBody.innerHTML = data.transactions.slice(0, 15).map(tx => {
-          const income = tx.tx_type === 'Доход' ? fmt(tx.amount) : '—';
-          const expense = tx.tx_type === 'Расход' ? fmt(tx.amount) : '—';
+        txBody.innerHTML = data.transactions.slice(0, 18).map(tx => {
+          const isIncome = tx.tx_type === 'Доход';
+          const sign     = isIncome ? '+' : '−';
+          const badgeClass = isIncome ? 'income' : 'expense';
+          const badgeText  = isIncome ? '💰 Доход' : '💸 Расход';
           return `
             <tr>
-              <td>${tx.date || '—'}</td>
-              <td>${tx.category || '—'}</td>
-              <td class="amount pos">${income} ₽</td>
-              <td class="amount neg">${expense} ₽</td>
-              <td>${tx.tx_type === 'Доход' ? '💰' : '💸'}</td>
+              <td style="color:var(--text-muted);font-size:10px;">${tx.date || '—'}</td>
+              <td style="font-weight:600;">${tx.category || '—'}</td>
+              <td class="tx-amount ${isIncome ? 'pos' : 'neg'}">${sign}${fmt(tx.amount)} ₽</td>
+              <td style="text-align:center;">
+                <span class="tx-type-badge ${badgeClass}">${badgeText}</span>
+              </td>
             </tr>`;
         }).join('');
       }
-      
-      // Quarterly Bar Chart (CSS) - FIXED
+
+      // ── Bar Chart
       const barChart = document.getElementById('quarter-bar-chart');
       if (barChart && data.monthly_data && data.monthly_data.length > 0) {
-        const maxVal = Math.max(...data.monthly_data.map(m => Math.max(m.income || 0, m.expense || 0)));
+        const maxVal = Math.max(...data.monthly_data.map(m => Math.max(m.income || 0, m.expense || 0)), 1);
         barChart.innerHTML = data.monthly_data.map(m => {
-          const incomeHeight = maxVal > 0 ? Math.max(4, (m.income / maxVal * 80)) : 4; /* Уменьшил множитель */
-          const expenseHeight = maxVal > 0 ? Math.max(4, (m.expense / maxVal * 80)) : 4;
+          const ih = Math.max(4, Math.round((m.income  || 0) / maxVal * 90));
+          const eh = Math.max(4, Math.round((m.expense || 0) / maxVal * 90));
           const shortName = (m.month_name || '').substr(0, 3);
+          const ik = Math.round((m.income  || 0) / 1000);
+          const ek = Math.round((m.expense || 0) / 1000);
           return `
-            <div class="css-bar-wrapper">
-              <div class="css-bar-value">${Math.round(m.income/1000)}k</div>
-              <div class="css-bar" style="height:${incomeHeight}px"></div>
-              <div class="css-bar-value">${Math.round(m.expense/1000)}k</div>
-              <div class="css-bar expense" style="height:${expenseHeight}px"></div>
+            <div class="css-bar-group">
+              <div class="css-bar-bars">
+                <div class="css-bar-col">
+                  <div class="css-bar-val">${ik}k</div>
+                  <div class="css-bar inc" style="height:${ih}px;"></div>
+                </div>
+                <div class="css-bar-col">
+                  <div class="css-bar-val">${ek}k</div>
+                  <div class="css-bar exp" style="height:${eh}px;"></div>
+                </div>
+              </div>
               <div class="css-bar-label">${shortName}</div>
             </div>`;
         }).join('');
       }
-      
-      // Insights
+
+      // ── Insights
       const expenses = data.transactions ? data.transactions.filter(t => t.tx_type === 'Расход') : [];
-      const avgCheck = expenses.length > 0 ? totalExpense / expenses.length : 0;
+      const avgCheck  = expenses.length > 0 ? Math.round(totalExpense / expenses.length) : 0;
       setText('avg-check', `${fmt(avgCheck)} ₽`);
-      
-      const maxExpense = expenses.length > 0 ? Math.max(...expenses.map(t => t.amount || 0)) : 0;
-      const maxCat = expenses.find(t => t.amount === maxExpense)?.category || '—';
-      setText('max-expense', `${fmt(maxExpense)} ₽`);
+
+      const maxExpAmt = expenses.length > 0 ? Math.max(...expenses.map(t => t.amount || 0)) : 0;
+      const maxCat    = expenses.find(t => t.amount === maxExpAmt)?.category || '—';
+      setText('max-expense',  `${fmt(maxExpAmt)} ₽`);
       setText('max-category', maxCat);
-      
+
       const maxMonth = data.monthly_data?.reduce((a, b) => (b.expense || 0) > (a.expense || 0) ? b : a);
       setText('max-month', maxMonth?.month_name || '—');
-      
+
       const recEl = document.getElementById('recommendation');
       if (recEl) {
         const rate = parseFloat(savingsRate);
-        if (rate < 10) recEl.textContent = 'Сократить регулярные расходы на 10-15%';
-        else if (rate > 25) recEl.textContent = 'Отлично! Рассмотреть инвестиции';
-        else recEl.textContent = 'Стабильно, можно оптимизировать категории';
+        if      (rate < 10)  recEl.textContent = 'Сократить регулярные расходы на 10–15%';
+        else if (rate > 25)  recEl.textContent = 'Отлично! Рассмотреть инвестиции';
+        else                 recEl.textContent = 'Стабильно, можно оптимизировать категории';
       }
-      
-      // Final card
-      setText('final-emoji', delta >= 0 ? '🎯' : '📊');
+
+      // ── Final card
+      setText('final-emoji',    delta >= 0 ? '🎯' : '📊');
       setText('final-headline', delta >= 0 ? `Профицит за ${quarterLabel}` : `Дефицит за ${quarterLabel}`);
-      setText('final-income', fmt(totalIncome));
-      setText('final-expense', fmt(totalExpense));
-      setText('final-delta', fmt(delta));
-      
+      setText('final-income',   fmt(totalIncome));
+      setText('final-expense',  fmt(totalExpense));
+      setText('final-delta',    fmt(delta));
+
     })();
   </script>
 </body>
