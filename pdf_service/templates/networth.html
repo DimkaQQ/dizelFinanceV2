@@ -434,6 +434,7 @@
       const nwValue = document.querySelector('.networth-hero .value');
       if (nwSubtitle) {
         nwSubtitle.textContent = netWorth >= 0 ? '📈 Рост капитала' : '⚠️ Снижение капитала';
+        nwSubtitle.style.color = netWorth >= 0 ? '#34d399' : '#f87171';
         nwValue.className = `value ${netWorth >= 0 ? 'positive' : 'negative'}`;
       }
       
