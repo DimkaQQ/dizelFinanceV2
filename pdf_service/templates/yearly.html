@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Годовой отчёт — Wealth Control</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     @page { size: A4; margin: 0; }
     :root {
@@ -60,7 +59,6 @@
       padding: 40mm 24mm;
       background: var(--bg-accent);
       color: white;
-      border-radius: 0;
     }
     .cover .logo {
       width: 72px; height: 72px;
@@ -170,7 +168,91 @@
       background: #f8fafc; border: 1px solid var(--border-light);
       border-radius: var(--radius-md); padding: 20px; margin: 16px 0;
     }
-    .chart-container { height: 240px; position: relative; }
+    
+    /* CSS Bar Chart для PDF */
+    .css-bar-chart {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      height: 200px;
+      padding: 20px 10px;
+      background: white;
+      border-radius: 8px;
+    }
+    .css-bar-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      max-width: 60px;
+    }
+    .css-bar {
+      width: 100%;
+      background: linear-gradient(to top, var(--success), #34d399);
+      border-radius: 4px 4px 0 0;
+      min-height: 4px;
+      transition: height 0.3s;
+    }
+    .css-bar.expense {
+      background: linear-gradient(to top, var(--danger), #f87171);
+    }
+    .css-bar-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .css-bar-value {
+      font-size: 8px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+    }
+    
+    /* CSS Pie Chart для PDF */
+    .css-pie-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 30px;
+      padding: 20px;
+    }
+    .css-pie {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      position: relative;
+    }
+    .css-pie-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .css-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+    }
+    .css-legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+    
+    /* CSS Line Chart для PDF */
+    .css-line-chart {
+      height: 220px;
+      position: relative;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+    }
+    .css-line-svg {
+      width: 100%;
+      height: 100%;
+    }
     
     .insights {
       background: linear-gradient(135deg, #f8fafc, #fff);
@@ -308,7 +390,7 @@
     </footer>
   </div>
 
-  <!-- Страница 3: Помесячная таблица -->
+  <!-- Страница 3: Помесячная таблица + бар-чарт -->
   <div class="page">
     <header class="page-header">
       <div>
@@ -331,7 +413,7 @@
     </table>
 
     <div class="chart-box mt-2">
-      <div class="chart-container"><canvas id="monthlyChart"></canvas></div>
+      <div class="css-bar-chart" id="monthly-bar-chart"></div>
     </div>
 
     <footer class="page-footer">
@@ -354,7 +436,7 @@
         <div class="bar-list" id="categories-list"></div>
       </div>
       <div class="chart-box">
-        <div class="chart-container"><canvas id="categoryChart"></canvas></div>
+        <div class="css-pie-container" id="category-pie"></div>
       </div>
     </div>
 
@@ -393,7 +475,7 @@
     <div class="section">
       <div class="section-title"><span class="num">2</span> Динамика за 3 года</div>
       <div class="chart-box">
-        <div class="chart-container"><canvas id="trendChart"></canvas></div>
+        <div class="css-line-chart" id="trend-line-chart"></div>
       </div>
     </div>
 
@@ -443,14 +525,16 @@
         if (el) el.textContent = value;
       }
 
-      // Basic data
+      // Basic data - ВАЖНО: рассчитываем net_worth из активов!
       const year = data.year || new Date().getFullYear();
       const totalIncome = data.total_income || 0;
       const totalExpense = data.total_expense || 0;
       const delta = totalIncome - totalExpense;
       const savingsRate = totalIncome > 0 ? ((delta / totalIncome) * 100).toFixed(1) : 0;
       const avgMonthly = totalExpense / 12;
-      const netWorth = data.net_worth || 0;
+      
+      // Рассчитываем чистый капитал из активов!
+      const netWorth = data.total_assets || 0;
       const capitalMonths = avgMonthly > 0 ? (netWorth / avgMonthly).toFixed(1) : 0;
       
       // Fill basic fields
@@ -545,6 +629,24 @@
         }).join('');
       }
       
+      // Monthly Bar Chart (CSS)
+      const barChart = document.getElementById('monthly-bar-chart');
+      if (barChart && data.monthly_data && data.monthly_data.length > 0) {
+        const maxVal = Math.max(...data.monthly_data.map(m => Math.max(m.income || 0, m.expense || 0)));
+        barChart.innerHTML = data.monthly_data.map(m => {
+          const incomeHeight = maxVal > 0 ? (m.income / maxVal * 160) : 0;
+          const expenseHeight = maxVal > 0 ? (m.expense / maxVal * 160) : 0;
+          return `
+            <div class="css-bar-wrapper">
+              <div class="css-bar-value">${fmt(m.income/1000)}k</div>
+              <div class="css-bar" style="height:${incomeHeight}px"></div>
+              <div class="css-bar-value">${fmt(m.expense/1000)}k</div>
+              <div class="css-bar expense" style="height:${expenseHeight}px"></div>
+              <div class="css-bar-label">${(m.month_name || '').substr(0,3)}</div>
+            </div>`;
+        }).join('');
+      }
+      
       // Categories
       const catList = document.getElementById('categories-list');
       if (data.top_categories && data.top_categories.length > 0) {
@@ -561,125 +663,87 @@
         }).join('');
       }
       
-      // Charts configuration
-      Chart.defaults.font.family = 'var(--font-main)';
-      Chart.defaults.font.size = 10;
-      Chart.defaults.plugins.legend.labels.color = '#475569';
-      Chart.defaults.scales.x.grid.color = 'rgba(15,23,42,0.06)';
-      Chart.defaults.scales.y.grid.color = 'rgba(15,23,42,0.06)';
-      Chart.defaults.scales.x.ticks.color = '#64748b';
-      Chart.defaults.scales.y.ticks.color = '#64748b';
-      
-      // Monthly chart
-      const mCtx = document.getElementById('monthlyChart');
-      if (mCtx && data.monthly_data && data.monthly_data.length > 0) {
-        new Chart(mCtx, {
-          type: 'bar',
-          data: {
-            labels: data.monthly_data.map(m => m.month_name || ''),
-            datasets: [
-              { 
-                label: 'Доходы', 
-                data: data.monthly_data.map(m => m.income || 0), 
-                backgroundColor: 'rgba(16,185,129,0.6)', 
-                borderColor: '#10b981', 
-                borderWidth: 1 
-              },
-              { 
-                label: 'Расходы', 
-                data: data.monthly_data.map(m => m.expense || 0), 
-                backgroundColor: 'rgba(239,68,68,0.6)', 
-                borderColor: '#ef4444', 
-                borderWidth: 1 
-              }
-            ]
-          },
-          options: {
-            responsive: true, 
-            maintainAspectRatio: false,
-            plugins: { 
-              legend: { position: 'top', labels: { usePointStyle: true } } 
-            },
-            scales: {
-              y: { 
-                beginAtZero: true, 
-                ticks: { callback: v => (v/1000).toFixed(0)+'k ₽' } 
-              },
-              x: { grid: { display: false } }
-            }
-          }
+      // Category Pie Chart (CSS conic-gradient)
+      const pieContainer = document.getElementById('category-pie');
+      if (pieContainer && data.top_categories && data.top_categories.length > 0) {
+        const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
+        const top7 = data.top_categories.slice(0, 7);
+        const total = top7.reduce((sum, c) => sum + (c.total || 0), 0);
+        
+        let gradientParts = [];
+        let currentDeg = 0;
+        top7.forEach((cat, i) => {
+          const pct = total > 0 ? (cat.total / total * 100) : 0;
+          const deg = pct * 3.6;
+          gradientParts.push(`${colors[i]} ${currentDeg}deg ${currentDeg + deg}deg`);
+          currentDeg += deg;
         });
+        
+        const legendHtml = top7.map((cat, i) => `
+          <div class="css-legend-item">
+            <div class="css-legend-color" style="background:${colors[i]}"></div>
+            <span>${cat.name || ''}: ${fmt(cat.total)} ₽</span>
+          </div>
+        `).join('');
+        
+        pieContainer.innerHTML = `
+          <div class="css-pie" style="background: conic-gradient(${gradientParts.join(', ')})"></div>
+          <div class="css-pie-legend">${legendHtml}</div>
+        `;
       }
       
-      // Category pie chart
-      const cCtx = document.getElementById('categoryChart');
-      if (cCtx && data.top_categories && data.top_categories.length > 0) {
-        const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#22c55e'];
-        new Chart(cCtx, {
-          type: 'doughnut',
-          data: {
-            labels: data.top_categories.slice(0,7).map(c => c.name || ''),
-            datasets: [{
-              data: data.top_categories.slice(0,7).map(c => c.total || 0),
-              backgroundColor: colors,
-              borderWidth: 2, 
-              borderColor: '#fff'
-            }]
-          },
-          options: {
-            responsive: true, 
-            maintainAspectRatio: false,
-            plugins: { 
-              legend: { position: 'right', labels: { boxWidth: 10, font: { size: 9 } } } 
-            },
-            cutout: '65%'
-          }
-        });
-      }
-      
-      // Trend chart (3 years)
-      const tCtx = document.getElementById('trendChart');
-      if (tCtx && data.trend && data.trend.length > 0) {
-        new Chart(tCtx, {
-          type: 'line',
-          data: {
-            labels: data.trend.map(t => t.label || ''),
-            datasets: [
-              { 
-                label: 'Доходы', 
-                data: data.trend.map(t => t.income || 0), 
-                borderColor: '#10b981', 
-                backgroundColor: 'rgba(16,185,129,0.1)', 
-                tension: 0.4, 
-                fill: true, 
-                borderWidth: 2 
-              },
-              { 
-                label: 'Расходы', 
-                data: data.trend.map(t => t.expense || 0), 
-                borderColor: '#ef4444', 
-                backgroundColor: 'rgba(239,68,68,0.1)', 
-                tension: 0.4, 
-                fill: true, 
-                borderWidth: 2 
-              }
-            ]
-          },
-          options: {
-            responsive: true, 
-            maintainAspectRatio: false,
-            plugins: { 
-              legend: { position: 'top' } 
-            },
-            scales: {
-              y: { 
-                beginAtZero: true, 
-                ticks: { callback: v => (v/1000).toFixed(0)+'k ₽' } 
-              },
-              x: { grid: { display: false } }
-            }
-          }
-        });
+      // Trend Line Chart (CSS/SVG)
+      const trendChart = document.getElementById('trend-line-chart');
+      if (trendChart && data.trend && data.trend.length > 0) {
+        const width = 100;
+        const height = 180;
+        const padding = 20;
+        
+        const allValues = [
+          ...data.trend.map(t => t.income || 0),
+          ...data.trend.map(t => t.expense || 0)
+        ];
+        const maxVal = Math.max(...allValues, 1);
+        
+        const incomePoints = data.trend.map((t, i) => {
+          const x = padding + (i / (data.trend.length - 1)) * (width - 2 * padding);
+          const y = height - padding - ((t.income || 0) / maxVal) * (height - 2 * padding);
+          return `${x},${y}`;
+        }).join(' ');
+        
+        const expensePoints = data.trend.map((t, i) => {
+          const x = padding + (i / (data.trend.length - 1)) * (width - 2 * padding);
+          const y = height - padding - ((t.expense || 0) / maxVal) * (height - 2 * padding);
+          return `${x},${y}`;
+        }).join(' ');
+        
+        const labels = data.trend.map(t => t.label || '').map(l => l.substr(-2));
+        
+        trendChart.innerHTML = `
+          <svg class="css-line-svg" viewBox="0 0 ${width} ${height}">
+            <!-- Grid lines -->
+            <line x1="${padding}" y1="${height-padding}" x2="${width-padding}" y2="${height-padding}" stroke="#e2e8f0" stroke-width="0.5"/>
+            <line x1="${padding}" y1="${padding}" x2="${width-padding}" y2="${padding}" stroke="#e2e8f0" stroke-width="0.5"/>
+            
+            <!-- Income line -->
+            <polyline points="${incomePoints}" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            
+            <!-- Expense line -->
+            <polyline points="${expensePoints}" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            
+            <!-- Labels -->
+            ${data.trend.map((t, i) => {
+              const x = padding + (i / (data.trend.length - 1)) * (width - 2 * padding);
+              return `<text x="${x}" y="${height-2}" text-anchor="middle" font-size="6" fill="#64748b">${labels[i]}</text>`;
+            }).join('')}
+            
+            <!-- Legend -->
+            <rect x="${padding}" y="2" width="8" height="8" fill="#10b981" rx="1"/>
+            <text x="${padding+10}" y="8" font-size="6" fill="#475569">Доходы</text>
+            <rect x="${padding+50}" y="2" width="8" height="8" fill="#ef4444" rx="1"/>
+            <text x="${padding+60}" y="8" font-size="6" fill="#475569">Расходы</text>
+          </svg>
+        `;
       }
       
       console.log('PDF report rendered successfully');
