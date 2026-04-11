@@ -132,20 +132,6 @@
       font-size: 10px; font-weight: 700;
     }
     
-    .weeks-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-    .week-card {
-      background: #f8fafc; border: 1px solid var(--border-light);
-      border-radius: var(--radius-md); padding: 14px 12px; text-align: center;
-    }
-    .week-card .w-label {
-      font-weight: 700; color: var(--text-primary); margin-bottom: 8px; font-size: 11px;
-      padding: 3px 8px; background: var(--bg-accent); color: white; border-radius: 6px; display: inline-block;
-    }
-    .week-card .row { display: flex; justify-content: space-between; font-size: 9px; margin: 4px 0; color: var(--text-secondary); }
-    .week-card .row .val { font-weight: 600; font-family: var(--font-mono); font-size: 10px; }
-    .week-card .row .val.pos { color: var(--success); }
-    .week-card .row .val.neg { color: var(--danger); }
-    
     .bar-list { display: flex; flex-direction: column; gap: 10px; }
     .bar-item { display: grid; grid-template-columns: 1fr 120px 60px 40px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
     .bar-item:last-child { border-bottom: none; }
@@ -251,7 +237,7 @@
     </div>
   </div>
 
-  <!-- Страница 2: Ключевые показатели -->
+  <!-- Страница 2: Ключевые показатели и категории -->
   <div class="page">
     <header class="page-header">
       <div>
@@ -291,14 +277,7 @@
     </div>
 
     <div class="section">
-      <div class="section-title"><span class="num">1</span> Недельная динамика</div>
-      <div class="weeks-grid" id="weeks-grid">
-        <!-- Заполняется JavaScript -->
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title"><span class="num">2</span> Топ-5 категорий расходов</div>
+      <div class="section-title"><span class="num">1</span> Топ-5 категорий расходов</div>
       <div class="bar-list" id="top-categories">
         <!-- Заполняется JavaScript -->
       </div>
@@ -306,11 +285,11 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 2 из 4</div>
+      <div class="page-num">Страница 2 из 3</div>
     </footer>
   </div>
 
-  <!-- Страница 3: Детализация транзакций -->
+  <!-- Страница 3: Детализация транзакций, инсайты и итог -->
   <div class="page">
     <header class="page-header" style="margin-bottom:16px;">
       <div>
@@ -331,21 +310,6 @@
       </thead>
       <tbody id="transactions-body"></tbody>
     </table>
-
-    <footer class="page-footer">
-      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 3 из 4</div>
-    </footer>
-  </div>
-
-  <!-- Страница 4: Инсайты и итог -->
-  <div class="page">
-    <header class="page-header" style="margin-bottom:16px;">
-      <div>
-        <div class="title">Анализ и выводы</div>
-        <div class="subtitle">Рекомендации</div>
-      </div>
-    </header>
 
     <div class="insights">
       <strong>📌 Ключевые наблюдения:</strong>
@@ -372,7 +336,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
-      <div class="page-num">Страница 4 из 4</div>
+      <div class="page-num">Страница 3 из 3</div>
     </footer>
   </div>
 
@@ -432,31 +396,6 @@
       }
       
       setText('delta-label', delta >= 0 ? '📈 Профицит' : '⚠️ Дефицит');
-      
-      // Weeks grid - FIX: проверяем есть ли данные по неделям
-      const wGrid = document.getElementById('weeks-grid');
-      if (wGrid) {
-        if (data.weeks && data.weeks.length > 0) {
-          wGrid.innerHTML = data.weeks.map(w => {
-            const wDelta = (w.income || 0) - (w.expense || 0);
-            return `
-              <div class="week-card">
-                <div class="w-label">${w.label || 'Неделя'}</div>
-                <div class="row"><span>Доход:</span><span class="val pos">${fmt(w.income)} ₽</span></div>
-                <div class="row"><span>Расход:</span><span class="val neg">${fmt(w.expense)} ₽</span></div>
-                <div class="row"><span>Δ:</span><span class="val ${wDelta >= 0 ? 'pos' : 'neg'}">${fmt(wDelta)} ₽</span></div>
-              </div>`;
-          }).join('');
-        } else {
-          // Показываем заглушки если недель нет
-          wGrid.innerHTML = `
-            <div class="week-card"><div class="w-label">Неделя 1</div><div style="font-size:9px;color:var(--text-muted);padding:8px 0;">Нет данных</div></div>
-            <div class="week-card"><div class="w-label">Неделя 2</div><div style="font-size:9px;color:var(--text-muted);padding:8px 0;">Нет данных</div></div>
-            <div class="week-card"><div class="w-label">Неделя 3</div><div style="font-size:9px;color:var(--text-muted);padding:8px 0;">Нет данных</div></div>
-            <div class="week-card"><div class="w-label">Неделя 4</div><div style="font-size:9px;color:var(--text-muted);padding:8px 0;">Нет данных</div></div>
-          `;
-        }
-      }
       
       // Top categories
       const topCats = document.getElementById('top-categories');

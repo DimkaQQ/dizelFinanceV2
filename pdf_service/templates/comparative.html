@@ -143,9 +143,14 @@
       pointer-events: none;
     }
     .comparison-hero .title {
-      font-size: 12px; color: var(--accent-gold-light);
-      text-transform: uppercase; letter-spacing: 0.08em;
-      margin-bottom: 12px; position: relative;
+      font-size: 12px; 
+      color: #ffffff; /* ← ИЗМЕНЕНО: белый вместо золотого для контраста */
+      text-transform: uppercase; 
+      letter-spacing: 0.08em;
+      margin-bottom: 12px; 
+      position: relative;
+      opacity: 0.95; /* ← Увеличил непрозрачность */
+      font-weight: 600; /* ← Добавил жирность */
     }
     .comparison-hero .main-diff {
       font-size: 32px; font-weight: 800; font-family: var(--font-mono);
@@ -154,8 +159,11 @@
     .comparison-hero .main-diff.pos { color: #34d399; }
     .comparison-hero .main-diff.neg { color: #f87171; }
     .comparison-hero .details {
-      font-size: 12px; color: rgba(255,255,255,0.85);
-      margin-top: 12px; position: relative;
+      font-size: 12px; 
+      color: rgba(255,255,255,0.9); /* ← Увеличил контраст */
+      margin-top: 12px; 
+      position: relative;
+      font-weight: 500;
     }
     
     .section { margin: 20px 0; page-break-inside: avoid; }
@@ -172,7 +180,7 @@
     
     .data-table {
       width: 100%; border-collapse: separate; border-spacing: 0;
-      font-size: 10px; margin: 6px 0 35px; /* Увеличил отступ снизу */
+      font-size: 10px; margin: 6px 0 40px; /* ← УВЕЛИЧИЛ отступ снизу с 35px до 40px */
     }
     .data-table thead { background: #f1f5f9; border-bottom: 2px solid var(--border-light); }
     .data-table th {
@@ -203,8 +211,8 @@
       background: white; 
       border: 1px solid var(--border-light);
       border-radius: var(--radius-md); 
-      padding: 30px 20px; /* Увеличил padding сверху */
-      margin: 40px 0 20px; /* Увеличил отступы */
+      padding: 40px 20px; /* ← УВЕЛИЧИЛ padding сверху с 30px до 40px */
+      margin: 50px 0 20px; /* ← УВЕЛИЧИЛ отступы: сверху с 40px до 50px */
       page-break-inside: avoid;
     }
     
@@ -212,8 +220,8 @@
       display: flex;
       align-items: flex-end;
       justify-content: space-around;
-      height: 160px; /* Уменьшил высоту */
-      padding: 20px 20px 30px; /* Увеличил padding для spacing */
+      height: 160px;
+      padding: 20px 20px 30px;
       background: #f8fafc;
       border-radius: 8px;
       gap: 30px;
@@ -222,7 +230,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px; /* Увеличил gap */
+      gap: 12px;
       flex: 1;
       max-width: 140px;
     }
@@ -230,7 +238,7 @@
       display: flex;
       gap: 12px;
       align-items: flex-end;
-      height: 120px; /* Уменьшил высоту */
+      height: 120px;
       justify-content: center;
     }
     .css-bar-compare .bar {
@@ -257,7 +265,7 @@
       background: linear-gradient(135deg, #f8fafc, #fff);
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
-      padding: 20px 18px; margin: 30px 0; /* Увеличил отступы */
+      padding: 20px 18px; margin: 30px 0;
       page-break-inside: avoid;
     }
     .insights ul { margin-left: 16px; margin-top: 12px; }
@@ -270,7 +278,7 @@
     
     .final-card {
       background: var(--bg-accent); border-radius: var(--radius-lg);
-      padding: 32px 24px; color: white; text-align: center; margin: 30px 0; /* Увеличил отступы */
+      padding: 32px 24px; color: white; text-align: center; margin: 30px 0;
       position: relative; overflow: hidden;
       page-break-inside: avoid;
     }
