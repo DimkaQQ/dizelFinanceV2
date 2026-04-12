@@ -182,10 +182,11 @@
       padding: 8px 8px; 
       border-bottom: 1px solid var(--border-light); 
       color: var(--text-primary);
+      text-align: left;
     }
     .data-table tr:last-child td { border-bottom: none; }
-    .data-table tr:nth-child(even) { background: #fafafa; }
-    .data-table .amount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
+    .data-table tr:nth-child(even) td { background: #f8fafc; }
+    .data-table .amount { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; font-size: 11px; }
     .data-table .amount.pos { color: var(--success); }
     .data-table .amount.neg { color: var(--danger); }
     
@@ -351,12 +352,12 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 2 из 5</div>
+      <div class="page-num">Страница 2 из 4</div>
     </footer>
   </div>
 
   <!-- Страница 3: Таблица транзакций -->
-  <div class="page" style="padding-bottom: 25mm;">
+  <div class="page">
     <header class="page-header" style="margin-bottom:16px;">
       <div>
         <div class="title">Операции за квартал</div>
@@ -378,24 +379,20 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 3 из 5</div>
+      <div class="page-num">Страница 3 из 4</div>
     </footer>
   </div>
 
-  <!-- Страница 4: График + Инсайты -->
+  <!-- Страница 4: Наблюдения + Итог -->
   <div class="page">
     <header class="page-header">
       <div>
-        <div class="title">Динамика и анализ</div>
-        <div class="subtitle">График и ключевые наблюдения</div>
+        <div class="title">Анализ и итоги</div>
+        <div class="subtitle">Ключевые наблюдения</div>
       </div>
     </header>
 
-    <div class="chart-box">
-      <div class="css-bar-chart" id="quarter-bar-chart"></div>
-    </div>
-
-    <div class="insights" style="margin-top: 24px;">
+    <div class="insights">
       <strong>📌 Ключевые наблюдения:</strong>
       <ul>
         <li>Средний чек: <span class="highlight" id="avg-check">— ₽</span></li>
@@ -404,21 +401,6 @@
         <li>Рекомендация: <span class="highlight" id="recommendation">—</span></li>
       </ul>
     </div>
-
-    <footer class="page-footer">
-      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 4 из 5</div>
-    </footer>
-  </div>
-
-  <!-- Страница 5: Итог -->
-  <div class="page">
-    <header class="page-header">
-      <div>
-        <div class="title">Итоги квартала</div>
-        <div class="subtitle">Финансовый результат</div>
-      </div>
-    </header>
 
     <div class="final-card">
       <div class="emoji" id="final-emoji">—</div>
@@ -435,7 +417,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
-      <div class="page-num">Страница 5 из 5</div>
+      <div class="page-num">Страница 4 из 4</div>
     </footer>
   </div>
 
