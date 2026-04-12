@@ -278,9 +278,7 @@
 
     <div class="section">
       <div class="section-title"><span class="num">1</span> Топ-5 категорий расходов</div>
-      <div class="bar-list" id="top-categories">
-        <!-- Заполняется JavaScript -->
-      </div>
+      <div class="bar-list" id="top-categories"></div>
     </div>
 
     <footer class="page-footer">
@@ -289,35 +287,22 @@
     </footer>
   </div>
 
-  <!-- Страница 3: Детализация транзакций, инсайты и итог -->
+  <!-- Страница 3: Детализация, наблюдения и итог (в стиле Q4) -->
   <div class="page">
-    <header class="page-header" style="margin-bottom:16px;">
+    <header class="page-header">
       <div>
-        <div class="title">Все операции за месяц</div>
-        <div class="subtitle">Полная детализация</div>
+        <div class="title">Анализ и итоги</div>
+        <div class="subtitle">Ключевые наблюдения</div>
       </div>
     </header>
-
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th style="width:18%; text-align:left;">Дата</th>
-          <th style="width:32%; text-align:left;">Категория</th>
-          <th style="width:25%;">Сумма</th>
-          <th style="width:15%;">Тип</th>
-          <th style="width:10%;"> </th>
-        </tr>
-      </thead>
-      <tbody id="transactions-body"></tbody>
-    </table>
 
     <div class="insights">
       <strong>📌 Ключевые наблюдения:</strong>
       <ul>
         <li>Средний чек: <span class="highlight" id="avg-check">— ₽</span></li>
         <li>Крупнейшая трата: <span class="highlight" id="max-expense">— ₽</span> (<span id="max-category">—</span>)</li>
-        <li>Дней с расходами: <span class="highlight" id="active-days">—</span> из <span id="total-days">—</span></li>
-        <li>Сравнение с прошлым месяцем: <span class="highlight" id="vs-prev">—</span></li>
+        <li>Самый затратный день: <span class="highlight" id="max-day">—</span></li>
+        <li>Рекомендация: <span class="highlight" id="recommendation">—</span></li>
       </ul>
     </div>
 
@@ -417,7 +402,7 @@
         }
       }
       
-      // Transactions table - упрощённая версия
+      // Transactions table
       const txBody = document.getElementById('transactions-body');
       if (txBody) {
         if (data.transactions && data.transactions.length > 0) {
@@ -426,7 +411,6 @@
             const txType = tx.tx_type || 'Расход';
             const icon = txType === 'Доход' ? '💰' : '💸';
             const amountClass = txType === 'Доход' ? 'pos' : 'neg';
-            
             return `
               <tr>
                 <td>${tx.date || '—'}</td>
@@ -441,7 +425,7 @@
         }
       }
       
-      // Insights
+      // Insights — в стиле Q4
       const expenses = data.transactions ? data.transactions.filter(t => t.tx_type === 'Расход') : [];
       const avgCheck = expenses.length > 0 ? totalExpense / expenses.length : 0;
       setText('avg-check', `${fmt(avgCheck)} ₽`);
@@ -451,17 +435,22 @@
       setText('max-expense', `${fmt(maxExpense)} ₽`);
       setText('max-category', maxCat);
       
-      const activeDays = data.transactions ? new Set(data.transactions.map(t => t.date)).size : 0;
-      const totalDays = new Date(year, data.month, 0).getDate();
-      setText('active-days', activeDays);
-      setText('total-days', totalDays);
+      // Самый затратный день
+      const expensesByDay = {};
+      expenses.forEach(tx => {
+        const d = tx.date || '';
+        if (d) expensesByDay[d] = (expensesByDay[d] || 0) + (tx.amount || 0);
+      });
+      const maxDay = Object.entries(expensesByDay).sort((a,b) => b[1] - a[1])[0]?.[0] || '—';
+      setText('max-day', maxDay);
       
-      const vsPrevEl = document.getElementById('vs-prev');
-      if (vsPrevEl) {
-        const totalChange = prevExpense > 0 ? ((totalExpense - prevExpense) / prevExpense * 100).toFixed(1) : 0;
-        const sign = totalChange > 0 ? '+' : '';
-        vsPrevEl.textContent = `${sign}${totalChange}% расходов`;
-        vsPrevEl.className = totalChange <= 0 ? 'highlight text-success' : 'highlight';
+      // Рекомендация
+      const recEl = document.getElementById('recommendation');
+      if (recEl) {
+        const rate = parseFloat(savingsRate);
+        if (rate < 10) recEl.textContent = 'Сократить регулярные расходы на 10-15%';
+        else if (rate > 25) recEl.textContent = 'Отлично! Рассмотреть инвестиции';
+        else recEl.textContent = 'Стабильно, можно оптимизировать категории';
       }
       
       // Final card
