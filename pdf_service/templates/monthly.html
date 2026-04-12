@@ -192,18 +192,7 @@
     .data-table .amount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
     .data-table .amount.pos { color: var(--success); }
     .data-table .amount.neg { color: var(--danger); }
-    .data-table .type { 
-      text-align: center; 
-      font-size: 16px;
-      padding-left: 4px;
-      padding-right: 4px;
-    }
-    .data-table .tx-type-label {
-      font-size: 9px;
-      color: var(--text-muted);
-      text-align: right;
-      padding-left: 6px;
-    }
+    .data-table .type { text-align: center; font-size: 16px; }
     
     .insights {
       background: linear-gradient(135deg, #f8fafc, #fff);
@@ -475,7 +464,7 @@
                 <td>${tx.category || '—'}</td>
                 <td class="amount ${amountClass}">${fmt(amount)} ₽</td>
                 <td class="type">${icon}</td>
-                <td class="tx-type-label">${txType}</td>
+                <td style="font-size:9px;color:var(--text-muted);">${txType}</td>
               </tr>`;
           }).join('');
         } else {
