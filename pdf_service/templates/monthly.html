@@ -289,13 +289,28 @@
 
   <!-- Страница 3: Детализация, наблюдения и итог (в стиле Q4) -->
   <div class="page">
-    <header class="page-header">
+    <header class="page-header" style="margin-bottom:16px;">
       <div>
-        <div class="title">Анализ и итоги</div>
-        <div class="subtitle">Ключевые наблюдения</div>
+        <div class="title">Все операции за месяц</div>
+        <div class="subtitle">Полная детализация</div>
       </div>
     </header>
 
+    <!-- Таблица транзакций -->
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:18%; text-align:left;">Дата</th>
+          <th style="width:32%; text-align:left;">Категория</th>
+          <th style="width:25%;">Сумма</th>
+          <th style="width:15%;">Тип</th>
+          <th style="width:10%;"> </th>
+        </tr>
+      </thead>
+      <tbody id="transactions-body"></tbody>
+    </table>
+
+    <!-- Блок наблюдений (в стиле Q4) -->
     <div class="insights">
       <strong>📌 Ключевые наблюдения:</strong>
       <ul>
@@ -306,6 +321,7 @@
       </ul>
     </div>
 
+    <!-- Финальная карточка (в стиле Q4) -->
     <div class="final-card">
       <div class="emoji" id="final-emoji">—</div>
       <div class="headline" id="final-headline">—</div>
