@@ -48,7 +48,6 @@
     }
     .page:last-child { page-break-after: auto; }
     
-    /* Страница с транзакциями может переноситься */
     .transactions-page {
       page-break-inside: auto;
     }
@@ -60,7 +59,6 @@
       page-break-after: auto;
     }
     
-    /* Итоги всегда на новой странице */
     .summary-section {
       page-break-before: always;
       page-break-inside: avoid;
@@ -209,18 +207,13 @@
     .data-table .amount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
     .data-table .amount.pos { color: var(--success); }
     .data-table .amount.neg { color: var(--danger); }
-    .data-table .type { 
-      text-align: center; 
-      font-size: 16px;
-      padding-left: 4px;
-      padding-right: 4px;
+    .data-table .tx-type { 
+      text-align: right; 
+      font-weight: 600;
+      font-size: 10px;
     }
-    .data-table .tx-type-label {
-      font-size: 9px;
-      color: var(--text-muted);
-      text-align: right;
-      padding-left: 6px;
-    }
+    .data-table .tx-type.expense { color: var(--danger); }
+    .data-table .tx-type.income { color: var(--success); }
     
     .insights {
       background: linear-gradient(135deg, #f8fafc, #fff);
@@ -350,11 +343,10 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width:18%; text-align:left;">Дата</th>
-          <th style="width:32%; text-align:left;">Категория</th>
-          <th style="width:25%;">Сумма</th>
+          <th style="width:20%; text-align:left;">Дата</th>
+          <th style="width:35%; text-align:left;">Категория</th>
+          <th style="width:30%;">Сумма</th>
           <th style="width:15%;">Тип</th>
-          <th style="width:10%;"> </th>
         </tr>
       </thead>
       <tbody id="transactions-body"></tbody>
@@ -470,24 +462,23 @@
         }).join('');
       }
       
-      // Transactions table — с таким же дизайном как в monthly
+      // Transactions table — БЕЗ эмодзи, только текст с цветом
       const txBody = document.getElementById('transactions-body');
       if (data.transactions && data.transactions.length > 0) {
         txBody.innerHTML = data.transactions.map(tx => {
           const isIncome = tx.tx_type === 'Доход';
-          const icon = isIncome ? '💰' : '💸';
           const amountClass = isIncome ? 'pos' : 'neg';
+          const typeClass = isIncome ? 'income' : 'expense';
           return `
             <tr>
               <td>${tx.date || '—'}</td>
               <td>${tx.category || '—'}</td>
               <td class="amount ${amountClass}">${fmt(tx.amount)} ₽</td>
-              <td class="type">${icon}</td>
-              <td class="tx-type-label">${tx.tx_type || 'Расход'}</td>
+              <td class="tx-type ${typeClass}">${tx.tx_type || 'Расход'}</td>
             </tr>`;
         }).join('');
       } else {
-        txBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Нет транзакций за этот период</td></tr>';
+        txBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">Нет транзакций за этот период</td></tr>';
       }
       
       // Insights

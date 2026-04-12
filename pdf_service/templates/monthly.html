@@ -48,7 +48,6 @@
     }
     .page:last-child { page-break-after: auto; }
     
-    /* Страница с транзакциями может переноситься */
     .transactions-page {
       page-break-inside: auto;
     }
@@ -60,7 +59,6 @@
       page-break-after: auto;
     }
     
-    /* Итоги всегда на новой странице */
     .summary-section {
       page-break-before: always;
       page-break-inside: avoid;
@@ -192,7 +190,13 @@
     .data-table .amount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
     .data-table .amount.pos { color: var(--success); }
     .data-table .amount.neg { color: var(--danger); }
-    .data-table .type { text-align: center; font-size: 16px; }
+    .data-table .tx-type { 
+      text-align: right; 
+      font-weight: 600;
+      font-size: 10px;
+    }
+    .data-table .tx-type.expense { color: var(--danger); }
+    .data-table .tx-type.income { color: var(--success); }
     
     .insights {
       background: linear-gradient(135deg, #f8fafc, #fff);
@@ -306,7 +310,7 @@
     </footer>
   </div>
 
-  <!-- Страница 3: Детализация транзакций (может занимать несколько страниц) -->
+  <!-- Страница 3: Детализация транзакций -->
   <div class="page transactions-page">
     <header class="page-header" style="margin-bottom:16px;">
       <div>
@@ -318,11 +322,10 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width:18%; text-align:left;">Дата</th>
-          <th style="width:32%; text-align:left;">Категория</th>
-          <th style="width:25%;">Сумма</th>
+          <th style="width:20%; text-align:left;">Дата</th>
+          <th style="width:35%; text-align:left;">Категория</th>
+          <th style="width:30%;">Сумма</th>
           <th style="width:15%;">Тип</th>
-          <th style="width:10%;"> </th>
         </tr>
       </thead>
       <tbody id="transactions-body"></tbody>
@@ -334,7 +337,7 @@
     </footer>
   </div>
 
-  <!-- Страница 4: Итоги и наблюдения (ВСЕГДА ОТДЕЛЬНАЯ СТРАНИЦА) -->
+  <!-- Страница 4: Итоги и наблюдения -->
   <div class="page summary-section">
     <header class="page-header">
       <div>
@@ -394,7 +397,6 @@
       const savingsRate = totalIncome > 0 ? ((delta / totalIncome) * 100).toFixed(1) : 0;
       const totalAssets = data.total_assets || 0;
       
-      // Comparison with previous month
       const prevIncome = data.prev_income || 0;
       const prevExpense = data.prev_expense || 0;
       const incomeChange = prevIncome > 0 ? ((totalIncome - prevIncome) / prevIncome * 100).toFixed(1) : 0;
@@ -411,7 +413,6 @@
       setText('savings-rate', savingsRate);
       setText('total-assets', `${fmt(totalAssets)} ₽`);
       
-      // Income delta
       const incomeDeltaEl = document.getElementById('income-delta');
       if (incomeDeltaEl) {
         const sign = incomeChange > 0 ? '+' : '';
@@ -419,7 +420,6 @@
         incomeDeltaEl.className = `delta ${incomeChange >= 0 ? 'pos' : 'neg'}`;
       }
       
-      // Expense delta
       const expenseDeltaEl = document.getElementById('expense-delta');
       if (expenseDeltaEl) {
         const sign = expenseChange > 0 ? '+' : '';
@@ -429,7 +429,6 @@
       
       setText('delta-label', delta >= 0 ? '📈 Профицит' : '⚠️ Дефицит');
       
-      // Top categories
       const topCats = document.getElementById('top-categories');
       if (topCats) {
         if (data.top_categories && data.top_categories.length > 0) {
@@ -449,26 +448,25 @@
         }
       }
       
-      // Transactions table
+      // Transactions table - БЕЗ эмодзи, только текст с цветом
       const txBody = document.getElementById('transactions-body');
       if (txBody) {
         if (data.transactions && data.transactions.length > 0) {
           txBody.innerHTML = data.transactions.map(tx => {
             const amount = tx.amount || 0;
             const txType = tx.tx_type || 'Расход';
-            const icon = txType === 'Доход' ? '💰' : '💸';
             const amountClass = txType === 'Доход' ? 'pos' : 'neg';
+            const typeClass = txType === 'Доход' ? 'income' : 'expense';
             return `
               <tr>
                 <td>${tx.date || '—'}</td>
                 <td>${tx.category || '—'}</td>
                 <td class="amount ${amountClass}">${fmt(amount)} ₽</td>
-                <td class="type">${icon}</td>
-                <td style="font-size:9px;color:var(--text-muted);">${txType}</td>
+                <td class="tx-type ${typeClass}">${txType}</td>
               </tr>`;
           }).join('');
         } else {
-          txBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Нет транзакций за этот период</td></tr>';
+          txBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">Нет транзакций за этот период</td></tr>';
         }
       }
       
@@ -482,7 +480,6 @@
       setText('max-expense', `${fmt(maxExpense)} ₽`);
       setText('max-category', maxCat);
       
-      // Самый затратный день
       const expensesByDay = {};
       expenses.forEach(tx => {
         const d = tx.date || '';
@@ -491,7 +488,6 @@
       const maxDay = Object.entries(expensesByDay).sort((a,b) => b[1] - a[1])[0]?.[0] || '—';
       setText('max-day', maxDay);
       
-      // Рекомендация
       const recEl = document.getElementById('recommendation');
       if (recEl) {
         const rate = parseFloat(savingsRate);
@@ -500,14 +496,12 @@
         else recEl.textContent = 'Стабильно, можно оптимизировать категории';
       }
       
-      // Final card
       setText('final-emoji', delta >= 0 ? '🎯' : '📊');
       setText('final-headline', delta >= 0 ? `Профицит за ${monthName}` : `Дефицит за ${monthName}`);
       setText('final-income', fmt(totalIncome));
       setText('final-expense', fmt(totalExpense));
       setText('final-delta', fmt(delta));
       
-      // Update page numbers
       const pages = document.querySelectorAll('.page');
       const totalPages = pages.length;
       document.querySelectorAll('.page-num').forEach((el, idx) => {
