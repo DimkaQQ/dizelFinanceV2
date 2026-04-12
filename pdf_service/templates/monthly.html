@@ -48,6 +48,25 @@
     }
     .page:last-child { page-break-after: auto; }
     
+    /* Страница с транзакциями может переноситься */
+    .transactions-page {
+      page-break-inside: auto;
+    }
+    .transactions-page .data-table {
+      page-break-inside: auto;
+    }
+    .transactions-page tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    
+    /* Итоги всегда на новой странице */
+    .summary-section {
+      page-break-before: always;
+      page-break-inside: avoid;
+      margin-top: 20px;
+    }
+    
     .cover {
       display: flex;
       flex-direction: column;
@@ -179,7 +198,7 @@
       background: linear-gradient(135deg, #f8fafc, #fff);
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
-      padding: 16px 18px; margin: 16px 0; page-break-inside: avoid;
+      padding: 16px 18px; margin: 20px 0; page-break-inside: avoid;
     }
     .insights ul { margin-left: 16px; margin-top: 8px; }
     .insights li { margin: 6px 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
@@ -283,12 +302,12 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 2 из 3</div>
+      <div class="page-num">Страница 2 из —</div>
     </footer>
   </div>
 
-  <!-- Страница 3: Детализация, наблюдения и итог (в стиле Q4) -->
-  <div class="page">
+  <!-- Страница 3: Детализация транзакций (может занимать несколько страниц) -->
+  <div class="page transactions-page">
     <header class="page-header" style="margin-bottom:16px;">
       <div>
         <div class="title">Все операции за месяц</div>
@@ -296,7 +315,6 @@
       </div>
     </header>
 
-    <!-- Таблица транзакций -->
     <table class="data-table">
       <thead>
         <tr>
@@ -310,7 +328,21 @@
       <tbody id="transactions-body"></tbody>
     </table>
 
-    <!-- Блок наблюдений (в стиле Q4) -->
+    <footer class="page-footer">
+      <div class="brand"><span class="logo">WC</span> Wealth Control</div>
+      <div class="page-num">Страница 3 из —</div>
+    </footer>
+  </div>
+
+  <!-- Страница 4: Итоги и наблюдения (ВСЕГДА ОТДЕЛЬНАЯ СТРАНИЦА) -->
+  <div class="page summary-section">
+    <header class="page-header">
+      <div>
+        <div class="title">Анализ и итоги</div>
+        <div class="subtitle">Ключевые наблюдения</div>
+      </div>
+    </header>
+
     <div class="insights">
       <strong>📌 Ключевые наблюдения:</strong>
       <ul>
@@ -321,7 +353,6 @@
       </ul>
     </div>
 
-    <!-- Финальная карточка (в стиле Q4) -->
     <div class="final-card">
       <div class="emoji" id="final-emoji">—</div>
       <div class="headline" id="final-headline">—</div>
@@ -337,7 +368,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
-      <div class="page-num">Страница 3 из 3</div>
+      <div class="page-num">Страница 4 из —</div>
     </footer>
   </div>
 
@@ -441,7 +472,7 @@
         }
       }
       
-      // Insights — в стиле Q4
+      // Insights
       const expenses = data.transactions ? data.transactions.filter(t => t.tx_type === 'Расход') : [];
       const avgCheck = expenses.length > 0 ? totalExpense / expenses.length : 0;
       setText('avg-check', `${fmt(avgCheck)} ₽`);
@@ -475,6 +506,13 @@
       setText('final-income', fmt(totalIncome));
       setText('final-expense', fmt(totalExpense));
       setText('final-delta', fmt(delta));
+      
+      // Update page numbers
+      const pages = document.querySelectorAll('.page');
+      const totalPages = pages.length;
+      document.querySelectorAll('.page-num').forEach((el, idx) => {
+        el.textContent = `Страница ${idx + 1} из ${totalPages}`;
+      });
       
     })();
   </script>
