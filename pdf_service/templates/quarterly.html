@@ -332,7 +332,7 @@
   </div>
 
    <!-- Страница 3: Таблица транзакций (может занимать несколько страниц) -->
-   <div class="page transactions-page">
+  <div class="page transactions-page">
     <header class="page-header" style="margin-bottom:16px;">
       <div>
         <div class="title">Все операции за квартал</div>
@@ -351,15 +351,7 @@
       </thead>
       <tbody id="transactions-body"></tbody>
     </table>
-
-    <!-- Футер делаем относительным, а не абсолютным -->
-    <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: var(--text-muted);">
-      <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-secondary);">
-        <div style="width: 16px; height: 16px; background: var(--bg-accent); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 700;">WC</div>
-        Wealth Control
-      </div>
-      <div style="font-family: var(--font-mono); color: var(--text-muted);" class="tx-page-num">Страница 3 из —</div>
-    </div>
+    <!-- Футер убран - будет только на финальной странице -->
   </div>
 
   <!-- Страница 4: Наблюдения + Итог (ВСЕГДА ОТДЕЛЬНАЯ СТРАНИЦА) -->
