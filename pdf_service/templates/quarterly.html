@@ -48,6 +48,25 @@
     }
     .page:last-child { page-break-after: auto; }
     
+    /* Страница с транзакциями может переноситься */
+    .transactions-page {
+      page-break-inside: auto;
+    }
+    .transactions-page .data-table {
+      page-break-inside: auto;
+    }
+    .transactions-page tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    
+    /* Итоги всегда на новой странице */
+    .summary-section {
+      page-break-before: always;
+      page-break-inside: avoid;
+      margin-top: 20px;
+    }
+    
     .cover {
       display: flex;
       flex-direction: column;
@@ -163,7 +182,7 @@
       border-collapse: separate;
       border-spacing: 0;
       font-size: 10px; 
-      margin: 6px 0 25px;
+      margin: 6px 0; 
     }
     .data-table thead { 
       background: #f1f5f9; 
@@ -172,79 +191,42 @@
     .data-table th { 
       font-weight: 700; 
       color: var(--text-secondary); 
+      text-align: right; 
       padding: 10px 8px; 
       text-transform: uppercase; 
       font-size: 9px; 
       letter-spacing: 0.04em;
-      text-align: left;
     }
+    .data-table th:first-child { text-align: left; }
     .data-table td { 
-      padding: 8px 8px; 
+      padding: 9px 8px; 
       border-bottom: 1px solid var(--border-light); 
       color: var(--text-primary);
-      text-align: left;
+      text-align: right;
     }
+    .data-table td:first-child { text-align: left; font-weight: 600; }
     .data-table tr:last-child td { border-bottom: none; }
-    .data-table tr:nth-child(even) td { background: #f8fafc; }
-    .data-table .amount { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; font-size: 11px; }
+    .data-table .amount { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
     .data-table .amount.pos { color: var(--success); }
     .data-table .amount.neg { color: var(--danger); }
-    
-    .chart-box {
-      background: white; 
-      border: 1px solid var(--border-light);
-      border-radius: var(--radius-md); 
-      padding: 20px;
-      margin: 20px 0 15px;
-      page-break-inside: avoid;
+    .data-table .type { 
+      text-align: center; 
+      font-size: 16px;
+      padding-left: 4px;
+      padding-right: 4px;
     }
-    
-    .css-bar-chart {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-around;
-      height: 120px;
-      padding: 15px 5px 20px;
-      background: #f8fafc;
-      border-radius: 8px;
-    }
-    .css-bar-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      flex: 1;
-      max-width: 55px;
-    }
-    .css-bar {
-      width: 100%;
-      background: linear-gradient(to top, var(--success), #34d399);
-      border-radius: 4px 4px 0 0;
-      min-height: 2px;
-    }
-    .css-bar.expense {
-      background: linear-gradient(to top, var(--danger), #f87171);
-    }
-    .css-bar-label {
+    .data-table .tx-type-label {
       font-size: 9px;
       color: var(--text-muted);
-      text-align: center;
-      white-space: nowrap;
-      margin-top: 6px;
-    }
-    .css-bar-value {
-      font-size: 8px;
-      font-weight: 600;
-      font-family: var(--font-mono);
-      color: var(--text-secondary);
-      line-height: 1;
+      text-align: right;
+      padding-left: 6px;
     }
     
     .insights {
       background: linear-gradient(135deg, #f8fafc, #fff);
       border: 1px solid var(--border-light); border-left: 4px solid var(--accent-gold);
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
-      padding: 16px 18px; margin: 25px 0;
+      padding: 16px 18px; margin: 20px 0;
       page-break-inside: avoid;
     }
     .insights ul { margin-left: 16px; margin-top: 8px; }
@@ -254,7 +236,7 @@
     
     .final-card {
       background: var(--bg-accent); border-radius: var(--radius-lg);
-      padding: 28px 24px; color: white; text-align: center; margin: 30px 0;
+      padding: 28px 24px; color: white; text-align: center; margin: 20px 0;
       page-break-inside: avoid;
     }
     .final-card .emoji { font-size: 42px; margin-bottom: 14px; }
@@ -352,26 +334,27 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 2 из 4</div>
+      <div class="page-num">Страница 2 из —</div>
     </footer>
   </div>
 
-  <!-- Страница 3: Таблица транзакций -->
-  <div class="page">
+  <!-- Страница 3: Таблица транзакций (может занимать несколько страниц) -->
+  <div class="page transactions-page">
     <header class="page-header" style="margin-bottom:16px;">
       <div>
-        <div class="title">Операции за квартал</div>
-        <div class="subtitle">Все транзакции периода</div>
+        <div class="title">Все операции за квартал</div>
+        <div class="subtitle">Полная детализация</div>
       </div>
     </header>
 
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width:20%;">Дата</th>
-          <th style="width:45%;">Категория</th>
-          <th style="width:25%; text-align:right;">Сумма</th>
-          <th style="width:10%; text-align:center;">Тип</th>
+          <th style="width:18%; text-align:left;">Дата</th>
+          <th style="width:32%; text-align:left;">Категория</th>
+          <th style="width:25%;">Сумма</th>
+          <th style="width:15%;">Тип</th>
+          <th style="width:10%;"> </th>
         </tr>
       </thead>
       <tbody id="transactions-body"></tbody>
@@ -379,12 +362,12 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control</div>
-      <div class="page-num">Страница 3 из 4</div>
+      <div class="page-num">Страница 3 из —</div>
     </footer>
   </div>
 
-  <!-- Страница 4: Наблюдения + Итог -->
-  <div class="page">
+  <!-- Страница 4: Наблюдения + Итог (ВСЕГДА ОТДЕЛЬНАЯ СТРАНИЦА) -->
+  <div class="page summary-section">
     <header class="page-header">
       <div>
         <div class="title">Анализ и итоги</div>
@@ -417,7 +400,7 @@
 
     <footer class="page-footer">
       <div class="brand"><span class="logo">WC</span> Wealth Control • Personal Finance OS</div>
-      <div class="page-num">Страница 4 из 4</div>
+      <div class="page-num">Страница 4 из —</div>
     </footer>
   </div>
 
@@ -487,40 +470,24 @@
         }).join('');
       }
       
-      // Transactions table — ВСЕ транзакции, без лимита
+      // Transactions table — с таким же дизайном как в monthly
       const txBody = document.getElementById('transactions-body');
       if (data.transactions && data.transactions.length > 0) {
         txBody.innerHTML = data.transactions.map(tx => {
           const isIncome = tx.tx_type === 'Доход';
+          const icon = isIncome ? '💰' : '💸';
+          const amountClass = isIncome ? 'pos' : 'neg';
           return `
             <tr>
-              <td style="color:var(--text-muted);">${tx.date || '—'}</td>
-              <td style="font-weight:600;">${tx.category || '—'}</td>
-              <td class="amount ${isIncome ? 'pos' : 'neg'}" style="text-align:right;">
-                ${isIncome ? '+' : '−'}${fmt(tx.amount)} ₽
-              </td>
-              <td style="text-align:center;">${isIncome ? '💰' : '💸'}</td>
+              <td>${tx.date || '—'}</td>
+              <td>${tx.category || '—'}</td>
+              <td class="amount ${amountClass}">${fmt(tx.amount)} ₽</td>
+              <td class="type">${icon}</td>
+              <td class="tx-type-label">${tx.tx_type || 'Расход'}</td>
             </tr>`;
         }).join('');
-      }
-      
-      // Quarterly Bar Chart (CSS)
-      const barChart = document.getElementById('quarter-bar-chart');
-      if (barChart && data.monthly_data && data.monthly_data.length > 0) {
-        const maxVal = Math.max(...data.monthly_data.map(m => Math.max(m.income || 0, m.expense || 0)));
-        barChart.innerHTML = data.monthly_data.map(m => {
-          const incomeHeight = maxVal > 0 ? Math.max(4, (m.income / maxVal * 80)) : 4;
-          const expenseHeight = maxVal > 0 ? Math.max(4, (m.expense / maxVal * 80)) : 4;
-          const shortName = (m.month_name || '').substr(0, 3);
-          return `
-            <div class="css-bar-wrapper">
-              <div class="css-bar-value">${Math.round(m.income/1000)}k</div>
-              <div class="css-bar" style="height:${incomeHeight}px"></div>
-              <div class="css-bar-value">${Math.round(m.expense/1000)}k</div>
-              <div class="css-bar expense" style="height:${expenseHeight}px"></div>
-              <div class="css-bar-label">${shortName}</div>
-            </div>`;
-        }).join('');
+      } else {
+        txBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Нет транзакций за этот период</td></tr>';
       }
       
       // Insights
@@ -550,6 +517,13 @@
       setText('final-income', fmt(totalIncome));
       setText('final-expense', fmt(totalExpense));
       setText('final-delta', fmt(delta));
+      
+      // Update page numbers
+      const pages = document.querySelectorAll('.page');
+      const totalPages = pages.length;
+      document.querySelectorAll('.page-num').forEach((el, idx) => {
+        el.textContent = `Страница ${idx + 1} из ${totalPages}`;
+      });
       
     })();
   </script>
