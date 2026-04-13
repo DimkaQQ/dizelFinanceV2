@@ -267,26 +267,35 @@ def analytics():
     conn = db.get_conn()
     cur = conn.cursor()
     
-    # 1. Доходы за выбранный год
+    # 1. Доходы за выбранный год (с учетом корректировок)
     if month:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) 
+            SELECT category, SUM(amount_rub) as total
             FROM transactions 
             WHERE user_id = %s AND tx_type = 'Доход' 
             AND EXTRACT(YEAR FROM date) = %s 
             AND EXTRACT(MONTH FROM date) = %s
+            GROUP BY category
         """, (u, year, month))
     else:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) 
+            SELECT category, SUM(amount_rub) as total
             FROM transactions 
             WHERE user_id = %s AND tx_type = 'Доход' 
             AND EXTRACT(YEAR FROM date) = %s
+            GROUP BY category
         """, (u, year))
     
-    # 🔥 Конвертируем Decimal в float!
-    result = cur.fetchone()
-    income = float(result[0]) if result and result[0] is not None else 0.0
+    # Применяем корректировки к доходам
+    income = 0.0
+    for row in cur.fetchall():
+        category = row[0]
+        original_amount = float(row[1]) if row[1] else 0.0
+        # Если есть корректировка для этой категории — используем её
+        if category in adjusted_categories:
+            income += adjusted_categories[category]['value']
+        else:
+            income += original_amount
     
     # 2. Расходы за выбранный год/месяц (с учетом корректировок)
     if month:
@@ -318,7 +327,7 @@ def analytics():
         else:
             expense += original_amount
     
-    # 3. Дельта (теперь оба float — ошибки не будет)
+    # 3. Дельта
     delta = income - expense
     
     # 4. Savings Rate
@@ -328,7 +337,7 @@ def analytics():
     months_count = 1 if month else 12
     avg_monthly = expense / months_count if expense > 0 else 0
     
-    # 6. Чистый капитал
+    # 6. Чистый капитал (сумма всех активов на текущий момент)
     cur.execute("""
         SELECT COALESCE(SUM(amount_rub), 0) 
         FROM transactions 
@@ -356,9 +365,9 @@ def analytics():
     cur.close()
     conn.close()
     
-    # Формируем метрики
+    # Формируем метрики с реальными значениями
     key_metrics = [
-        {"name": "Доходы (₽/год)", "formula": "Сумма всех транзакций с 'Доход' за год", "unit": "₽", "value": round(income, 2)},
+        {"name": "Доходы (₽/год)", "formula": "Сумма всех транзакций с 'Доход' за год (с учетом корректировок)", "unit": "₽", "value": round(income, 2)},
         {"name": "Расходы (₽/год)", "formula": "Сумма всех транзакций с 'Расход' за год (с учетом корректировок)", "unit": "₽", "value": round(expense, 2)},
         {"name": "Дельта / Cash Flow (₽)", "formula": "Доходы − Расходы", "unit": "₽", "value": round(delta, 2)},
         {"name": "Savings Rate (%)", "formula": "(Дельта / Доходы) × 100%", "unit": "%", "value": round(savings_rate, 2)},
