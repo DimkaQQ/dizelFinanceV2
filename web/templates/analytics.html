@@ -261,9 +261,10 @@
       {% for row in rows | sort(attribute='total', reverse=True) %}
       {% set pct = (row.total / total * 100) if total > 0 else 0 %}
       
-      {# 🔥 Проверяем корректировку #}
-      {% set adj = adjusted_categories.get(row.category, {}) %}
-      {% set display_value = adj.value if adj.value is not none else row.total %}
+      {# 🔥 Безопасное получение корректировки #}
+      {% set adj = adjusted_categories.get(row.category, {}) if adjusted_categories else {} %}
+      {% set adj_value = adj.value if adj and adj.value is not none else none %}
+      {% set display_value = adj_value if adj_value is not none else row.total %}
       
       <div class="category-row">
         <div class="category-name">{{ row.category }}</div>
@@ -274,7 +275,12 @@
             data-category="{{ row.category }}" 
             data-year="{{ year }}" 
             data-month="{{ month or 'null' }}">
-          {{ "{:,.0f}".format(display_value) }} ₽
+          {# 🔥 Безопасное форматирование #}
+          {% if display_value is none %}
+            {{ "{:,.0f}".format(row.total|default(0)) }} ₽
+          {% else %}
+            {{ "{:,.0f}".format(display_value) }} ₽
+          {% endif %}
         </div>
         <div class="category-percent">{{ pct | round(1) }}%</div>
         <div class="category-count">×{{ row.cnt }}</div>
@@ -376,7 +382,7 @@ function editCategoryRow(btn) {
   const monthRaw = amountEl.dataset.month;
   const month = monthRaw === 'null' ? null : parseInt(monthRaw);
   
-  // Парсим текущее значение
+  // Парсим текущее значение (убираем ₽, пробелы, запятые)
   const currentText = amountEl.textContent.trim().replace(/[^\d]/g, '');
   const currentValue = parseInt(currentText) || 0;
   
