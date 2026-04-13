@@ -468,6 +468,12 @@ def get_category_breakdown(user_id: int, year: int, month: int = None,
                 row['total'] = float(row['total']) if row['total'] else 0.0
                 row['cnt'] = int(row['cnt']) if row['cnt'] else 0
             
+            # 🔥 ПРИМЕНЯЕМ КОРРЕКТИРОВКИ (ЭТОГО НЕ ХВАТАЛО!)
+            adjustments = get_category_adjustments_for_period(user_id, year, month)
+            for row in rows:
+                if row['category'] in adjustments:
+                    row['total'] = adjustments[row['category']]['value']
+            
             return rows
 
 def get_yearly_trend(user_id: int, years: int = 3) -> list[dict]:

@@ -256,6 +256,9 @@ def analytics():
     trend = db.get_yearly_trend(u, years=3)
     years = list(range(n.year, n.year - 5, -1))
 
+    # 🔥 Получаем корректировки категорий для передачи в шаблон
+    adjusted_categories = db.get_category_adjustments_for_period(u, year, month)
+
     by_section = {}
     for row in cats:
         sec = row.get("section", "")
@@ -340,6 +343,7 @@ def analytics():
         years=years,
         trend=trend,
         key_metrics=key_metrics,
+        adjusted_categories=adjusted_categories,
     )
 
 # ── Upload file (с поддержкой скриншотов) ──────────────────────────────────────
