@@ -267,7 +267,7 @@ def analytics():
     conn = db.get_conn()
     cur = conn.cursor()
     
-    # 1. Доходы за выбранный год (с учетом корректировок)
+    # 1. Доходы за выбранный год
     if month:
         cur.execute("""
             SELECT COALESCE(SUM(amount_rub), 0) 
@@ -283,7 +283,10 @@ def analytics():
             WHERE user_id = %s AND tx_type = 'Доход' 
             AND EXTRACT(YEAR FROM date) = %s
         """, (u, year))
-    income = cur.fetchone()[0]
+    
+    # 🔥 Конвертируем Decimal в float!
+    result = cur.fetchone()
+    income = float(result[0]) if result and result[0] is not None else 0.0
     
     # 2. Расходы за выбранный год/месяц (с учетом корректировок)
     if month:
@@ -305,17 +308,17 @@ def analytics():
         """, (u, year))
     
     # Применяем корректировки к расходам
-    expense = 0
+    expense = 0.0
     for row in cur.fetchall():
         category = row[0]
-        original_amount = float(row[1])
+        original_amount = float(row[1]) if row[1] else 0.0
         # Если есть корректировка для этой категории — используем её
         if category in adjusted_categories:
             expense += adjusted_categories[category]['value']
         else:
             expense += original_amount
     
-    # 3. Дельта
+    # 3. Дельта (теперь оба float — ошибки не будет)
     delta = income - expense
     
     # 4. Savings Rate
@@ -325,13 +328,14 @@ def analytics():
     months_count = 1 if month else 12
     avg_monthly = expense / months_count if expense > 0 else 0
     
-    # 6. Чистый капитал (сумма всех активов на текущий момент)
+    # 6. Чистый капитал
     cur.execute("""
         SELECT COALESCE(SUM(amount_rub), 0) 
         FROM transactions 
         WHERE user_id = %s AND tx_type = 'Актив'
     """, (u,))
-    net_worth = cur.fetchone()[0]
+    result = cur.fetchone()
+    net_worth = float(result[0]) if result and result[0] is not None else 0.0
     
     # 7. Расходы за прошлый год (для инфляции)
     cur.execute("""
@@ -340,7 +344,8 @@ def analytics():
         WHERE user_id = %s AND tx_type = 'Расход' 
         AND EXTRACT(YEAR FROM date) = %s
     """, (u, year - 1))
-    expense_prev_year = cur.fetchone()[0]
+    result = cur.fetchone()
+    expense_prev_year = float(result[0]) if result and result[0] is not None else 0.0
     
     # 8. Личная инфляция
     inflation = ((expense / expense_prev_year - 1) * 100) if expense_prev_year > 0 else None
@@ -351,7 +356,7 @@ def analytics():
     cur.close()
     conn.close()
     
-    # Формируем метрики с реальными значениями
+    # Формируем метрики
     key_metrics = [
         {"name": "Доходы (₽/год)", "formula": "Сумма всех транзакций с 'Доход' за год", "unit": "₽", "value": round(income, 2)},
         {"name": "Расходы (₽/год)", "formula": "Сумма всех транзакций с 'Расход' за год (с учетом корректировок)", "unit": "₽", "value": round(expense, 2)},
@@ -374,7 +379,7 @@ def analytics():
         years=years,
         trend=trend,
         key_metrics=key_metrics,
-        adjusted_categories=adjusted_categories,  # ← Передаем в шаблон
+        adjusted_categories=adjusted_categories,
     )
 
 # ── Upload file (с поддержкой скриншотов) ──────────────────────────────────────
