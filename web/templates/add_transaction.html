@@ -118,6 +118,81 @@
     text-align: center;
     margin-top: 8px;
   }
+
+  /* 🔥 Модальное окно для добавления категории */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal.active { display: flex; }
+  .modal-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal-card h3 {
+    margin: 0 0 16px;
+    font-size: 1.1rem;
+    color: var(--text);
+  }
+  .modal-card input, .modal-card select {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.95rem;
+    box-sizing: border-box;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .modal-actions button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .modal-actions .btn-save {
+    background: var(--accent);
+    color: white;
+  }
+  .modal-actions .btn-cancel {
+    background: var(--bg3);
+    color: var(--text);
+  }
+
+  /* Кнопка добавления категории */
+  .add-cat-btn {
+    margin-top: 12px;
+    font-size: 11px;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .add-cat-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(124,106,255,0.06);
+  }
 </style>
 {% endblock %}
 
@@ -208,6 +283,12 @@
       <div class="card">
         <div class="card-title" id="catTitle" style="margin-bottom:12px">Шаг 2 — Категория</div>
         <div class="cat-grid" id="catGrid"></div>
+        
+        <!-- 🔥 Кнопка добавления категории -->
+        <button type="button" class="add-cat-btn" onclick="showAddCategory()">
+          + Добавить новую категорию
+        </button>
+        
         <div style="margin-top:16px">
           <button type="button" class="btn btn-ghost btn-sm" onclick="goStep(1)">← Назад</button>
         </div>
@@ -271,9 +352,27 @@
   </form>
 </div>
 
+<!-- 🔥 Модальное окно для добавления категории -->
+<div id="addCategoryModal" class="modal">
+  <div class="modal-card">
+    <h3>➕ Новая категория</h3>
+    <input type="text" id="newCatName" placeholder="Название категории (например: Кофе)">
+    <select id="newCatSection">
+      {% for sec in sections %}
+        <option value="{{ sec }}">{{ sec }}</option>
+      {% endfor %}
+    </select>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveNewCategory()">Сохранить</button>
+      <button class="btn-cancel" onclick="hideAddCategory()">Отмена</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SECTIONS = {{ sections | tojson }};
 let currentStep = 1;
+let currentSectionForCat = ''; // запоминаем текущий раздел для добавления категории
 
 // Индикатор шагов
 function updateDots(step) {
@@ -295,6 +394,7 @@ function selectSection(btn) {
   document.querySelectorAll('.section-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   const sec = btn.dataset.section;
+  currentSectionForCat = sec; // запоминаем для модалки
   document.getElementById('fSection').value = sec;
 
   // Строим сетку категорий
@@ -321,6 +421,89 @@ function selectCategory(btn, cat, sec) {
   document.getElementById('selBadge').textContent = sec + ' → ' + cat;
   setTimeout(() => goStep(3), 250);
 }
+
+// 🔥 Модальное окно: показать
+function showAddCategory() {
+  const modal = document.getElementById('addCategoryModal');
+  const sectionSelect = document.getElementById('newCatSection');
+  
+  // Предвыбираем текущий раздел если он есть
+  if (currentSectionForCat) {
+    sectionSelect.value = currentSectionForCat;
+  }
+  
+  document.getElementById('newCatName').value = '';
+  modal.classList.add('active');
+  document.getElementById('newCatName').focus();
+}
+
+// 🔥 Модальное окно: скрыть
+function hideAddCategory() {
+  document.getElementById('addCategoryModal').classList.remove('active');
+}
+
+// 🔥 Сохранить новую категорию
+async function saveNewCategory() {
+  const name = document.getElementById('newCatName').value.trim();
+  const section = document.getElementById('newCatSection').value;
+  
+  if (!name) {
+    alert('Введите название категории');
+    return;
+  }
+  
+  try {
+    const resp = await fetch('/api/categories', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'add', name, section})
+    });
+    
+    const result = await resp.json();
+    if (result.ok) {
+      // Обновляем список категорий в сетке
+      await refreshCategories(section);
+      hideAddCategory();
+      alert('✅ Категория добавлена!');
+    } else {
+      alert('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+    }
+  } catch (e) {
+    console.error(e);
+    alert('❌ Ошибка соединения с сервером');
+  }
+}
+
+// 🔥 Обновить сетку категорий для раздела
+async function refreshCategories(section) {
+  try {
+    const resp = await fetch(`/api/categories?section=${encodeURIComponent(section)}`);
+    const cats = await resp.json();
+    
+    const grid = document.getElementById('catGrid');
+    grid.innerHTML = '';
+    cats.forEach(cat => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cat-btn';
+      b.textContent = cat;
+      b.onclick = () => selectCategory(b, cat, section);
+      grid.appendChild(b);
+    });
+  } catch (e) {
+    console.error('Failed to refresh categories:', e);
+  }
+}
+
+// Закрытие модалки по клику вне её
+document.getElementById('addCategoryModal').addEventListener('click', function(e) {
+  if (e.target === this) hideAddCategory();
+});
+
+// Закрытие по Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') hideAddCategory();
+});
 
 // Предотвращаем отправку быстрой формы при нажатии Enter в полях детальной формы
 document.addEventListener('DOMContentLoaded', function() {

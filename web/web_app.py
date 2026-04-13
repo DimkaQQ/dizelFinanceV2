@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 DizelFinance — Flask Web App v2
+Обновления:
+✅ Поддержка скриншотов при загрузке
+✅ Редактируемые итоги в аналитике (API + DB)
+✅ Динамические категории (добавление/удаление через API)
+✅ Унификация структуры категорий (Портфель детей и т.д.)
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -28,7 +33,6 @@ app.secret_key = FLASK_SECRET
 
 # Хранилище сессий загруженных файлов (in-memory)
 upload_sessions: dict = {}
-
 DEFAULT_USER = 0
 
 def uid():
@@ -41,7 +45,6 @@ def uid():
 def now():
     return datetime.now()
 
-# Инжектируем now во все шаблоны
 @app.context_processor
 def inject_now():
     return {"now": now()}
@@ -67,16 +70,12 @@ def login():
         if WEB_USERS.get(username) == password:
             session["logged_in"] = True
             session["username"] = username
-            
-            # ❗ КЛЮЧЕВОЕ: если логин — это Telegram ID, используем его как user_id
             try:
-                session["user_id"] = int(username)  # Telegram ID → user_id в БД
+                session["user_id"] = int(username)
                 log.info(f"🔐 Web login: {username} → user_id={session['user_id']}")
             except ValueError:
-                # Если логин не число — используем дефолт
                 session["user_id"] = DEFAULT_USER
                 log.warning(f"⚠️ Web login: {username} is not numeric, using DEFAULT_USER")
-            
             return redirect(url_for("dashboard"))
         flash("Неверные данные")
     return render_template("login.html")
@@ -97,7 +96,6 @@ def dashboard():
     top   = db.get_top_categories(u, n.year, n.month, limit=6)
     recent= db.get_transactions(u, limit=8)
 
-    # Chart data
     monthly_map = {}
     for r in trend:
         monthly_map[(int(r["year"]), int(r["month"]))] = r
@@ -112,7 +110,6 @@ def dashboard():
                 chart_income.append(float(row.get("income") or 0))
                 chart_expense.append(float(row.get("expense") or 0))
 
-    # Donut — разделы
     expense_sections = [(r["section"], float(r.get("expense") or 0))
                         for r in data["sections"] if float(r.get("expense") or 0) > 0]
     section_labels = [s[0] for s in expense_sections]
@@ -167,7 +164,6 @@ def transactions():
 @app.route("/transactions/add", methods=["GET", "POST"])
 def add_transaction():
     if request.method == "POST":
-        # Быстрый ввод общего расхода
         if request.form.get("quick_expense"):
             return quick_monthly_expense_post()
         
@@ -177,9 +173,18 @@ def add_transaction():
         rate = get_rate(cur)
         a_rub= round(amt * rate, 2)
         cat  = request.form.get("category", "")
-        sec  = ALL_CATEGORIES.get(cat, "")
+        sec  = request.form.get("section", "")
+        
+        # Поддержка кастомных категорий: если нет в ALL_CATEGORIES, берём из БД
+        if cat and cat not in ALL_CATEGORIES:
+            db_cats = db.get_categories_for_section(u, sec)
+            if cat not in db_cats:
+                flash("❌ Неизвестная категория")
+                return redirect(url_for("add_transaction"))
+        
         tx_type_map = {"Доходы": "Доход", "Движение активов": "Актив"}
         tx_type = tx_type_map.get(sec, "Расход")
+        
         db.save_transaction(u, {
             "date":       request.form.get("date", now().strftime("%d.%m.%Y")),
             "section":    sec,
@@ -202,12 +207,11 @@ def add_transaction():
         sections=SECTIONS,
         currencies=CURRENCIES,
         today=n.strftime("%Y-%m-%d"),
-        months=MONTH_NAMES,  # ← ДОБАВЬ ЭТУ СТРОКУ!
-        now=n,               # ← И ЭТУ для быстрого ввода
+        months=MONTH_NAMES,
+        now=n,
     )
 
 def quick_monthly_expense_post():
-    """Обработка быстрого ввода общего расхода."""
     u = uid()
     year = int(request.form.get("year", now().year))
     month = int(request.form.get("month", now().month))
@@ -231,7 +235,6 @@ def quick_monthly_expense_post():
         "comment": "Быстрый ввод (без детализации)",
         "source": "web_quick",
     })
-    
     flash(f"✅ Записано {amount:,.0f} ₽ за {month_name} {year}")
     return redirect(url_for("transactions"))
 
@@ -258,83 +261,63 @@ def analytics():
         sec = row.get("section", "")
         by_section.setdefault(sec, []).append(row)
 
-    # 🔥 РАССЧИТЫВАЕМ КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ ИЗ БД
     conn = db.get_conn()
     cur = conn.cursor()
     
-    # 1. Доходы за выбранный год
     if month:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) 
-            FROM transactions 
+            SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
             WHERE user_id = %s AND tx_type = 'Доход' 
-            AND EXTRACT(YEAR FROM date) = %s 
-            AND EXTRACT(MONTH FROM date) = %s
+            AND EXTRACT(YEAR FROM date) = %s AND EXTRACT(MONTH FROM date) = %s
         """, (u, year, month))
     else:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) 
-            FROM transactions 
-            WHERE user_id = %s AND tx_type = 'Доход' 
-            AND EXTRACT(YEAR FROM date) = %s
+            SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
+            WHERE user_id = %s AND tx_type = 'Доход' AND EXTRACT(YEAR FROM date) = %s
         """, (u, year))
     income = cur.fetchone()[0]
     
-    # 2. Расходы за выбранный год/месяц
     if month:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) 
-            FROM transactions 
+            SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
             WHERE user_id = %s AND tx_type = 'Расход' 
-            AND EXTRACT(YEAR FROM date) = %s 
-            AND EXTRACT(MONTH FROM date) = %s
+            AND EXTRACT(YEAR FROM date) = %s AND EXTRACT(MONTH FROM date) = %s
         """, (u, year, month))
     else:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) 
-            FROM transactions 
-            WHERE user_id = %s AND tx_type = 'Расход' 
-            AND EXTRACT(YEAR FROM date) = %s
+            SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
+            WHERE user_id = %s AND tx_type = 'Расход' AND EXTRACT(YEAR FROM date) = %s
         """, (u, year))
     expense = cur.fetchone()[0]
     
-    # 3. Дельта
+    # Проверяем корректировки из БД
+    adj = db.get_adjusted_totals_for_period(u, year, month)
+    if "income" in adj: income = adj["income"]["value"]
+    if "expense" in adj: expense = adj["expense"]["value"]
+    
     delta = income - expense
-    
-    # 4. Savings Rate
     savings_rate = (delta / income * 100) if income > 0 else 0
-    
-    # 5. Среднемесячные расходы
     months_count = 1 if month else 12
     avg_monthly = expense / months_count if expense > 0 else 0
     
-    # 6. Чистый капитал (сумма всех активов на текущий момент)
     cur.execute("""
-        SELECT COALESCE(SUM(amount_rub), 0) 
-        FROM transactions 
+        SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
         WHERE user_id = %s AND tx_type = 'Актив'
     """, (u,))
     net_worth = cur.fetchone()[0]
     
-    # 7. Расходы за прошлый год (для инфляции)
     cur.execute("""
-        SELECT COALESCE(SUM(amount_rub), 0) 
-        FROM transactions 
-        WHERE user_id = %s AND tx_type = 'Расход' 
-        AND EXTRACT(YEAR FROM date) = %s
+        SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
+        WHERE user_id = %s AND tx_type = 'Расход' AND EXTRACT(YEAR FROM date) = %s
     """, (u, year - 1))
     expense_prev_year = cur.fetchone()[0]
     
-    # 8. Личная инфляция
     inflation = ((expense / expense_prev_year - 1) * 100) if expense_prev_year > 0 else None
-    
-    # 9. Капитал на месяцы
     capital_months = round(net_worth / avg_monthly, 1) if avg_monthly > 0 else None
     
     cur.close()
     conn.close()
     
-    # Формируем метрики с реальными значениями
     key_metrics = [
         {"name": "Доходы (₽/год)", "formula": "Сумма всех транзакций с 'Доход' за год", "unit": "₽", "value": round(income, 2)},
         {"name": "Расходы (₽/год)", "formula": "Сумма всех транзакций с 'Расход' за год", "unit": "₽", "value": round(expense, 2)},
@@ -343,8 +326,8 @@ def analytics():
         {"name": "Среднемесячные расходы", "formula": "Расходы за год ÷ 12", "unit": "₽", "value": round(avg_monthly, 2)},
         {"name": "Личная инфляция (%)", "formula": "(Расходы_тек/Расходы_пред − 1) × 100%", "unit": "%", "value": round(inflation, 2) if inflation is not None else None},
         {"name": "Чистый капитал (₽)", "formula": "Сумма активов − обязательства", "unit": "₽", "value": round(net_worth, 2)},
-        {"name": "Рост капитала (%)", "formula": "(Капитал_тек/Капитал_пред − 1) × 100%", "unit": "%", "value": None},  # Нужна история капитала
-        {"name": "FI Ratio (%)", "formula": "(Пассивный доход / Расходы) × 100%", "unit": "%", "value": None},  # Нужна маркировка пассивных доходов
+        {"name": "Рост капитала (%)", "formula": "(Капитал_тек/Капитал_пред − 1) × 100%", "unit": "%", "value": None},
+        {"name": "FI Ratio (%)", "formula": "(Пассивный доход / Расходы) × 100%", "unit": "%", "value": None},
         {"name": "Капитал на месяцы", "formula": "Чистый капитал / Среднемесячные расходы", "unit": "мес", "value": capital_months},
     ]
 
@@ -356,10 +339,10 @@ def analytics():
         months=MONTH_NAMES,
         years=years,
         trend=trend,
-        key_metrics=key_metrics,  # ← Теперь с реальными значениями!
+        key_metrics=key_metrics,
     )
 
-# ── Upload file ────────────────────────────────────────────────────────────────
+# ── Upload file (с поддержкой скриншотов) ──────────────────────────────────────
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload_file():
@@ -379,13 +362,16 @@ def upload_file():
         month_sel= int(request.form.get("period_month", n.month))
 
         try:
-            from ai import parse_xlsx, parse_pdf
+            from ai import parse_xlsx, parse_pdf, parse_screenshot, guess_categories_batch
             from txt_parser import parse_txt, read_txt_file
-            from ai import guess_categories_batch
             from rates import get_rate
 
-            # Парсим файл
-            if fname.endswith((".xlsx", ".xls")):
+            txs = []
+            # 🔥 Поддержка скриншотов
+            if fname.endswith((".png", ".jpg", ".jpeg", ".webp")):
+                mime = f"image/{fname.split('.')[-1]}"
+                txs = parse_screenshot(raw, mime_type=mime)
+            elif fname.endswith((".xlsx", ".xls")):
                 txs = parse_xlsx(raw)
             elif fname.endswith(".pdf"):
                 txs = parse_pdf(raw)
@@ -393,14 +379,13 @@ def upload_file():
                 text = read_txt_file(raw)
                 txs  = parse_txt(text)
             else:
-                flash("Неподдерживаемый формат файла")
+                flash("Неподдерживаемый формат файла. Используйте: Excel, PDF, TXT, PNG, JPG")
                 return redirect(url_for("upload_file"))
 
             if not txs:
                 flash("Транзакции не найдены в файле")
                 return redirect(url_for("upload_file"))
 
-            # Угадываем категории
             cat_results = guess_categories_batch(txs)
             existing    = db.get_existing_keys(u)
             enriched    = []
@@ -421,7 +406,6 @@ def upload_file():
                     "is_duplicate": is_dup,
                 })
 
-            # Сохраняем в сессию
             sess_id = str(uuid.uuid4())[:8]
             upload_sessions[sess_id] = {"transactions": enriched, "user_id": u}
 
@@ -489,23 +473,19 @@ def generate_report():
             month = int(request.form.get("month", n.month))
             data  = build_monthly_data(u, year, month)
             fname = f"DizelFinance_{MONTH_NAMES.get(month,'')}_{year}.pdf"
-
         elif template == "quarterly":
             year    = int(request.form.get("year",    n.year))
             quarter = int(request.form.get("quarter", 1))
             data    = build_quarterly_data(u, year, quarter)
             fname   = f"DizelFinance_Q{quarter}_{year}.pdf"
-
         elif template == "yearly":
             year  = int(request.form.get("year", n.year))
             data  = build_yearly_data(u, year)
             fname = f"DizelFinance_{year}_Годовой.pdf"
-
         elif template == "networth":
             year  = int(request.form.get("year", n.year))
             data  = build_networth_data(u, year)
             fname = f"DizelFinance_{year}_Капитал.pdf"
-
         elif template == "comparative":
             periods = []
             for i in range(1, 4):
@@ -515,7 +495,6 @@ def generate_report():
                     periods.append({"year": y, "month": m})
             data  = build_comparative_data(u, periods)
             fname = "DizelFinance_Сравнение.pdf"
-
         else:
             flash("Неизвестный шаблон")
             return redirect(url_for("reports"))
@@ -527,7 +506,6 @@ def generate_report():
             as_attachment=True,
             download_name=fname,
         )
-
     except RuntimeError as e:
         flash(f"❌ {e}")
         return redirect(url_for("reports"))
@@ -536,7 +514,7 @@ def generate_report():
         flash(f"❌ Ошибка генерации: {e}")
         return redirect(url_for("reports"))
 
-# ── API ────────────────────────────────────────────────────────────────────────
+# ── API (Корректировки, Категории, Статус) ─────────────────────────────────────
 
 @app.route("/api/summary")
 def api_summary():
@@ -545,11 +523,48 @@ def api_summary():
     month = request.args.get("month", n.month, type=int)
     return jsonify(db.get_monthly_summary(uid(), year, month))
 
-@app.route("/api/categories")
-def api_categories():
+@app.route("/api/categories", methods=["GET", "POST"])
+def manage_categories():
+    u = uid()
+    if request.method == "POST":
+        data = request.get_json()
+        action = data.get("action")
+        name = data.get("name", "").strip()
+        section = data.get("section", "")
+        if not name or not section:
+            return jsonify({"error": "name и section обязательны"}), 400
+        
+        if action == "add":
+            db.add_custom_category(u, name, section)
+            return jsonify({"ok": True, "message": "Категория добавлена"})
+        elif action == "remove":
+            if db.remove_custom_category(u, name):
+                return jsonify({"ok": True, "message": "Категория удалена"})
+            return jsonify({"error": "Категория не найдена"}), 404
+        return jsonify({"error": "Неизвестное действие"}), 400
+    
+    # GET: возвращаем объединённый список (кастомные + дефолтные)
     section = request.args.get("section", "")
-    cats    = SECTIONS.get(section, {}).get("categories", [])
+    cats = db.get_categories_for_section(u, section)
     return jsonify(cats)
+
+@app.route("/api/adjust-total", methods=["POST"])
+def adjust_total():
+    """POST: {year, month, metric_type, value, note}"""
+    u = uid()
+    data = request.get_json()
+    if not data or not all(k in data for k in ["year", "metric_type", "value"]):
+        return jsonify({"error": "Недостаточно данных"}), 400
+    
+    db.save_adjusted_total(
+        u, 
+        data["year"], 
+        data.get("month"), 
+        data["metric_type"], 
+        float(data["value"]),
+        data.get("note", "")
+    )
+    return jsonify({"ok": True, "message": "Итог обновлён"})
 
 @app.route("/api/pdf-status")
 def api_pdf_status():
@@ -562,18 +577,28 @@ def api_pdf_status():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "version": "2.0"})
+    return jsonify({"status": "ok", "version": "2.1"})
+
+# ── Миграция (одноразовый запуск) ────────────────────────────────────────────
+
+@app.route("/migrate/portfolios")
+def migrate_portfolios():
+    """Замените 'admin' на реальный логин для доступа"""
+    if session.get("username") != "admin":
+        return jsonify({"error": "Доступ запрещён"}), 403
+    u = uid()
+    updated = db.migrate_portfolio_names(u)
+    return jsonify({"ok": True, "updated_rows": updated, "message": f"Обновлено {updated} записей"})
 
 # ── Run ────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     db.init_db()
-    # Используем отдельный порт для веб-приложения
     from config import WEB_FLASK_PORT
     log.info(f"🌐 Web App running on port {WEB_FLASK_PORT}")
     app.run(
         host="0.0.0.0",
-        port=WEB_FLASK_PORT,  # ← должно быть 5002
+        port=WEB_FLASK_PORT,
         debug=False,
         use_reloader=False
     )

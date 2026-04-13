@@ -23,10 +23,14 @@
         <div style="font-size:11px;color:var(--text3)">
           или нажмите для выбора · PDF, XLSX, TXT
         </div>
-        <input type="file" id="fileInput" name="file"
-               accept=".pdf,.xlsx,.xls,.txt"
-               style="display:none"
-               onchange="handleFileSelect(this)">
+        <input type="file" 
+            id="fileInput" 
+            name="file" 
+            accept=".xlsx,.xls,.pdf,.txt,.png,.jpg,.jpeg,.webp"
+            required
+            style="display:none"
+            onchange="handleFileSelect(this)">
+        <small>Поддерживается: Excel, PDF, TXT, скриншоты (PNG, JPG)</small>
       </div>
 
       <!-- Выбранный файл -->
@@ -95,7 +99,9 @@
           <td class="c-muted" style="font-family:var(--mono);font-size:11px">{{ tx.date }}</td>
           <td style="font-size:12px">{{ (tx.merchant or '—')[:20] }}</td>
           <td>
-            <span class="tag {{ 'tag-in' if tx.tx_type == 'Доход' else 'tag-out' }}">{{ tx.section[:4] }}</span>
+            <span class="tag {{ 'tag-in' if tx.tx_type == 'Доход' else 'tag-out' }}">
+              {{ {'Доходы':'💰','Регулярные расходы':'🛒','Крупные траты':'💳','Движение активов':'🏦'}.get(tx.section,'📌') }}
+            </span>
             <span style="margin-left:4px;font-size:11px">{{ tx.category }}</span>
           </td>
           <td class="num {{ 'c-green' if tx.tx_type == 'Доход' else 'c-red' }}">
@@ -138,7 +144,7 @@ function handleFileSelect(input) {
 }
 
 function showFile(file) {
-  const icons = { pdf: '📄', xlsx: '📊', xls: '📊', txt: '📝' };
+  const icons = { pdf: '📄', xlsx: '📊', xls: '📊', txt: '📝', png: '🖼️', jpg: '🖼️', jpeg: '🖼️', webp: '🖼️' };
   const ext   = file.name.split('.').pop().toLowerCase();
   document.getElementById('fileIcon').textContent = icons[ext] || '📄';
   document.getElementById('fileName').textContent = file.name;

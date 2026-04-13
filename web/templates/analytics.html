@@ -118,6 +118,57 @@
   .section-income .category-amount { color: #22c55e; }
   .section-expense .category-amount { color: #ef4444; }
   .section-asset .category-amount { color: #3b82f6; }
+
+  /* 🔥 Редактируемые метрики */
+  .metric-card {
+    position: relative;
+  }
+  .edit-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--muted);
+    transition: all 0.15s;
+    opacity: 0;
+  }
+  .metric-card:hover .edit-btn {
+    opacity: 1;
+  }
+  .edit-btn:hover {
+    background: var(--accent);
+    color: white;
+  }
+  .edit-input {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 2px solid var(--accent);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-align: left;
+    outline: none;
+  }
+  .edit-input:focus {
+    box-shadow: 0 0 0 3px rgba(124,106,255,0.3);
+  }
+  .metric-note {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-style: italic;
+  }
 </style>
 
 <!-- Фильтры -->
@@ -154,6 +205,9 @@
   
   <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px">
     {% for m in key_metrics %}
+    {% set is_editable = m.name in ['Доходы (₽/год)', 'Расходы (₽/год)', 'Чистый капитал (₽)'] %}
+    {% set metric_type = 'income' if 'Доходы' in m.name else 'expense' if 'Расходы' in m.name else 'assets' %}
+    
     <div class="metric-card" style="
       background: linear-gradient(135deg, {% if m.value is none or m.value == 0 %}rgba(100,100,100,0.1){% elif m.name in ['Доходы (₽/год)', 'Дельта / Cash Flow (₽)', 'Чистый капитал (₽)', 'Рост капитала (%)', 'Капитал на месяцы'] %}rgba(34,197,94,0.1){% elif m.name in ['Расходы (₽/год)', 'Среднемесячные расходы'] %}rgba(239,68,68,0.1){% else %}rgba(59,130,246,0.1){% endif %});
       border: 1px solid {% if m.value is none or m.value == 0 %}rgba(100,100,100,0.2){% elif m.name in ['Доходы (₽/год)', 'Дельта / Cash Flow (₽)', 'Чистый капитал (₽)', 'Рост капитала (%)', 'Капитал на месяцы'] %}rgba(34,197,94,0.3){% elif m.name in ['Расходы (₽/год)', 'Среднемесячные расходы'] %}rgba(239,68,68,0.3){% else %}rgba(59,130,246,0.3){% endif %};
@@ -161,6 +215,11 @@
       padding: 20px;
       transition: transform 0.2s, box-shadow 0.2s;
     " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+      
+      <!-- 🔥 Кнопка редактирования (только для редактируемых метрик) -->
+      {% if is_editable %}
+      <button class="edit-btn" onclick="editMetric(this)" title="Редактировать значение">✏️</button>
+      {% endif %}
       
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px">
         <div style="font-size:0.85rem; color:var(--muted); line-height:1.4; flex:1">
@@ -175,7 +234,14 @@
         </div>
       </div>
       
-      <div style="font-size:1.8rem; font-weight:700; margin-bottom:8px; color:{% if m.value is none %}var(--muted){% elif m.value < 0 %}#ef4444{% elif m.name in ['Доходы (₽/год)', 'Дельта / Cash Flow (₽)', 'Чистый капитал (₽)', 'Рост капитала (%)', 'Капитал на месяцы', 'FI Ratio (%)', 'Savings Rate (%)'] %}#22c55e{% else %}#ef4444{% endif %}">
+      <!-- 🔥 Значение с data-атрибутами для редактирования -->
+      <div {% if is_editable %}
+           data-editable="true"
+           data-metric="{{ metric_type }}"
+           data-year="{{ year }}"
+           data-month="{{ month or '' }}"
+           {% endif %}
+           style="font-size:1.8rem; font-weight:700; margin-bottom:8px; color:{% if m.value is none %}var(--muted){% elif m.value < 0 %}#ef4444{% elif m.name in ['Доходы (₽/год)', 'Дельта / Cash Flow (₽)', 'Чистый капитал (₽)', 'Рост капитала (%)', 'Капитал на месяцы', 'FI Ratio (%)', 'Savings Rate (%)'] %}#22c55e{% else %}#ef4444{% endif %}">
         {% if m.value is none %}
           <span style="opacity:0.5">—</span>
         {% elif m.unit == '₽' %}
@@ -189,6 +255,10 @@
         {% endif %}
       </div>
       
+      {% if is_editable %}
+      <div class="metric-note">Нажмите ✏️ для ручной корректировки</div>
+      {% endif %}
+      
       <div style="font-size:0.75rem; color:var(--muted); line-height:1.4; border-top:1px solid rgba(100,100,100,0.2); padding-top:8px; margin-top:8px">
         {{ m.formula }}
       </div>
@@ -197,7 +267,7 @@
   </div>
   
   <div style="margin-top:16px; padding:12px; background:rgba(59,130,246,0.1); border-left:4px solid #3b82f6; border-radius:8px; font-size:0.85rem; color:var(--muted)">
-    💡 <strong>Совет:</strong> Значения рассчитываются автоматически из ваших транзакций. Пока данных нет — отображается «—».
+    💡 <strong>Совет:</strong> Значения рассчитываются автоматически из ваших транзакций. Пока данных нет — отображается «—». Редактируемые поля можно корректировать вручную.
   </div>
 </div>
 
@@ -312,4 +382,104 @@
 })();
 </script>
 {% endif %}
+
+<!-- 🔥 JS для редактирования метрик -->
+<script>
+function editMetric(btn) {
+  const card = btn.closest('.metric-card');
+  const valueEl = card.querySelector('[data-editable]');
+  
+  if (!valueEl) return;
+  
+  // Парсим текущее значение (убираем ₽, пробелы, заменяем запятую на точку)
+  const currentText = valueEl.textContent.trim();
+  const current = parseFloat(currentText.replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+  
+  // Создаём input для редактирования
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.step = '0.01';
+  input.min = '0';
+  input.value = current;
+  input.className = 'edit-input';
+  
+  // Сохраняем оригинальное значение для отмены
+  const originalValue = valueEl.innerHTML;
+  
+  // Обработчик сохранения при потере фокуса
+  input.onblur = function() {
+    const newVal = parseFloat(this.value) || 0;
+    const metricType = valueEl.dataset.metric;
+    const year = parseInt(valueEl.dataset.year);
+    const month = valueEl.dataset.month ? parseInt(valueEl.dataset.month) : null;
+    
+    // Отправляем на сервер
+    fetch('/api/adjust-total', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        year: year,
+        month: month,
+        metric_type: metricType,
+        value: newVal,
+        note: 'Корректировка через веб-интерфейс'
+      })
+    })
+    .then(r => r.json())
+    .then(result => {
+      if (result.ok) {
+        // Обновляем отображение с форматированием
+        const formatted = newVal.toLocaleString('ru-RU').replace(',', ' ') + ' ₽';
+        valueEl.innerHTML = formatted;
+        valueEl.style.color = newVal >= 0 ? '#22c55e' : '#ef4444';
+      } else {
+        alert('❌ Ошибка сохранения: ' + (result.error || 'Неизвестная ошибка'));
+        valueEl.innerHTML = originalValue; // Откат
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('❌ Ошибка соединения с сервером');
+      valueEl.innerHTML = originalValue; // Откат
+    })
+    .finally(() => {
+      // Восстанавливаем элемент
+      if (input.parentNode) {
+        input.parentNode.replaceChild(valueEl, input);
+      }
+    });
+  };
+  
+  // Обработчик отмены по Escape
+  input.onkeydown = function(e) {
+    if (e.key === 'Escape') {
+      valueEl.innerHTML = originalValue;
+      if (input.parentNode) {
+        input.parentNode.replaceChild(valueEl, input);
+      }
+    }
+  };
+  
+  // Заменяем элемент на input и фокусируем
+  valueEl.parentNode.replaceChild(input, valueEl);
+  input.focus();
+  input.select();
+}
+
+// Закрытие модалки по клику вне (для совместимости с другими модалками)
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('addCategoryModal');
+  if (modal && e.target === modal) {
+    hideAddCategory();
+  }
+});
+
+// Закрытие по Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('addCategoryModal');
+    if (modal) hideAddCategory();
+  }
+});
+</script>
 {% endblock %}
