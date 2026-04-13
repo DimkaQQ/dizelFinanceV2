@@ -259,27 +259,31 @@
     
     <div>
       {% for row in rows | sort(attribute='total', reverse=True) %}
-        {% set pct = (row.total / total * 100) if total > 0 else 0 %}
-        <div class="category-row">
-          <div class="category-name">{{ row.category }}</div>
-          <div class="category-bar">
-            <div class="category-bar-fill" style="width: {{ pct }}%"></div>
-          </div>
-          <div class="category-amount" 
-               data-category="{{ row.category }}" 
-               data-year="{{ year }}" 
-               data-month="{{ month or 'null' }}">
-            {{ "{:,.0f}".format(row.total) }} ₽
-          </div>
-          <div class="category-percent">{{ pct | round(1) }}%</div>
-          <div class="category-count">×{{ row.cnt }}</div>
-          
-          <!-- 🔥 Кнопка редактирования -->
-          <button class="edit-cat-btn" 
-                  onclick="editCategoryRow(this)" 
-                  title="Редактировать сумму">✏️</button>
+      {% set pct = (row.total / total * 100) if total > 0 else 0 %}
+      
+      {# 🔥 Проверяем корректировку #}
+      {% set adj = adjusted_categories.get(row.category, {}) %}
+      {% set display_value = adj.value if adj.value is not none else row.total %}
+      
+      <div class="category-row">
+        <div class="category-name">{{ row.category }}</div>
+        <div class="category-bar">
+          <div class="category-bar-fill" style="width: {{ pct }}%"></div>
         </div>
-      {% endfor %}
+        <div class="category-amount" 
+            data-category="{{ row.category }}" 
+            data-year="{{ year }}" 
+            data-month="{{ month or 'null' }}">
+          {{ "{:,.0f}".format(display_value) }} ₽
+        </div>
+        <div class="category-percent">{{ pct | round(1) }}%</div>
+        <div class="category-count">×{{ row.cnt }}</div>
+        
+        <button class="edit-cat-btn" 
+                onclick="editCategoryRow(this)" 
+                title="Редактировать сумму">✏️</button>
+      </div>
+    {% endfor %}
     </div>
   </div>
 {% else %}
