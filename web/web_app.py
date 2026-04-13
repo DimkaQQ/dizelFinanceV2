@@ -256,74 +256,105 @@ def analytics():
     trend = db.get_yearly_trend(u, years=3)
     years = list(range(n.year, n.year - 5, -1))
 
-    # 🔥 Получаем корректировки категорий для передачи в шаблон
-    adjusted_categories = db.get_category_adjustments_for_period(u, year, month)
-
     by_section = {}
     for row in cats:
         sec = row.get("section", "")
         by_section.setdefault(sec, []).append(row)
 
+    # 🔥 Получаем корректировки категорий
+    adjusted_categories = db.get_category_adjustments_for_period(u, year, month)
+    
     conn = db.get_conn()
     cur = conn.cursor()
     
+    # 1. Доходы за выбранный год (с учетом корректировок)
     if month:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
+            SELECT COALESCE(SUM(amount_rub), 0) 
+            FROM transactions 
             WHERE user_id = %s AND tx_type = 'Доход' 
-            AND EXTRACT(YEAR FROM date) = %s AND EXTRACT(MONTH FROM date) = %s
+            AND EXTRACT(YEAR FROM date) = %s 
+            AND EXTRACT(MONTH FROM date) = %s
         """, (u, year, month))
     else:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
-            WHERE user_id = %s AND tx_type = 'Доход' AND EXTRACT(YEAR FROM date) = %s
+            SELECT COALESCE(SUM(amount_rub), 0) 
+            FROM transactions 
+            WHERE user_id = %s AND tx_type = 'Доход' 
+            AND EXTRACT(YEAR FROM date) = %s
         """, (u, year))
     income = cur.fetchone()[0]
     
+    # 2. Расходы за выбранный год/месяц (с учетом корректировок)
     if month:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
+            SELECT category, SUM(amount_rub) as total
+            FROM transactions 
             WHERE user_id = %s AND tx_type = 'Расход' 
-            AND EXTRACT(YEAR FROM date) = %s AND EXTRACT(MONTH FROM date) = %s
+            AND EXTRACT(YEAR FROM date) = %s 
+            AND EXTRACT(MONTH FROM date) = %s
+            GROUP BY category
         """, (u, year, month))
     else:
         cur.execute("""
-            SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
-            WHERE user_id = %s AND tx_type = 'Расход' AND EXTRACT(YEAR FROM date) = %s
+            SELECT category, SUM(amount_rub) as total
+            FROM transactions 
+            WHERE user_id = %s AND tx_type = 'Расход' 
+            AND EXTRACT(YEAR FROM date) = %s
+            GROUP BY category
         """, (u, year))
-    expense = cur.fetchone()[0]
     
-    # Проверяем корректировки из БД
-    adj = db.get_adjusted_totals_for_period(u, year, month)
-    if "income" in adj: income = adj["income"]["value"]
-    if "expense" in adj: expense = adj["expense"]["value"]
+    # Применяем корректировки к расходам
+    expense = 0
+    for row in cur.fetchall():
+        category = row[0]
+        original_amount = float(row[1])
+        # Если есть корректировка для этой категории — используем её
+        if category in adjusted_categories:
+            expense += adjusted_categories[category]['value']
+        else:
+            expense += original_amount
     
+    # 3. Дельта
     delta = income - expense
+    
+    # 4. Savings Rate
     savings_rate = (delta / income * 100) if income > 0 else 0
+    
+    # 5. Среднемесячные расходы
     months_count = 1 if month else 12
     avg_monthly = expense / months_count if expense > 0 else 0
     
+    # 6. Чистый капитал (сумма всех активов на текущий момент)
     cur.execute("""
-        SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
+        SELECT COALESCE(SUM(amount_rub), 0) 
+        FROM transactions 
         WHERE user_id = %s AND tx_type = 'Актив'
     """, (u,))
     net_worth = cur.fetchone()[0]
     
+    # 7. Расходы за прошлый год (для инфляции)
     cur.execute("""
-        SELECT COALESCE(SUM(amount_rub), 0) FROM transactions 
-        WHERE user_id = %s AND tx_type = 'Расход' AND EXTRACT(YEAR FROM date) = %s
+        SELECT COALESCE(SUM(amount_rub), 0) 
+        FROM transactions 
+        WHERE user_id = %s AND tx_type = 'Расход' 
+        AND EXTRACT(YEAR FROM date) = %s
     """, (u, year - 1))
     expense_prev_year = cur.fetchone()[0]
     
+    # 8. Личная инфляция
     inflation = ((expense / expense_prev_year - 1) * 100) if expense_prev_year > 0 else None
+    
+    # 9. Капитал на месяцы
     capital_months = round(net_worth / avg_monthly, 1) if avg_monthly > 0 else None
     
     cur.close()
     conn.close()
     
+    # Формируем метрики с реальными значениями
     key_metrics = [
         {"name": "Доходы (₽/год)", "formula": "Сумма всех транзакций с 'Доход' за год", "unit": "₽", "value": round(income, 2)},
-        {"name": "Расходы (₽/год)", "formula": "Сумма всех транзакций с 'Расход' за год", "unit": "₽", "value": round(expense, 2)},
+        {"name": "Расходы (₽/год)", "formula": "Сумма всех транзакций с 'Расход' за год (с учетом корректировок)", "unit": "₽", "value": round(expense, 2)},
         {"name": "Дельта / Cash Flow (₽)", "formula": "Доходы − Расходы", "unit": "₽", "value": round(delta, 2)},
         {"name": "Savings Rate (%)", "formula": "(Дельта / Доходы) × 100%", "unit": "%", "value": round(savings_rate, 2)},
         {"name": "Среднемесячные расходы", "formula": "Расходы за год ÷ 12", "unit": "₽", "value": round(avg_monthly, 2)},
@@ -343,7 +374,7 @@ def analytics():
         years=years,
         trend=trend,
         key_metrics=key_metrics,
-        adjusted_categories=adjusted_categories,
+        adjusted_categories=adjusted_categories,  # ← Передаем в шаблон
     )
 
 # ── Upload file (с поддержкой скриншотов) ──────────────────────────────────────
