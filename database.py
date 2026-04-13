@@ -422,18 +422,16 @@ def get_monthly_summary(user_id: int, year: int, month: int) -> dict:
             cur.execute(sql, (user_id, year, month))
             rows = [dict(r) for r in cur.fetchall()]
             
-            total_income  = sum(float(r["income"]  or 0) for r in rows)
-            total_expense = sum(float(r["expense"] or 0) for r in rows)
-            total_assets  = sum(float(r["assets"]  or 0) for r in rows)
+            # 🔥 Конвертируем Decimal в float
+            for row in rows:
+                row['income'] = float(row['income']) if row['income'] else 0.0
+                row['expense'] = float(row['expense']) if row['expense'] else 0.0
+                row['assets'] = float(row['assets']) if row['assets'] else 0.0
+                row['cnt'] = int(row['cnt']) if row['cnt'] else 0
             
-            # Проверяем корректировки
-            adjusted = get_adjusted_totals_for_period(user_id, year, month)
-            if "income" in adjusted:
-                total_income = adjusted["income"]["value"]
-            if "expense" in adjusted:
-                total_expense = adjusted["expense"]["value"]
-            if "assets" in adjusted:
-                total_assets = adjusted["assets"]["value"]
+            total_income  = sum(row['income'] for row in rows)
+            total_expense = sum(row['expense'] for row in rows)
+            total_assets  = sum(row['assets'] for row in rows)
             
             return {
                 "sections": rows,
@@ -465,11 +463,10 @@ def get_category_breakdown(user_id: int, year: int, month: int = None,
             cur.execute(sql, params)
             rows = [dict(r) for r in cur.fetchall()]
             
-            # 🔥 Применяем корректировки
-            adjustments = get_category_adjustments_for_period(user_id, year, month)
+            # 🔥 Конвертируем Decimal в float для Jinja2
             for row in rows:
-                if row['category'] in adjustments:
-                    row['total'] = adjustments[row['category']]['value']
+                row['total'] = float(row['total']) if row['total'] else 0.0
+                row['cnt'] = int(row['cnt']) if row['cnt'] else 0
             
             return rows
 
