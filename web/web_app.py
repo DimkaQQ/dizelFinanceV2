@@ -579,6 +579,24 @@ def api_pdf_status():
 def health():
     return jsonify({"status": "ok", "version": "2.1"})
 
+@app.route("/api/adjust-category", methods=["POST"])
+def adjust_category():
+    """POST: {year, month, category, value, note}"""
+    u = uid()
+    data = request.get_json()
+    if not data or not all(k in data for k in ["year", "category", "value"]):
+        return jsonify({"error": "Недостаточно данных"}), 400
+    
+    db.save_category_adjustment(
+        u, 
+        data["year"], 
+        data.get("month"), 
+        data["category"], 
+        float(data["value"]),
+        data.get("note", "")
+    )
+    return jsonify({"ok": True, "message": "Категория обновлена"})
+
 # ── Миграция (одноразовый запуск) ────────────────────────────────────────────
 
 @app.route("/migrate/portfolios")

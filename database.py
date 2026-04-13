@@ -110,6 +110,22 @@ CREATE TABLE IF NOT EXISTS custom_categories (
     UNIQUE(user_id, name)
 );
 
+-- 🔥 НОВАЯ ТАБЛИЦА: Корректировки категорий
+CREATE TABLE IF NOT EXISTS category_adjustments (
+    id            SERIAL PRIMARY KEY,
+    user_id       BIGINT NOT NULL,
+    year          INT NOT NULL,
+    month         INT,
+    category      TEXT NOT NULL,
+    adjusted_value NUMERIC(14,2) NOT NULL,
+    note          TEXT,
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, year, month, category)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cat_adj_user ON category_adjustments(user_id, year, month);
+
 CREATE INDEX IF NOT EXISTS idx_tx_user_date  ON transactions(user_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_tx_category   ON transactions(category);
 CREATE INDEX IF NOT EXISTS idx_tx_section    ON transactions(section);
@@ -447,7 +463,15 @@ def get_category_breakdown(user_id: int, year: int, month: int = None,
     with db() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(sql, params)
-            return [dict(r) for r in cur.fetchall()]
+            rows = [dict(r) for r in cur.fetchall()]
+            
+            # 🔥 Применяем корректировки
+            adjustments = get_category_adjustments_for_period(user_id, year, month)
+            for row in rows:
+                if row['category'] in adjustments:
+                    row['total'] = adjustments[row['category']]['value']
+            
+            return rows
 
 def get_yearly_trend(user_id: int, years: int = 3) -> list[dict]:
     current_year = datetime.now().year
@@ -466,6 +490,59 @@ def get_yearly_trend(user_id: int, years: int = 3) -> list[dict]:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(sql, (user_id, current_year - years + 1))
             return [dict(r) for r in cur.fetchall()]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🔥 КОРРЕКТИРОВКИ КАТЕГОРИЙ
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def save_category_adjustment(user_id: int, year: int, month: int, 
+                             category: str, adjusted_value: float, note: str = ""):
+    """Сохраняет корректировку для конкретной категории."""
+    sql = """
+    INSERT INTO category_adjustments (user_id, year, month, category, adjusted_value, note, updated_at)
+    VALUES (%s,%s,%s,%s,%s,%s, NOW())
+    ON CONFLICT (user_id, year, month, category) 
+    DO UPDATE SET adjusted_value = EXCLUDED.adjusted_value, 
+                  note = EXCLUDED.note,
+                  updated_at = NOW()
+    """
+    with db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (user_id, year, month, category, adjusted_value, note))
+
+def get_category_adjustment(user_id: int, year: int, month: int, category: str):
+    """Получает корректировку для категории если есть."""
+    sql = """
+    SELECT adjusted_value, note FROM category_adjustments
+    WHERE user_id=%s AND year=%s AND month=%s AND category=%s
+    """
+    with db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (user_id, year, month, category))
+            row = cur.fetchone()
+            return (float(row[0]), row[1]) if row else (None, None)
+
+def get_category_adjustments_for_period(user_id: int, year: int, month: int = None):
+    """Получает все корректировки категорий за период."""
+    if month is None:
+        sql = """
+        SELECT category, adjusted_value, note 
+        FROM category_adjustments
+        WHERE user_id=%s AND year=%s AND month IS NULL
+        """
+        params = (user_id, year)
+    else:
+        sql = """
+        SELECT category, adjusted_value, note 
+        FROM category_adjustments
+        WHERE user_id=%s AND year=%s AND month=%s
+        """
+        params = (user_id, year, month)
+    
+    with db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            return {row[0]: {"value": float(row[1]), "note": row[2]} for row in cur.fetchall()}
 
 def get_top_categories(user_id: int, year: int, month: int = None,
                        limit: int = 10) -> list[dict]:
