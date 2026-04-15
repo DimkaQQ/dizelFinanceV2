@@ -411,15 +411,25 @@ def upload_file():
         month_sel= int(request.form.get("period_month", n.month))
 
         try:
-            from ai import parse_xlsx, parse_pdf, parse_screenshot, guess_categories_batch
+            # 🔥 ВАЖНО: добавили parse_category_summary в импорт
+            from ai import parse_xlsx, parse_pdf, parse_screenshot, parse_category_summary, guess_categories_batch
             from txt_parser import parse_txt, read_txt_file
             from rates import get_rate
 
             txs = []
-            # 🔥 Поддержка скриншотов
+
+            # Парсим файл в зависимости от типа
             if fname.endswith((".png", ".jpg", ".jpeg", ".webp")):
                 mime = f"image/{fname.split('.')[-1]}"
+                
+                # 1. Сначала пробуем найти обычные транзакции (список операций)
                 txs = parse_screenshot(raw, mime_type=mime)
+                
+                # 2. 🔥 Если список пуст — пробуем парсить как Сводку (категории с итогами)
+                if not txs:
+                    log.info("Стандартный парсинг не нашёл транзакций, пробуем парсинг категорий...")
+                    txs = parse_category_summary(raw, mime_type=mime)
+
             elif fname.endswith((".xlsx", ".xls")):
                 txs = parse_xlsx(raw)
             elif fname.endswith(".pdf"):
@@ -435,6 +445,7 @@ def upload_file():
                 flash("Транзакции не найдены в файле")
                 return redirect(url_for("upload_file"))
 
+            # Угадываем категории (если это сводка, категории уже могут быть заданы)
             cat_results = guess_categories_batch(txs)
             existing    = db.get_existing_keys(u)
             enriched    = []
@@ -455,6 +466,7 @@ def upload_file():
                     "is_duplicate": is_dup,
                 })
 
+            # Сохраняем в сессию
             sess_id = str(uuid.uuid4())[:8]
             upload_sessions[sess_id] = {"transactions": enriched, "user_id": u}
 

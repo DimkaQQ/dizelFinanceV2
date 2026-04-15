@@ -432,3 +432,68 @@ def parse_sms(text: str) -> dict | None:
     except Exception as e:
         log.error(f"parse_sms: {e}")
     return None
+
+# Добавь этот код в ai.py (после parse_sms)
+
+_SUMMARY_PROMPT = """
+Это скриншот аналитики или статистики (сводка по категориям).
+Здесь НЕТ отдельных операций. Извлеки ИТОГОВУЮ сумму для КАЖДОЙ категории.
+
+Для каждой категории верни:
+- merchant: Название категории (например "Рестораны")
+- amount: Общая сумма (число, без пробелов и валюты)
+- currency: RUB или USD/EUR и т.д. (если не указано, предполагай RUB)
+- tx_type: "Расход" (если это траты) или "Доход" (если доходы)
+
+Верни ТОЛЬКО чистый JSON массив. Если данных нет — [].
+Пример: [{"merchant": "Рестораны", "amount": 30000, "currency": "RUB", "tx_type": "Расход"}]
+"""
+
+def parse_category_summary(image_bytes: bytes, mime_type: str = "image/jpeg") -> list[dict]:
+    """Парсит скриншоты аналитики (категории с итогами)."""
+    try:
+        result = ask_claude(_SUMMARY_PROMPT, image_bytes=image_bytes, mime_type=mime_type)
+        data = extract_json(result)
+        
+        if isinstance(data, list):
+            transactions = data
+        elif isinstance(data, dict):
+            transactions = [data]
+        else:
+            transactions = []
+            
+        # Нормализация данных
+        today = datetime.now().strftime("%d.%m.%Y, 12:00")
+        
+        for tx in transactions:
+            # Дата = Сегодня (так как это сводка)
+            tx["date"] = today
+            
+            # Сумма
+            try:
+                amt = tx.get("amount", 0)
+                if isinstance(amt, str):
+                    amt = amt.replace(" ", "").replace(",", ".")
+                tx["amount"] = float(amt)
+            except:
+                tx["amount"] = 0.0
+                
+            # Валюта
+            if tx.get("currency") not in CURRENCIES:
+                tx["currency"] = "RUB"
+                
+            # Тип (по умолчанию Расход)
+            if tx.get("tx_type") not in ["Расход", "Доход", "Актив"]:
+                tx["tx_type"] = "Расход"
+                
+            # Название (если пустое)
+            if not tx.get("merchant"):
+                tx["merchant"] = "Без категории"
+                
+            # Очищаем поле hint, так как это уже категория
+            tx["category_hint"] = "" 
+            
+        return transactions
+    except Exception as e:
+        log.error(f"parse_category_summary: {e}")
+        return []
