@@ -420,7 +420,8 @@ def upload_file():
 
             # Парсим файл в зависимости от типа
             if fname.endswith((".png", ".jpg", ".jpeg", ".webp")):
-                mime = f"image/{fname.split('.')[-1]}"
+                ext = fname.split('.')[-1]
+                mime = f"image/jpeg" if ext in ["jpg", "jpeg"] else f"image/{ext}"
                 
                 # 1. Сначала пробуем найти обычные транзакции (список операций)
                 txs = parse_screenshot(raw, mime_type=mime)
