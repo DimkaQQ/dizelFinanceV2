@@ -11,7 +11,7 @@ import re
 import requests
 
 from config import (
-    ANTHROPIC_API_KEY, CLAUDE_MODEL, CLAUDE_PROXY,
+    ANTHROPIC_API_KEY, CLAUDE_MODEL, CLAUDE_PROXY, CURRENCIES,
     INCOME_CATS, EXPENSE_CATS, ASSET_CATS, ALL_CATEGORIES,
     is_julian, is_internal_transfer,
 )
